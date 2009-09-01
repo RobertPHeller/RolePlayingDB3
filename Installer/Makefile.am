@@ -45,8 +45,8 @@ INCLUDES = -I. -I$(TCL_INC_DIR)
 nodist_diskfree_la_SOURCES = diskfree_wrap.cc
 diskfree_la_LDFLAGS = -g -module -avoid-version $(TCL_STUB_LIB_SPEC)
 diskfree_la_CXXFLAGS = $(INCLUDES)
-setupSCRIPTS = $(top_builddir)/Scripts/Version.tcl \
-		$(top_srcdir)/Scripts/fileentry.tcl
+setupSCRIPTS = #$(top_builddir)/Scripts/Version.tcl \
+#		$(top_srcdir)/Scripts/fileentry.tcl
 setupIMAGES = 
 setupLIBIMAGES = $(top_srcdir)/Scripts/DeepwoodsBanner.gif
 EXTRA_DIST = diskfree.i setup.tcl $(setupIMAGES)

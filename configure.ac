@@ -271,6 +271,23 @@ else
 fi
 AC_SUBST(SNITLIB)
 
+AC_MSG_CHECKING(uri dir)
+URILIB=`echo 'puts $tcl_library'|${HOSTTCLSH}`
+
+dirs="${TCL_PREFIX}/lib/uri* ${TCL_PREFIX}/lib/tcllib*/uri* ${URILIB}/../tcllib*/uri* ${URILIB}/../uri* ${URILIB}/tcllib*/uri* ${URILIB}/uri*"
+for i in $dirs ; do
+  if test -d "$i" -a -f "$i/pkgIndex.tcl"; then
+    URILIB=`cd $i; pwd`
+  fi
+done
+AC_ARG_WITH(urilib, [  --with-urilib=DIR          use uri from DIR], URILIB=$withval,)
+if test -d $URILIB; then
+   AC_MSG_RESULT([using uri library in $URILIB])
+else
+   AC_MSG_ERROR(Uri library directory $URILIB doesn't exist)
+fi
+AC_SUBST(URILIB)
+
 AC_PATH_PROGS(UNZIP,unzip)
 
 AC_MSG_CHECKING([Checking target Img, Tclxml,  and tclkit])

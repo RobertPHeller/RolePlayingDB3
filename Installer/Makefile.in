@@ -219,6 +219,7 @@ TCL_UNSHARED_LIB_FILE = @TCL_UNSHARED_LIB_FILE@
 TCL_VERSION = @TCL_VERSION@
 TOP_DIR = @TOP_DIR@
 UNZIP = @UNZIP@
+URILIB = @URILIB@
 VERSION = @VERSION@
 WISH = @WISH@
 ac_ct_AR = @ac_ct_AR@
@@ -274,9 +275,7 @@ INCLUDES = -I. -I$(TCL_INC_DIR)
 nodist_diskfree_la_SOURCES = diskfree_wrap.cc
 diskfree_la_LDFLAGS = -g -module -avoid-version $(TCL_STUB_LIB_SPEC)
 diskfree_la_CXXFLAGS = $(INCLUDES)
-setupSCRIPTS = $(top_builddir)/Scripts/Version.tcl \
-		$(top_srcdir)/Scripts/fileentry.tcl
-
+#		$(top_srcdir)/Scripts/fileentry.tcl
 setupIMAGES = 
 setupLIBIMAGES = $(top_srcdir)/Scripts/DeepwoodsBanner.gif
 EXTRA_DIST = diskfree.i setup.tcl $(setupIMAGES)
