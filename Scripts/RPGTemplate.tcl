@@ -207,19 +207,21 @@ namespace eval RolePlayingDB3 {
     proc dirtree {tree parent dir pattern} {
       foreach directory [lsort -dictionary [glob -nocomplain \
 						 -type d [file join $dir *]]] {
-	set thisnode [$tree insert end $parent \
-			[file rootname [file tail $directory]]#auto \
-			-data $directory \
-			-text [file rootname [file tail $directory]] \
+	regsub -all {[[:space:]]} "[file rootname [file tail $directory]]" {_} nodename
+	set thisnode [$tree insert end "$parent" \
+			"$nodename#auto" \
+			-data "$directory" \
+			-text "[file rootname [file tail $directory]]" \
 			-open yes\
-			-image $openfold]
+			-image "$openfold"]
 	dirtree $tree $thisnode $directory $pattern
       }
       foreach file [lsort -dictionary [glob -nocomplain \
 					    -type f \
 					    [file join $dir $pattern]]] {
+	regsub -all {[[:space:]]} "[file rootname [file tail $file]]" {_} nodename
 	$tree insert end $parent \
-			[file rootname [file tail $file]]#auto \
+			"$nodename#auto" \
 			-data $file \
 			-text [file rootname [file tail $file]] \
 			-open no
@@ -313,8 +315,8 @@ namespace eval RolePlayingDB3 {
       pack $templatetree -fill both -expand yes
       $templatesw setwidget $templatetree
       $templatetree bindText <ButtonRelease-3> [mymethod _postItemMenu]
-      $templatetree bindText <ButtonPress-1>   [mymethod _startMove %x %y]
-      $templatetree bindText <ButtonRelease-1> [mymethod _endMove %x %y]
+      $templatetree bindText <ButtonPress-2>   [mymethod _startMove %x %y]
+      $templatetree bindText <ButtonRelease-2> [mymethod _endMove %x %y]
       $self configurelist $args
 
       update
@@ -426,8 +428,8 @@ namespace eval RolePlayingDB3 {
      update idle
     }
     method _addtemplate {} {
-      puts stderr "*** $self _addtemplate"
-      puts stderr "*** $self _addtemplate: _addNewTemplateDialog = $_addNewTemplateDialog"
+#      puts stderr "*** $self _addtemplate"
+#      puts stderr "*** $self _addtemplate: _addNewTemplateDialog = $_addNewTemplateDialog"
       switch [$_addNewTemplateDialog draw] {
 	0 {
 	  set name [$newTemplateName cget -text]
@@ -487,6 +489,7 @@ namespace eval RolePlayingDB3 {
 			 -characterdatacommand [mymethod _characterdata]]
       set nodeStack {root}
       $p parse $xml
+      $p free
     }
     method _elementstart {name attlist args} {
       set nodename $name
@@ -504,8 +507,9 @@ namespace eval RolePlayingDB3 {
 	  append text " $n=\"$v\""
 	}
       }
-      set item [$templatetree insert end [lindex $nodeStack end] \
-			${nodename}#auto -text $text \
+      regsub -all {[[:space:]]} "$nodename" {_} nodename
+      set item [$templatetree insert end "[lindex $nodeStack end]" \
+			"${nodename}#auto" -text $text \
 			-data [list $name $attlist $args] \
 			-open $open]
       lappend nodeStack $item
@@ -516,7 +520,7 @@ namespace eval RolePlayingDB3 {
     method _characterdata {data} {
       set data [string trim "$data"]
       if {"$data" ne ""} {
-	$templatetree insert 0 [lindex $nodeStack end] #auto \
+	$templatetree insert 0 "[lindex $nodeStack end]" #auto \
 			-text "$data" -data "$data"
       }
     }
@@ -537,7 +541,7 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set parent [lindex $selected 0]
-	  foreach {name attrlist args} [$templatetree itemcget $parent -data] {break}
+	  foreach {name attrlist args} [$templatetree itemcget "$parent" -data] {break}
 	  if {"$name" eq "Field"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Fields cannot be used as Containers!"
 	    return
@@ -557,6 +561,11 @@ namespace eval RolePlayingDB3 {
 	      set ftype [$newFieldType cget -text]
 	      set generator [$newFieldGenerator cget -text]
 	      set updatable [$newFieldUpdatable cget -text]
+	      if {!$updatable && 
+		  [lsearch -exact {{Whole Number} {Word / Short Phrase}} "$ftype"] < 0} {
+		tk_messageBox -type ok -icon warning -message "Only Whole Numbers and Word / Short Phrase type fields can be locked!"
+		set updatable yes
+	      }
 	      if {"$ftype" eq "Container" && "$name" ne "Field"} {
 		set attrlist [list name $name]
 		regsub -all {[[:space:]]} "$name" {_} tag
@@ -575,13 +584,14 @@ namespace eval RolePlayingDB3 {
 		if {"$n" ne "name" && "$v" ne ""} {
 		  append text " $n=\"$v\""
 		}
-	      }	
-	      $templatetree insert end $parent ${nodename}#auto -text $text \
+	      }
+	      regsub -all {[[:space:]]} "$nodename" {_} nodename
+	      $templatetree insert end "$parent" "${nodename}#auto" -text $text \
 		-data [list $tag  $attrlist \
 			    [list -namespace \
 				  http://www.deepsoft.com/roleplayingdb/v3xmlns]] \
 		-open yes
-	      $templatetree see ${nodename}#auto
+	      $templatetree see "${nodename}#auto"
 	      $self _regenerateXMLFromTree
 	    }
 	    1 {return}
@@ -604,11 +614,11 @@ namespace eval RolePlayingDB3 {
       set isdirty yes
     }
     method _processNodesAt {node fp {needxmlns yes} {indent {}}} {
-      foreach n [$templatetree nodes $node] {
+      foreach n [$templatetree nodes "$node"] {
 	if {[string is integer -strict $n]} {
-	  puts -nonewline $fp "[$templatetree itemcget $n -data]"
+	  puts -nonewline $fp "[$templatetree itemcget "$n" -data]"
 	} else {
-	  foreach {name attrlist args} [$templatetree itemcget $n -data] {break}
+	  foreach {name attrlist args} [$templatetree itemcget "$n" -data] {break}
 	  puts -nonewline $fp "$indent<rpgv3:$name "
           if {$needxmlns} {
 	    puts -nonewline $fp "xmlns:rpgv3=\""
@@ -622,7 +632,7 @@ namespace eval RolePlayingDB3 {
 	    puts -nonewline $fp "$nn=\"$vv\" "
 	  }
 	  if {"$name" ne "Field" && 
-	      ([llength [$templatetree nodes $n]] > 0 || 
+	      ([llength [$templatetree nodes "$n"]] > 0 || 
 	       [llength $attrlist] == 0 ||
 	       ([llength $attrlist] == 2 && [lindex $attrlist 0] eq "name"))} {
 	    puts $fp ">"
@@ -651,17 +661,17 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set thefield "[lindex $selected 0]"
-	  if {[$templatetree parent $thefield] eq "root"} {
+	  if {[$templatetree parent "$thefield"] eq "root"} {
 	    tk_messageBox -parent $win -type ok -icon warning -message "This is the toplevel container and cannot be deleted!"
 	    return
 	  }
-	  if {[llength [$templatetree nodes $thefield]] > 0} {
+	  if {[llength [$templatetree nodes "$thefield"]] > 0} {
 	    tk_messageBox -parent $win -type ok -icon info -message "This container is not empty, please be very sure you want to delete it!"
 	  }
 	  set ans [tk_messageBox -parent $win -type yesno -icon question -message "Are you sure you want to delete $thefield?"]
 	  if {"$ans" ne "yes"} {return}
 	    
-	  $templatetree delete $thefield
+	  $templatetree delete "$thefield"
 	  $self _regenerateXMLFromTree
 	}
         default {
@@ -686,8 +696,8 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set thecontainer "[lindex $selected 0]"
-	  set t [$templatetree itemcget $thecontainer -text]
-	  set d [$templatetree itemcget $thecontainer -data]
+	  set t [$templatetree itemcget "$thecontainer" -text]
+	  set d [$templatetree itemcget "$thecontainer" -data]
 	  if {[string is integer -strict $thecontainer] && "$t" eq "$d"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added to text!"
 	    return
@@ -697,12 +707,12 @@ namespace eval RolePlayingDB3 {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added a Field!"
 	    return
 	  }
-	  set children [$templatetree nodes $thecontainer]
+	  set children [$templatetree nodes "$thecontainer"]
 	  set oldtext {}
 	  set oldnode {}
 	  foreach child $children {
 	    if {[string is integer -strict $child]} {
-	      set oldtext [$templatetree itemcget $child -data]
+	      set oldtext [$templatetree itemcget "$child" -data]
 	      set oldnode $child
 	      break
 	    }
@@ -714,13 +724,13 @@ namespace eval RolePlayingDB3 {
 	      set newtext [string trim [$containerText cget -text]]
 	      if {"$oldnode" ne ""} {
 		if {"$newtext" eq ""} {
-		  $templatetree delete $oldnode
+		  $templatetree delete "$oldnode"
 		} else {
-		  $templatetree itemconfigure $oldnode -text "$newtext" \
+		  $templatetree itemconfigure "$oldnode" -text "$newtext" \
 						       -data "$newtext"
 		}
 	      } elseif {"$newtext" ne ""} {
-		$templatetree insert 0 $thecontainer #auto -text "$newtext" \
+		$templatetree insert 0 "$thecontainer" #auto -text "$newtext" \
 							   -data "$newtext"
 	      }
 	    }
@@ -751,9 +761,9 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set thefield "[lindex $selected 0]"
-	  set t [$templatetree itemcget $thefield -text]
-	  set d [$templatetree itemcget $thefield -data]
-	  if {[string is integer -strict $thefield] && "$t" eq "$d"} {
+	  set t [$templatetree itemcget "$thefield" -text]
+	  set d [$templatetree itemcget "$thefield" -data]
+	  if {[string is integer -strict "$thefield"] && "$t" eq "$d"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a field.  Text cannot be directly edited!"
 	    return
 	  }
@@ -775,17 +785,25 @@ namespace eval RolePlayingDB3 {
 	  switch $ans {
 	    1 {return}
 	    0 {
-	      set attrlist [list name [$theFieldName cget -text] \
-				 type [$theFieldType cget -text] \
-                                 generator [$theFieldGenerator cget -text] \
-                                 updatable [$theFieldUpdatable cget -text]]
+	      set name [$theFieldName cget -text]
+	      set ftype [$theFieldType cget -text]
+	      set generator [$theFieldGenerator cget -text]
+	      set updatable [$theFieldUpdatable cget -text]
+	      if {!$updatable && [lsearch -exact {{Whole Number} {Word / Short Phrase}} "$ftype"] < 0} {
+		tk_messageBox -type ok -icon warning -message "Only Whole Numbers and Word / Short Phrase type fields can be locked!"
+		set updatable yes
+	      }
+	      set attrlist [list name $name  \
+				 type $ftype \
+                                 generator $generator \
+                                 updatable $updatable]
 	      set text "Field:[$theFieldName cget -text]"
 	      foreach {n v} $attrlist {
 		if {"$n" ne "name" && "$v" ne ""} {
 		  append text " $n=\"$v\""
 		}
 	      }
-	      $templatetree itemconfigure $thefield -text $text -data [list $name  $attrlist $args]
+	      $templatetree itemconfigure "$thefield" -text $text -data [list $name  $attrlist $args]
 	      $self _regenerateXMLFromTree
 	    }
 	  }
@@ -807,10 +825,10 @@ namespace eval RolePlayingDB3 {
 	incr count
 	set mpath "$basepath$count"
       }
-      set t [$templatetree itemcget $item -text]
-      set d [$templatetree itemcget $item -data]
+      set t [$templatetree itemcget "$item" -text]
+      set d [$templatetree itemcget "$item" -data]
 #      puts stderr "*** $self _postItemMenu: item = $item, t = $t, d = $d"
-      if {[string is integer -strict $item] && "$t" eq "$d"} {return};# Text
+      if {[string is integer -strict "$item"] && "$t" eq "$d"} {return};# Text
       foreach {name attrlist args} $d {break}
       menu $mpath -tearoff no
       set iscontainer [expr {"$name" ne "Field"}]

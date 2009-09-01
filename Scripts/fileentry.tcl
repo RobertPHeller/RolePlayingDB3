@@ -95,6 +95,8 @@
 #     - FileEntry::bind
 # ------------------------------------------------------------------------------
 
+package require BWidget
+
 namespace eval FileEntry {
 # The namespace where this widget lives.
 # [index] FileEntry!namespace
@@ -108,6 +110,7 @@ namespace eval FileEntry {
 	{-defaultextension String "" 0}
 	{-filetypes String {} 0}
 	{-title String "" 0}
+	{-modifycmd String "" 0}
     }
 
     Widget::bwinclude FileEntry LabelFrame .labf \
@@ -225,7 +228,7 @@ proc FileEntry::bind { path args } {
 # <in> args -- Bind arguments
 # [index] FileEntry::bind!procedure
 
-    return [eval [list ::bind $path.e] $args]
+    return [eval ::bind [list $path.e] $args]
 }
 
 
@@ -270,6 +273,7 @@ proc FileEntry::OpenFile { path } {
   set defaultextension [Widget::getoption $path -defaultextension]
   set filetypes [Widget::getoption $path -filetypes]
   set title [Widget::getoption $path -title]
+  set modifycmd [Widget::getoption $path -modifycmd]
 #  puts stderr "*** FileEntry::OpenFile: path = $path, dialogType = $dialogType, defaultextension = $defaultextension, filetypes = $filetypes, title = $title"
 
   set currentfile "[$path.e cget -text]"
@@ -284,6 +288,7 @@ proc FileEntry::OpenFile { path } {
 			 -parent $path]
 	if {![string equal "$newfile" {}]} {
 	  $path.e configure -text "$newfile"
+	  if {"$modifycmd" ne ""} {uplevel \#0 $modifycmd}
 	}
     }
     save {
@@ -296,6 +301,7 @@ proc FileEntry::OpenFile { path } {
 			 -parent $path]
 	if {![string equal "$newfile" {}]} {
 	  $path.e configure -text "$newfile"
+	  if {"$modifycmd" ne ""} {uplevel \#0 $modifycmd}
 	}
     }
     directory {
@@ -305,6 +311,7 @@ proc FileEntry::OpenFile { path } {
 		-parent $path]
 	if {![string equal "$newdirectory" {}]} {
 	  $path.e configure -text "$newdirectory"
+	  if {"$modifycmd" ne ""} {uplevel \#0 $modifycmd}
 	}
     }
   }

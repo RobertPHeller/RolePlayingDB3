@@ -171,6 +171,9 @@ snit::type ZipArchive {
   }
   method toDosTime {file} {
     set sec [file mtime $file]
+    if {$sec == 0} {;#		broken metakit VFS directory implementation???
+      set sec [clock scan now];# temp hack to keep the vfs::zip implementation happy.
+    }
 
     foreach {year month day hour minute secound} \
 	[clock format $sec -format "%Y %m %e %k %M %S"] {}

@@ -44,6 +44,43 @@ package require BWLabelSpinBox
 package require BWFileEntry
 
 namespace eval RolePlayingDB3 {
+  snit::widgetadaptor LabeledScrolledText {
+    component scroll
+    component text
+    delegate option * to text except {-xscrollcommand -yscrollcommand}
+    delegate method * to text except {cget configure xview yview}
+    delegate option -label to hull as -text
+#    delegate option -labelfont to hull as -font
+#    delegate option -labelside to hull as -side
+#    delegate option -labelbaseline to hull as -baseline
+    option  -auto -readonly yes -default both \
+		  -type {snit::enum -values {none both vertical horizontal}}
+    option  -scrollbar -readonly yes -default both \
+		  -type {snit::enum -values {none both vertical horizontal}}
+    option -text -cgetmethod gettext -configuremethod puttext
+    method gettext {option} {
+      return "[$text get 1.0 end-1c]"
+    }
+    method puttext {option value} {
+      $text get delete 1.0 end
+      $text insert end "$value"
+    }
+    method bind {args} {
+      eval [list ::bind $text] $args
+    }
+    constructor {args} {
+      set auto [from args -auto]
+      set scrollbar [from args -scrollbar]
+      installhull using TitleFrame
+      install scroll using ScrolledWindow [$hull getframe].scroll \
+					-auto $auto -scrollbar $scrollbar
+      pack $scroll -fill both -expand yes
+      install text using text [$scroll getframe].text
+      pack $text -fill both -expand yes
+      $scroll setwidget $text
+      $self configurelist  $args
+    }
+  }
   snit::widget SheetEdit {
     option -template -readonly yes -default {}
     option {-sheetclass sheetClass SheetClass} \
@@ -66,9 +103,14 @@ namespace eval RolePlayingDB3 {
     variable currentFilename
     variable currentBaseFilename
     variable isdirty no
+    method setdirty {} {set isdirty yes}
     variable path
     variable tempfile
     variable sheetClass
+    variable nodeStack
+    variable nodeTree -array {}
+    variable parseMode
+    variable fileWidgets -array {}
     
     component banner
     component toolbar
@@ -208,9 +250,7 @@ namespace eval RolePlayingDB3 {
       file mkdir [file join $path media]
       close [open [file join $path media flag] w]
       file mkdir [file join $path xml]
-      set tfp [open [file join $path xml template.xml] w]
-      puts $tfp "$options(-template)"
-      close $tfp
+      close [open [file join $path xml flag] w]
       [winfo toplevel $win] configure -title "$options(-sheetclass) Edit: $currentBaseFilename"
     }
     method new {} {
@@ -280,6 +320,7 @@ namespace eval RolePlayingDB3 {
 				      -title "Save As File"]
       }
       if {"$_filename" eq {}} {return}
+      if {$isdirty} {$self recreateXML}
       ::ZipArchive createZipFromDirtree $_filename $path
       set isdirty no
       if {"$currentFilename" ne "$_filename"} {
@@ -308,10 +349,20 @@ namespace eval RolePlayingDB3 {
       set options(-template) [from args -template]
       set options(-sheetclass) [from args -sheetclass]
       set options(-openfilename) [from args -openfilename]
-      if {"$options(-openfilename)" eq ""} {
+      if {"$options(-openfilename)" eq "" && "$options(-template)" ne ""} {
 	$self opennew
-      } else {
+	set parseMode {template}
+	set XML $options(-template)
+      } elseif {"$options(-openfilename)" ne ""} {
 	$self openold $options(-openfilename)
+	set parseMode {file}
+	if {[catch {open [file join $path xml sheet.xml] r} shfp]} {
+	  error "Illformed sheet bundle: sheet.xml cannot be opened: $shfp"
+	}
+	set XML [read $shfp]
+	close $shfp
+      } else {
+	error "Neither -template nor -openfilename was passed!"
       }
       install banner using Label $win.banner \
 			-image $bannerImage($options(-sheetclass)) -anchor w \
@@ -328,10 +379,237 @@ namespace eval RolePlayingDB3 {
 					-constrainedwidth yes
       pack $sheetframe -fill both -expand yes
       $sheetsw setwidget $sheetframe
-#********
       #### Process openfile (open) or template (new)
       #### if open, re-generate template in archive
+      set p [xml::parser -elementstartcommand [mymethod _elementstart] \
+			 -elementendcommand   [mymethod _elementend] \
+			 -characterdatacommand [mymethod _characterdata]]
+      set nodeStack [list $sheetframe]
+      array unset nodeTree
+      if {"$parseMode" eq "file"} {
+	set options(-template) {<?xml version="1.0" ?>}
+	append options(-template) "\n"
+      }
+      $p parse $XML
+      $p free
+      if {"$parseMode" ne "file"} {$self recreateXML}
       $self configurelist $args
+#      puts stderr "*** $type $self: parseMode = $parseMode"
+#      if {"$parseMode" eq "file"} {
+#	puts stderr "*** $type $self: options(-template) is:\n$options(-template)"
+#      }
+    }
+    proc makeattrlist {attrlist} {
+      set result {}
+      foreach {n v} $attrlist {
+	append result "$n=\"$v\" "
+      }
+      return $result
+    }
+    variable needNamelist yes
+    method _elementstart {name attrlist args} {
+      set nodename $name
+      set widget none
+      set bindscript {}
+      set label  {}
+      set widgetopts [list]
+      if {"$name" eq "Field"} {
+	array unset attrlist_array
+	array set attrlist_array $attrlist
+	if {[catch {set attrlist_array(name)}]} {
+	  set attrlist_array(name) "Unamed Field"
+	}
+	if {[catch {set attrlist_array(type)}]} {
+	  set attrlist_array(type) {Word / Short Phrase}
+	}
+	if {[catch {set attrlist_array(generator)}]} {
+	  set attrlist_array(generator) {}
+	}
+	if {[catch {set attrlist_array(updatable)}]} {
+	  set attrlist_array(updatable) yes
+	}
+	set nodename "Field:$attrlist_array(name)"
+	set label $attrlist_array(name)
+	lappend widgetopts -label "$label:"
+	switch -exact -- "$attrlist_array(type)" {
+	  {Whole Number} {
+	    if {!$attrlist_array(updatable) && "$parseMode" eq "file"} {
+	      set widget LabelEntry
+	      lappend widgetopts -editable no
+	    } else {
+	      set widget LabelSpinBox
+	      lappend widgetopts -modifycmd [mymethod setdirty]
+	      set bindscript [list bind <KeyPress> [mymethod setdirty]]
+	      if {[regexp {^([[:digit:]]*)[dD]([[:digit:]]*)$} \
+			"$attrlist_array(generator)" -> num sides] > 0} {
+		lappend widgetopts -range [list $num [expr {$sides * $num}] 1]
+	      } elseif {[regexp {^[dD]%$} "$attrlist_array(generator)"] > 0} {
+		lappend widgetopts -range {1 100 1}
+	      }
+	    }
+       	  }
+	  {Word / Short Phrase} {
+	    set widget LabelEntry
+	    if {!$attrlist_array(updatable) && "$parseMode" eq "file"} {
+	      lappend widgetopts -editable no
+	    } else {
+	      set bindscript [list bind <KeyPress> [mymethod setdirty]]
+	    }
+
+	  }
+	  {Long Text} {
+	    set widget ::RolePlayingDB3::LabeledScrolledText
+	    lappend widgetopts -auto vertical -scrollbar vertical \
+			       -wrap word -width 70 -height 10 -relief sunken
+	    set bindscript [list bind <KeyPress> [mymethod setdirty]]
+	  }
+	  Graphic {
+	    set widget FileEntry
+	    lappend widgetopts -modifycmd [mymethod setdirty]
+	    set bindscript [list bind <KeyPress> [mymethod setdirty]]
+	    lappend widgetopts -filetypes { 
+				{"BMP Files"        {.bmp}              }
+				{"GIF Files"        {.gif .GIF}     GIFf}
+				{"JPEG Files"       {.jpeg .jpg}    JPEG}
+				{"PNG Files"        {.png}          PNGF}
+				{"TIFF Files"       {.tiff .tif}    TIFF}
+				{"XBM Files"        {.xbm}              }
+				{"XPM Files"        {.xpm}              }
+				{"Postscript Files" {.ps .eps}          } 
+				{"All Files"        *                   } }
+	  }
+	  Document {
+	    set widget FileEntry
+	    set bindscript [list bind <KeyPress> [mymethod setdirty]]
+	    lappend widgetopts -modifycmd [mymethod setdirty]
+	    lappend widgetopts -filetypes { 
+				{"All Files"        *                   } }
+	  }
+	}
+      } else {
+	set widget TitleFrame
+	lappend widgetopts -text $nodename
+      }
+      regsub -all {[[:space:]]} $nodename {} wname
+      set curroot [[lindex $nodeStack end] getframe]
+      set wname $curroot.[string tolower $wname]
+      set bwname $wname
+      set i 0
+      while {[winfo exists $wname]} {
+	incr i
+	set wname $bwname$i
+      }
+      eval [list $widget $wname] $widgetopts
+      if {"$widget" eq "FileEntry"} {set fileWidgets($wname) true}
+      if {"$name" ne "Field"} {
+	pack $wname -fill both -expand yes
+      } else {
+	pack $wname -fill x
+      }
+      if {"$bindscript" ne ""} {eval $wname $bindscript}
+      lappend nodeStack $wname
+      set nodeTree($wname) [list $name $attrlist $args]
+      if {"$parseMode" eq "file"} {
+	set indent [string repeat {  } [llength $nodeStack]]
+	append options(-template) "$indent<rpgv3:$name "
+	if {$needNamelist} {
+	  append options(-template) "xmlns:rpgv3=\""
+	  set namespace [lindex $args [expr {[lsearch -exact $args -namespace] + 1}]]
+	  append options(-template) "$namespace"
+	  append options(-template) "\" "
+	  set needNamelist no
+	}	    
+	append options(-template) "[makeattrlist $attrlist]"
+        if {"$name" ne "Field"} {
+	  append options(-template) ">\n"
+	} else {
+	  append options(-template) "/>\n"
+	}
+      }
+    }
+    method _elementend {name args} {
+      if {"$parseMode" eq "file"} {
+	if {"$name" != "Field"} {
+	  set indent [string repeat {  } [llength $nodeStack]]
+	  append options(-template) "</$name >\n"
+	}
+      }
+      set nodeStack [lrange $nodeStack 0 [expr {[llength $nodeStack] - 2}]]
+    }
+    method _characterdata {data} {
+#      puts stderr "*** $self _characterdata $data"
+      set curnode [lindex $nodeStack end]
+      set data [string trim "$data"]
+#      puts stderr "*** $self _characterdata: curnode = $curnode"
+#      puts stderr "*** $self _characterdata: data = '$data'"
+      if {"$data" ne ""} {$curnode configure -text "$data"}
+      if {"$parseMode" eq "file"} {
+	if {[winfo class $curnode] eq "TitleFrame"} {
+	  append options(-template) "$data\n"
+	}
+      }      
+    }
+    method recreateXML {} {
+      if {[catch {open [file join $path xml sheet.xml] w} shfp]} {
+	tk_messageBox -type ok -icon error -message "Internal error: cannot create sheet.xml: $shfp"
+	return
+      }
+      puts $shfp {<?xml version="1.0" ?>}
+      $self _recreateXML_processNodesAt $sheetframe $shfp
+      close $shfp
+    }
+    method childrenofgetframe {w} {
+      if {[catch {winfo children [$w getframe]} children]} {
+	return {}
+      } else {
+	set result [list]
+	foreach c $children {
+	  if {[catch {set nodeTree($c)}]} {continue}
+	  lappend result $c
+	}
+      }
+      return $result
+    }
+    method _recreateXML_processNodesAt {node fp {needxmlns yes} {indent {}}} {
+      foreach n [$self childrenofgetframe $node] {
+	if {[catch {set nodeTree($n)} data]} {continue}
+	foreach {name attrlist args} $data {break}
+	puts -nonewline $fp "$indent<rpgv3:$name "
+	if {$needxmlns} {
+	  puts -nonewline $fp "xmlns:rpgv3=\""
+	  set namespace [lindex $args [expr {[lsearch -exact $args -namespace] + 1}]]
+	  puts -nonewline $fp "$namespace"
+	  puts -nonewline $fp "\" "
+	  set needxmlns no
+	}
+	puts -nonewline $fp [makeattrlist $attrlist]
+	if {"$name" ne "Field" &&
+	    ([llength [$self childrenofgetframe $n]] > 0 ||
+	     [llength $attrlist] == 0 ||
+	     ([llength $attrlist] == 2 && [lindex $attrlist 0] eq "name"))} {
+	  puts -nonewline $fp ">"
+	  puts $fp "[$n cget -text]"
+	  $self _recreateXML_processNodesAt $n $fp $needxmlns "$indent  "
+	  puts $fp "$indent</rpgv3:$name>"
+	} else {
+	  puts -nonewline $fp ">"
+	  if {[catch {set fileWidgets($n)} fileflag]} {
+	    puts -nonewline $fp "[$n cget -text]"
+	  } else {
+	    set curfile "[$n cget -text]"
+	    if {"$curfile" ne ""} {
+	      if {[file pathtype "$curfile"] eq "relative" &&
+		  "media" eq [lindex [file split $curfile] 0]} {
+		puts -nonewline $fp "$curfile"
+	      } else {
+		file copy "$curfile" [file join $path media [file tail $curfile]]
+		puts -nonewline $fp "[file join media [file tail $curfile]]"
+	      }
+	    }
+	  }
+	  puts $fp "</rpgv3:$name>"
+	}
+      }
     }
   }
 }

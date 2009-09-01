@@ -82,6 +82,8 @@
 #     - LabelSpinBox::getvalue
 # ------------------------------------------------------------------------------
 
+package require BWidget
+
 namespace eval LabelSpinBox {
 # Namespace where this widget's code resides.
 # [index] LabelSpinBox!namespace
@@ -175,7 +177,7 @@ proc LabelSpinBox::setvalue { path args } {
 # <in> args -- Arguments to pass to the SpinBox setvalue procedure.
 # [index] LabelSpinBox::getvalue!procedure
 
-    return [eval [list ::setvalue $path.spin] $args]
+    return [eval [list $path.spin setvalue] $args]
 }
 
 # ------------------------------------------------------------------------------
@@ -187,7 +189,7 @@ proc LabelSpinBox::getvalue { path args } {
 # <in> args -- Arguments to pass to the SpinBox getvalue procedure.
 # [index] LabelSpinBox::getvalue!procedure
 
-    return [eval [list ::getvalue $path.spin] $args]
+    return [eval [list  $path.spin getvalue] $args]
 }
 
 # ------------------------------------------------------------------------------
@@ -199,7 +201,7 @@ proc LabelSpinBox::bind { path args } {
 # <in> args -- Arguments to pass to the SpinBox bind procedure.
 # [index] LabelSpinBox::bind!procedure
 
-    return [eval [list ::bind $path.spin] $args]
+    return [eval [list $path.spin bind] $args]
 }
 
 
