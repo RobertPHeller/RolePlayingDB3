@@ -117,14 +117,14 @@ snit::type ZipArchive {
     return [list $offset $dosTime $crc $csize $size]
   }
 
-  method createFile {file} {
+  method createFile {file args} {
     set fout [open $file w]
     fconfigure $fout -encoding binary -translation binary
-    $self createToStream $fout
+    eval [list $self createToStream $fout] $args
     close $fout
   }
 
-  method createToStream {ostream} {
+  method createToStream {ostream args} {
     set descriptionList [list]
     foreach {fin fout} $files {
       lappend descriptionList [$self addToStream $ostream $fin $fout]
@@ -157,7 +157,7 @@ snit::type ZipArchive {
     $self writeLong $ostream $cdOffset
 
     # zip file comment
-    set comment ""
+    set comment [from args -comment ""]
     # comment lenght
     $self writeShort $ostream [string bytelength $comment]
 
@@ -305,12 +305,12 @@ snit::type ZipArchive {
       return "$file"
     }
   }
-  typemethod createZipFromDirtree {zipfile directory} {
+  typemethod createZipFromDirtree {zipfile directory args} {
     set ziparchive [$type create %AUTO%]
     foreach f [find $directory] {
       $ziparchive addFile $f [stripdir $f $directory]
     }
-    $ziparchive createFile $zipfile
+    eval [list $ziparchive createFile $zipfile] $args
     $ziparchive destroy
     return $zipfile
   }

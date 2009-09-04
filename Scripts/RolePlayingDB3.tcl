@@ -116,7 +116,7 @@ proc RolePlayingDB3::CreateMainWindow {} {
 					{command "&Character"  file:new:character "Create new character"  {Alt c} -command {RolePlayingDB3::SheetEdit new -sheetclass Character}}
 					{command "&Monster"    file:new:monster   "Create new monster"    {Alt m} -command {RolePlayingDB3::SheetEdit new -sheetclass Monster}}
 					{command "&Spell"      file:new:spell     "Create new spell"      {Alt s} -command {RolePlayingDB3::SheetEdit new -sheetclass Spell}}
-					{command "M&ap"        file:new:map       "Create new map"        {Alt a} -command {RolePlayingDB3::Map new}}
+					{command "M&ap"        file:new:map       "Create new map"        {Alt a} -command {RolePlayingDB3::MapEditor new}}
 					{command "&Treasure"   file:new:treasure  "Create new treasure"   {Alt t} -command {RolePlayingDB3::SheetEdit new -sheetclass Treasure}}
 					{command "T&rick/Trap" file:new:tricktrap "Create new Trick/Trap" {Alt r} -command {RolePlayingDB3::SheetEdit new -sheetclass TrickTrap}}
 					{command "&Dressing"   file:new:dressing  "Create new dressing"   {Alt d} -command {RolePlayingDB3::SheetEdit new -sheetclass Dressing}}
@@ -167,7 +167,7 @@ proc RolePlayingDB3::CreateMainWindow {} {
   button $buttonmenu.map \
 	-image [image create photo \
 			-file [file join $ImageDir MapButton.png]] \
-	-command {RolePlayingDB3::Map edit}
+	-command {RolePlayingDB3::MapEditor edit}
 
   button $buttonmenu.treasure \
 	-image [image create photo \
@@ -261,7 +261,7 @@ namespace eval RolePlayingDB3 {
   variable OpenMenu [menu .openWhat -tearoff no -title "Open"]
   foreach x {Character Monster Spell Map Treasure TrickTrap Dressing} {
     if {[lsearch {Character Dressing Monster Spell Treasure TrickTrap} $x] < 0} {
-      $OpenMenu add command -label $x -command "RolePlayingDB3::$x open"
+      $OpenMenu add command -label $x -command "RolePlayingDB3::${x}Editor open"
     } else {
       $OpenMenu add command -label $x -command "RolePlayingDB3::SheetEdit open -sheetclass $x"
     }
@@ -310,6 +310,7 @@ proc RolePlayingDB3::CloseWindow {tl} {
 
 namespace eval RolePlayingDB3 {
   snit::widgetadaptor RPGToplevel {
+    option -minwidth -readonly yes -default 1 -type {snit::integer -min 1}
     option -mainframeconstructor -readonly yes -default {}
     option -mainframetemplate    -readonly yes -default {}
     delegate option              -class to hull
@@ -345,6 +346,7 @@ namespace eval RolePlayingDB3 {
     delegate method * to mainframe except {destroy configure cget}
 
     constructor {args} {
+      set options(-minwidth) [from args -minwidth]
       set options(-mainframeconstructor) [from args -mainframeconstructor]
       set options(-mainframetemplate)    [from args -mainframetemplate]
       if {"$options(-mainframeconstructor)" eq ""} {
@@ -362,7 +364,8 @@ namespace eval RolePlayingDB3 {
 					     -progressmax 100
       pack $main -fill both -expand yes
       set additionalOpts [list]
-      foreach opt {-sheetclass -openfilename} {
+      foreach opt {-sheetclass -openfilename -mapbundlemountpoint -mapeditor \
+		   -leveldir -spacefile -leveleditor} {
         set optval [from args $opt {}]
 	if {"$optval" ne ""} {lappend additionalOpts $opt $optval}
       }
@@ -375,6 +378,7 @@ namespace eval RolePlayingDB3 {
       wm withdraw $win
       update idle
       set width [winfo reqwidth $win]
+      if {$width < $options(-minwidth)} {set width $options(-minwidth)}
       set height [winfo reqheight $win]
       set height43 [expr {int(.75*$width)}]
       if {$height < $height43} {set height $height43}
@@ -451,6 +455,7 @@ package require RPGTemplate
 
 package require RPGSheetEdit
 
+package require RPGMapLevelSpace
 RolePlayingDB3::Configuration load
 
 RolePlayingDB3::CreateMainWindow

@@ -40,6 +40,7 @@ package require vfs::mk4
 package require ZipArchive
 package require xml
 package require BWLabelComboBox
+package require RPGUtilities
 
 namespace eval RolePlayingDB3 {
   snit::widget Template {
@@ -55,9 +56,7 @@ namespace eval RolePlayingDB3 {
     component toolbar
     component panes
     component  sbpane
-    component   sidebarname
-    component   sidebarsw
-    component     sitebartree
+    component   sidebartree
     component  tmppane
     component   templatename
     component   templatesw
@@ -89,8 +88,8 @@ namespace eval RolePlayingDB3 {
     typemethod myfiletypes {} {return $filetypes}
     typecomponent _editDialog
     typevariable bannerImage
+    typevariable bannerBackground #eadc9b
     typevariable templateMonster
-    typevariable openfold
     typeconstructor {
       set bannerImage [image create photo \
 				-file [file join $::RolePlayingDB3::ImageDir \
@@ -98,8 +97,6 @@ namespace eval RolePlayingDB3 {
       set templateMonster [image create photo \
 					-file [file join $::RolePlayingDB3::ImageDir \
 						SmallTemplateMonster.png]]
-      set openfold [image create photo -file [file join $::BWIDGET::LIBRARY \
-							images openfold.gif]]
       set _editDialog {}
     }
     typemethod _createEditDialog {} {
@@ -134,23 +131,26 @@ namespace eval RolePlayingDB3 {
 	set like_filename $defaultfilename
       }
       set newTop [RolePlayingDB3::RPGToplevel .template%AUTO% \
-			-mainframeconstructor $type -mainframetemplate {}]
+			-mainframeconstructor $type -mainframetemplate {} \
+			-class TemplateEditor]
       $newTop opennew
     }
     method opennew {} {
       set currentFilename {}
       set currentBaseFilename *noname*
+      $sidebartree configure -label "$currentBaseFilename"
       set path [$type genname]
       set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       while {[file exists $tempfile]} {
 	set path [$type genname]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::mk4::Mount $tempfile $path
+      vfs::mk4::Mount $tempfile /$path
       foreach theclass {Character Dressing Monster Spell Treasure TrickTrap} {
-	file mkdir [file join $path $theclass]
-        close [open [file join $path $theclass flag] w]
+	file mkdir [file join /$path $theclass]
+        close [open [file join /$path $theclass flag] w]
       }
+      $sidebartree configure -directory [file join /$path]
       [winfo toplevel $win] configure -title "Template Edit: $currentBaseFilename"
     }
     method new {} {$type new -like $win}
@@ -176,7 +176,8 @@ namespace eval RolePlayingDB3 {
 				   -title "File to open"]
       if {"$currentFilename" eq ""} {return}
       set newTop [RolePlayingDB3::RPGToplevel .template%AUTO% \
-			-mainframeconstructor $type -mainframetemplate {}]
+			-mainframeconstructor $type -mainframetemplate {} \
+			-class TemplateEditor]
       $newTop openold "$currentFilename"
     }
     method openold {_filename} {
@@ -186,50 +187,27 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::mk4::Mount $tempfile $path
+      vfs::mk4::Mount $tempfile /$path
       set currentFilename $_filename
       set currentBaseFilename [file tail $currentFilename]
+      $sidebartree configure -label "$currentBaseFilename"
       set inpath [$type genname]
       vfs::zip::Mount $currentFilename $inpath
       foreach classDir {Character Dressing Monster Spell Treasure TrickTrap} {
-        if {[catch {file copy [file join $inpath $classDir] $path}]} {
-	  file mkdir $path $classDir
-	  close [open [file join $path $classDir flag] w]
+        if {[catch {file copy [file join $inpath $classDir] /$path}]} {
+	  file mkdir /$path $classDir
+	  close [open [file join /$path $classDir flag] w]
 	}
       }
 
 #      puts stderr "*** $self openold: files in $currentFilename ($inpath): [glob -nocomplain $inpath/*]"
-#      puts stderr "*** $self openold: files in $tempfile ($path): [glob -nocomplain $path/*]"
+#      puts stderr "*** $self openold: files in $tempfile (/$path): [glob -nocomplain /$path/*]"
       vfs::unmount $inpath
+      $sidebartree configure -directory [file join /$path]
       [winfo toplevel $win] configure -title "Template Edit: $currentBaseFilename"
-      $self rescantemplates
-    }
-    proc dirtree {tree parent dir pattern} {
-      foreach directory [lsort -dictionary [glob -nocomplain \
-						 -type d [file join $dir *]]] {
-	regsub -all {[[:space:]]} "[file rootname [file tail $directory]]" {_} nodename
-	set thisnode [$tree insert end "$parent" \
-			"$nodename#auto" \
-			-data "$directory" \
-			-text "[file rootname [file tail $directory]]" \
-			-open yes\
-			-image "$openfold"]
-	dirtree $tree $thisnode $directory $pattern
-      }
-      foreach file [lsort -dictionary [glob -nocomplain \
-					    -type f \
-					    [file join $dir $pattern]]] {
-	regsub -all {[[:space:]]} "[file rootname [file tail $file]]" {_} nodename
-	$tree insert end $parent \
-			"$nodename#auto" \
-			-data $file \
-			-text [file rootname [file tail $file]] \
-			-open no
-      }
     }
     method rescantemplates {} {
-      $sitebartree delete [$sitebartree nodes root]
-      dirtree $sitebartree root $path *.xml
+      $sidebartree redrawdirtree
     }
     method open {args} {eval [list $type open -like $win] $args}
     method save {} {
@@ -246,11 +224,13 @@ namespace eval RolePlayingDB3 {
 				      -title "Save As File"]
       }
       if {"$_filename" eq {}} {return}
-      ::ZipArchive createZipFromDirtree $_filename $path
+      ::ZipArchive createZipFromDirtree $_filename /$path \
+				-comment "RPGV3 Template Bundle"
       set isdirty no
       if {"$currentFilename" ne "$_filename"} {
 	set currentFilename $_filename
 	set currentBaseFilename [file tail $currentFilename]
+	$sidebartree configure -label "$currentBaseFilename"
 	[winfo toplevel $win] configure -title "Template Edit: [file tail $currentFilename]"
       }
     }
@@ -266,13 +246,13 @@ namespace eval RolePlayingDB3 {
 	  no {}
         }
       }
-      vfs::unmount $path
+      vfs::unmount /$path
       file delete $tempfile
       destroy [winfo toplevel $win]
     }
     constructor {args} {
       install banner using Label $win.banner -image $bannerImage -anchor w \
-				-background #eadc9b
+				-background $bannerBackground
       pack $banner -fill x
       install toolbar using ButtonBox $win.toolbar -orient horizontal \
 						   -homogeneous no
@@ -292,17 +272,10 @@ namespace eval RolePlayingDB3 {
       install panes using PanedWindow $win.panes -side top
       pack $panes -fill both -expand yes
       set sbpane [$panes add -weight 1]
-      install sidebarname using LabelEntry $sbpane.sidebarname \
-				-editable no -label "Open File:" \
-				-textvariable [myvar currentBaseFilename]
-      pack $sidebarname -fill x
-      install sidebarsw using ScrolledWindow $sbpane.sidebarsw \
-						-scrollbar both -auto both
-      pack $sidebarsw -fill both -expand yes
-      install sitebartree using Tree [$sidebarsw getframe].sitebartree
-      pack $sitebartree -fill both -expand yes
-      $sidebarsw setwidget $sitebartree
-      $sitebartree bindText <Double-Button-1> [mymethod _openTemplate]
+      install sidebartree using ::RolePlayingDB3::LabeledDirTree $sbpane.sidebarname \
+				-showextension no -filepattern *.xml
+      pack $sidebartree -fill both -expand yes
+      $sidebartree bindText <Double-Button-1> [mymethod _openTemplate]
       set tmppane [$panes add -weight 5]
       install templatename using LabelEntry $tmppane.templatename \
 				-editable no -label "Open Template:" \
@@ -435,7 +408,7 @@ namespace eval RolePlayingDB3 {
 	  set name [$newTemplateName cget -text]
 	  set class [$newTemplateClass cget -text]
 	  if {[file extension $name] eq ""} {append name ".xml"}
-	  set filename [file join $path $class $name]
+	  set filename [file join /$path $class $name]
 	  if {[file exists $filename]} {
 	    tk_messageBox -type ok -icon warning -parent $win \
 			  -message "A Template named $name already exists! Please select a different name or delete the existing template."
@@ -453,7 +426,7 @@ namespace eval RolePlayingDB3 {
       }
     }
     method _deletetemplate {} {
-      set selected [$sitebartree selection get]
+      set selected [$sidebartree selection get]
       switch -- [llength $selected] {
 	0 {
 	  tk_messageBox -parent $win -type ok -icon info -message "Please select a template to delete!"
@@ -463,7 +436,7 @@ namespace eval RolePlayingDB3 {
 	  set thetemplate "[lindex $selected 0]"
 	  set ans [tk_messageBox -parent $win -type yesno -icon question -message "Are you sure you want to delete $thetemplate?"]
 	  if {"$ans" ne "yes"} {return}
-	  file delete [$sitebartree itemcget $thetemplate -data]
+	  file delete [$sidebartree itemcget $thetemplate -fullpath]
 	  $self rescantemplates
 	  set isdirty yes
 	}
@@ -475,8 +448,8 @@ namespace eval RolePlayingDB3 {
     variable templateFile {}
     variable nodeStack {}
     method _openTemplate {thetemplate} {
-      set templateFile [$sitebartree itemcget $thetemplate -data]
-      regsub "$path/" [file rootname "$templateFile"] {} currentTemplateName
+      set templateFile [$sidebartree itemcget $thetemplate -fullpath]
+      regsub "/$path/" [file rootname "$templateFile"] {} currentTemplateName
       if {[catch {open $templateFile r} fp]} {
 	error "_openTemplate: open $templateFile r: $fp"
 	return
@@ -857,17 +830,41 @@ namespace eval RolePlayingDB3 {
       $templatetree configure -cursor crosshair
     }
     method _endMove {mx my item} {
+      if {"$item" eq ""} {
+	return
+      }	
+      if {[string is integer -strict "$item"]} {
+	tk_messageBox -type ok -icon info \
+		-message "Cannot move caintainer text"
+	return
+      }
       set toX $mx
       set toY $my
       $templatetree configure -cursor $oldCursor
       if {$toY != $fromY} {
 #	puts stderr "*** $self _endMove: toY = $toY, $fromY = $fromY"
 	set which [$templatetree find @$toX,$toY]
+	if {"$which" eq ""} {
+	  tk_messageBox -type ok -icon info \
+		-message "Cannot move to nowhere"
+	  return
+	}
 #	puts stderr "*** $self _endMove: which = $which, item = $item"
 	if {$which eq $item} {return}
 	set myparent [$templatetree parent $item]
+	if {"$myparent" eq "root"} {
+	  tk_messageBox -type ok -icon info \
+		     -message "Cannot move sheet class container"
+	  return
+        }
+
 	set hisparent [$templatetree parent $which]
 #	puts stderr "*** $self _endMove: myparent = $myparent, hisparent = $hisparent"
+	if {"$hisparent" eq "root"} {
+	  tk_messageBox -type ok -icon info \
+		     -message "Cannot move fields or containers above sheet class container"
+	  return
+        }
 	if {$myparent eq $hisparent} {
 	  set currentOrder [$templatetree nodes $hisparent]
 	  set itemIndex [lsearch -exact $currentOrder $item]

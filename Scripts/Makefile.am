@@ -1,7 +1,7 @@
 Scripts = BWStdMenuBar.tcl fileentry.tcl HTMLHelp.tcl labelcombobox.tcl \
 	  labelselectcolor.tcl labelspinbox.tcl ReadConfiguration.tcl \
 	  RolePlayingDB3.tcl splash.tcl RPGTemplate.tcl ZipArchive.tcl \
-	  RPGSheetEdit.tcl
+	  RPGSheetEdit.tcl RPGMapLevelSpace.tcl RPGUtilities.tcl
 Images  = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
 	  AddNewExitBanner.png AddNewItemBanner.png CharacterBanner.png \
 	  CharacterButton.png CharacterRollBanner.png CreateMapBanner.png \
@@ -14,7 +14,8 @@ Images  = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
 	  background.png RPG-Icon.png CharacterDialogIcon.png \
 	  DressingDialogIcon.png MonsterDialogIcon.png SpellDialogIcon.png \
 	  TreasureDialogIcon.png TrickTrapDialogIcon.png \
-	  SheetEditDialogIcon.png
+	  SheetEditDialogIcon.png LevelBanner.png CreateLevelBanner.png \
+	  MapDialogIcon.png
 	  
 BUILT_SOURCES = Version.tcl
 noinst_DATA = Version.tcl
