@@ -464,9 +464,9 @@ namespace eval RolePlayingDB3 {
       $p parse $xml
       $p free
     }
-    method _elementstart {name attlist args} {
-      set nodename $name
-      if {"$name" eq "Field"} {
+    method _elementstart {tag attlist args} {
+      set nodename $tag
+      if {"$tag" eq "Field"} {
 	foreach {n v} $attlist {
 	  if {"$n" eq "name"} {set nodename "Field:$v"}
 	}
@@ -483,11 +483,11 @@ namespace eval RolePlayingDB3 {
       regsub -all {[[:space:]]} "$nodename" {_} nodename
       set item [$templatetree insert end "[lindex $nodeStack end]" \
 			"${nodename}#auto" -text $text \
-			-data [list $name $attlist $args] \
+			-data [list $tag $attlist $args] \
 			-open $open]
       lappend nodeStack $item
     }
-    method _elementend {name args} {
+    method _elementend {tag args} {
       set nodeStack [lrange $nodeStack 0 [expr {[llength $nodeStack] - 2}]]
     }
     method _characterdata {data} {
@@ -514,8 +514,8 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set parent [lindex $selected 0]
-	  foreach {name attrlist args} [$templatetree itemcget "$parent" -data] {break}
-	  if {"$name" eq "Field"} {
+	  foreach {tag attrlist args} [$templatetree itemcget "$parent" -data] {break}
+	  if {"$tag" eq "Field"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Fields cannot be used as Containers!"
 	    return
 	  }
@@ -541,8 +541,10 @@ namespace eval RolePlayingDB3 {
 	      }
 	      if {"$ftype" eq "Container" && "$name" ne "Field"} {
 		set attrlist [list name $name]
+		# Generate a tag that XML parsers will be happy with
 		regsub -all {[[:space:]]} "$name" {_} tag
 		regsub -all {:} $tag {-} tag
+	        regsub -all {[<>&'"]} $tag {} tag;# get rid of special XML chars
 		set tag [string totitle $tag]
 		set nodename $tag
 	      } else {
@@ -559,12 +561,12 @@ namespace eval RolePlayingDB3 {
 		}
 	      }
 	      regsub -all {[[:space:]]} "$nodename" {_} nodename
-	      $templatetree insert end "$parent" "${nodename}#auto" -text $text \
+	      set newnode [$templatetree insert end "$parent" "${nodename}#auto" -text $text \
 		-data [list $tag  $attrlist \
 			    [list -namespace \
 				  http://www.deepsoft.com/roleplayingdb/v3xmlns]] \
-		-open yes
-	      $templatetree see "${nodename}#auto"
+		-open yes]
+	      $templatetree see "$newnode"
 	      $self _regenerateXMLFromTree
 	    }
 	    1 {return}
@@ -586,31 +588,39 @@ namespace eval RolePlayingDB3 {
       close $fp
       set isdirty yes
     }
+    proc quoteXML {text} {
+      regsub -all {&} $text   {\&amp;} quoted
+      regsub -all {<} $quoted {\&lt;} quoted
+      regsub -all {>} $quoted {\&gt;} quoted
+      regsub -all {'} $quoted {\&apos;} quoted
+      regsub -all {"} $quoted {\&quot;} quoted
+      return "$quoted"
+    }
     method _processNodesAt {node fp {needxmlns yes} {indent {}}} {
       foreach n [$templatetree nodes "$node"] {
 	if {[string is integer -strict $n]} {
-	  puts -nonewline $fp "[$templatetree itemcget "$n" -data]"
+	  puts -nonewline $fp [quoteXML [$templatetree itemcget "$n" -data]]
 	} else {
-	  foreach {name attrlist args} [$templatetree itemcget "$n" -data] {break}
-	  puts -nonewline $fp "$indent<rpgv3:$name "
+	  foreach {tag attrlist args} [$templatetree itemcget "$n" -data] {break}
+	  puts -nonewline $fp "$indent<rpgv3:$tag "
           if {$needxmlns} {
 	    puts -nonewline $fp "xmlns:rpgv3=\""
 	    set namespace [lindex $args [expr {[lsearch -exact $args -namespace] + 1}]]
-	    puts -nonewline $fp "$namespace"
+	    puts -nonewline $fp "[quoteXML $namespace]"
 	    puts -nonewline $fp "\" "
 	    set needxmlns no
 	  }
 	  foreach {nn vv} $attrlist {
 	    if {"$vv" eq ""} {continue}
-	    puts -nonewline $fp "$nn=\"$vv\" "
+	    puts -nonewline $fp "$nn=\"[quoteXML $vv]\" "
 	  }
-	  if {"$name" ne "Field" && 
+	  if {"$tag" ne "Field" && 
 	      ([llength [$templatetree nodes "$n"]] > 0 || 
 	       [llength $attrlist] == 0 ||
 	       ([llength $attrlist] == 2 && [lindex $attrlist 0] eq "name"))} {
 	    puts $fp ">"
 	    $self _processNodesAt $n $fp $needxmlns "$indent  "
-	    puts $fp "$indent</rpgv3:$name>"
+	    puts $fp "$indent</rpgv3:$tag>"
 	  } else {
 	    puts $fp "/>"
 	  }
@@ -675,8 +685,8 @@ namespace eval RolePlayingDB3 {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added to text!"
 	    return
 	  }
-	  foreach {name attrlist args} $d {break}
-	  if {"$name" eq "Field"} {
+	  foreach {tag attrlist args} $d {break}
+	  if {"$tag" eq "Field"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added a Field!"
 	    return
 	  }
@@ -740,8 +750,8 @@ namespace eval RolePlayingDB3 {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a field.  Text cannot be directly edited!"
 	    return
 	  }
-	  foreach {name attrlist args} $d {break}
-	  if {"$name" ne "Field"} {
+	  foreach {tag attrlist args} $d {break}
+	  if {"$tag" ne "Field"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a field.  Only fields can be edited!"
 	    return
 	  }
@@ -776,7 +786,7 @@ namespace eval RolePlayingDB3 {
 		  append text " $n=\"$v\""
 		}
 	      }
-	      $templatetree itemconfigure "$thefield" -text $text -data [list $name  $attrlist $args]
+	      $templatetree itemconfigure "$thefield" -text $text -data [list $tag $attrlist $args]
 	      $self _regenerateXMLFromTree
 	    }
 	  }
@@ -802,10 +812,10 @@ namespace eval RolePlayingDB3 {
       set d [$templatetree itemcget "$item" -data]
 #      puts stderr "*** $self _postItemMenu: item = $item, t = $t, d = $d"
       if {[string is integer -strict "$item"] && "$t" eq "$d"} {return};# Text
-      foreach {name attrlist args} $d {break}
+      foreach {tag attrlist args} $d {break}
       menu $mpath -tearoff no
-      set iscontainer [expr {"$name" ne "Field"}]
-#      puts stderr "*** $self _postItemMenu: iscontainer = $iscontainer, name = $name"
+      set iscontainer [expr {"$tag" ne "Field"}]
+#      puts stderr "*** $self _postItemMenu: iscontainer = $iscontainer, tag = $tag"
       if {$iscontainer} {
 	$mpath add command -label "Add Field" -command [mymethod _addfield $item $mpath]
 	$mpath add command -label "Edit Text" -command [mymethod _edittext $item $mpath]

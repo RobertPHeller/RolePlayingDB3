@@ -344,11 +344,12 @@ namespace eval RolePlayingDB3 {
       $sheetframe recreateXML [file join /$path xml sheet.xml]
     }
     method _filewidgethandler {curfile} {
+      if {"$curfile" eq ""} {return $curfile}
       if {[file pathtype "$curfile"] eq "relative" &&
 	  "media" eq [lindex [file split $curfile] 0]} {
 	return "$curfile"
       } else {
-	file copy "$curfile" [file join /$path media [file tail $curfile]]
+	file copy -force "$curfile" [file join /$path media [file tail $curfile]]
 	return "[file join media [file tail $curfile]]"
       }
     }

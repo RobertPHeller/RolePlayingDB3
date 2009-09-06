@@ -488,11 +488,12 @@ namespace eval RolePlayingDB3 {
       $mediatree redrawdirtree
     }
     method _filewidgethandler {curfile} {
+      if {"$curfile" eq ""} {return $curfile}
       if {[file pathtype "$curfile"] eq "relative" &&
 	  "media" eq [lindex [file split $curfile] 0]} {
 	return "$curfile"
       } else {
-	file copy "$curfile" [file join /$path media [file tail $curfile]]
+	file copy -force "$curfile" [file join /$path media [file tail $curfile]]
 	set needmediatreeupdated yes
 	return "[file join media [file tail $curfile]]"
       }
@@ -765,7 +766,7 @@ namespace eval RolePlayingDB3 {
     <rpgv3:Canvas side="left" id="map" background="gray" />
     <rpgv3:Buttonbox side="right" orient="vertical" id="zoombuttons">
       <rpgv3:Bi label="Zoom In"  id="zoomin" />
-      <rpgv3:Bi label="Zoom To"  id="zoomto" />
+      <rpgv3:Bi label="Zoom &gt;"  id="zoomto" />
       <rpgv3:Bi label="Zoom Out" id="zoomout" />
     </rpgv3:Buttonbox >
   </rpgv3:LevelMap >  
@@ -1051,11 +1052,12 @@ namespace eval RolePlayingDB3 {
     }
     method updatemediatree {} {$options(-mapeditor) updatemediatree}
     method _filewidgethandler {curfile} {
+      if {"$curfile" eq ""} {return $curfile}
       if {[file pathtype "$curfile"] eq "relative" &&
 	  "media" eq [lindex [file split $curfile] 0]} {
 	return "$curfile"
       } else {
-	file copy "$curfile" [file join $mapbundlemountpoint media [file tail $curfile]]
+	file copy -force "$curfile" [file join $mapbundlemountpoint media [file tail $curfile]]
 	set needmediatreeupdated yes
 	return "[file join media [file tail $curfile]]"
       }
@@ -1206,26 +1208,9 @@ namespace eval RolePlayingDB3 {
     component   e_xLE
     component   e_yLE
     component   e_imfileFE
-    component   e_otherSpaceLevelLE
-    component   e_otherSpaceNameLE
+    component   e_otherSpaceLevelFE
+    component   e_otherSpaceNameFE
     component   e_sheetFileFE
-
-    proc quoteXML {text} {
-      regsub -all {&} $text {&amp;} quoted
-      regsub -all {<} $quoted {&lt;} quoted
-      regsub -all {>} $quoted {&gt;} quoted
-      regsub -all {'} $quoted {&apos;} quoted
-      regsub -all {"} $quoted {&quot;} quoted
-      return "$quoted"
-    }
-    proc unquoteXML {text} {
-      regsub -all {&quot;} $text {"} unquoted
-      regsub -all {&apos;} $unquoted {'} unquoted
-      regsub -all {&gt;} $unquoted {>} unquoted
-      regsub -all {&lt;} $unquoted {<} unquoted
-      regsub -all {&amp;} $unquoted {&} unquoted
-      return "$unquoted"
-    }
 
     proc isodd {n} {return [expr {($n % 1) == 1}]}
     proc getFromAttrList {key attrlist {default {}}} {
@@ -1236,7 +1221,7 @@ namespace eval RolePlayingDB3 {
 	return $default
       } else {
         incr index
-	return [unquoteXML [lindex $attrlist $index]]
+	return [lindex $attrlist $index]
       }
     }
     proc insertOrReplaceInAttrList {key value attrlistVar} {
@@ -1245,10 +1230,10 @@ namespace eval RolePlayingDB3 {
       set index [lsearch $attrlist $key]
 #      puts stderr "*** insertOrReplaceInAttrList: index = $index"
       if {$index < 0 || [isodd $index]} {
-	lappend attrlist $key "[quoteXML $value]"
+	lappend attrlist $key "$value"
       } else {
 	incr index
-	set attrlist [lreplace $attrlist $index $index "[quoteXML $value]"]
+	set attrlist [lreplace $attrlist $index $index "$value"]
       }
 #      puts stderr "*** insertOrReplaceInAttrList: attrlist = $attrlist"
     }
@@ -1266,24 +1251,26 @@ namespace eval RolePlayingDB3 {
   <rpgv3:SpaceContents name="Space Contents">Space Contents
     <rpgv3:Items name="Items" side="right">List of items
       <rpgv3:List id="itemlist" />
+      <rpgv3:Buttonbox orient="horizontal" fill="x" expand="no" >
+	<rpgv3:Bi label="Add New Item" id="addnewitem" />
+	<rpgv3:Bi label="Edit Item"    id="edititem" />
+	<rpgv3:Bi label="Delete Item"  id="deleteitem" />
+      </rpgv3:Buttonbox>
     </rpgv3:Items>
     <rpgv3:Exits name="Exits" side="left" >List of exits
       <rpgv3:List id="exitlist" />
+      <rpgv3:Buttonbox orient="horizontal" fill="x" expand="no" >
+	<rpgv3:Bi label="Add New Exit" id="addnewexit" />
+	<rpgv3:Bi label="Edit Exit"    id="editexit" />
+	<rpgv3:Bi label="Delete Exit"  id="deleteexit" />
+      </rpgv3:Buttonbox>
     </rpgv3:Exits>
   </rpgv3:SpaceContents >
-  <rpgv3:Buttonbox orient="horizontal" fill="x" expand="no" >
-    <rpgv3:Bi label="Add New Item" id="addnewitem" />
-    <rpgv3:Bi label="Edit Item"    id="edititem" />
-    <rpgv3:Bi label="Delete Item"  id="deleteitem" />
-    <rpgv3:Bi label="Add New Exit" id="addnewexit" />
-    <rpgv3:Bi label="Edit Exit"    id="editexit" />
-    <rpgv3:Bi label="Delete Exit"  id="deleteexit" />
-  </rpgv3:Buttonbox>
   <rpgv3:SpaceMap name="Space Map">Space Map
     <rpgv3:Canvas name="Space Map Canvas" id="map" background="gray" side="left" />
     <rpgv3:Buttonbox orient="vertical" fill="both" side="right" expand="no" id="zoombuttons" >
       <rpgv3:Bi label="Zoom In"  id="zoomin" />
-      <rpgv3:Bi label="Zoom to" id="zoomto" />
+      <rpgv3:Bi label="Zoom &gt;" id="zoomto" />
       <rpgv3:Bi label="Zoom Out" id="zoomout" />
     </rpgv3:Buttonbox>
   </rpgv3:SpaceMap>
@@ -1321,7 +1308,7 @@ namespace eval RolePlayingDB3 {
       }
       if {[file exists "$space"]} {
 	tk_messageBox -parent $parent -type ok -icon info -message "Space [file rootname [file tail $space]] already exists!"
-        return
+	return
       }
       set newTop [RolePlayingDB3::RPGToplevel \
 		.space%AUTO% \
@@ -1366,7 +1353,7 @@ namespace eval RolePlayingDB3 {
 	$options(-leveleditor) close -closingallwindows yes
       }
       if {!$dontsave} {
-        if {!$dontask} {
+	if {!$dontask} {
 	  if {$isdirty} {
 	    set ans [tk_messageBox -type yesnocancel -icon question \
 				-parent $win \
@@ -1394,7 +1381,7 @@ namespace eval RolePlayingDB3 {
 	set firstsave yes
 	set isnew yes
 	set xmlfile $options(-spacefile)
-        set isdirty yes
+	set isdirty yes
       } elseif {[file exists $options(-spacefile)]} {
 	set xmlfile {}
 	if {[catch {open $options(-spacefile) r} shfp]} {
@@ -1534,11 +1521,12 @@ namespace eval RolePlayingDB3 {
       if {$needmediatreeupdated} {$options(-leveleditor) updatemediatree}
     }
     method _filewidgethandler {curfile} {
+      if {"$curfile" eq ""} {return $curfile}
       if {[file pathtype "$curfile"] eq "relative" &&
 	  "media" eq [lindex [file split $curfile] 0]} {
 	return "$curfile"
       } else {
-	file copy "$curfile" [file join $options(-mapbundlemountpoint) media [file tail $curfile]]
+	file copy -force "$curfile" [file join $options(-mapbundlemountpoint) media [file tail $curfile]]
 	set needmediatreeupdated yes
 	return "[file join media [file tail $curfile]]"
       }
@@ -1560,29 +1548,29 @@ namespace eval RolePlayingDB3 {
 						      -labelwidth 10
       pack $i_descrLE -fill x
       install i_xLE using LabelSpinBox $frame.xLE -label "X:" -labelwidth 10 \
-					        -range {-320 320 1}
+						-range {-320 320 1}
       pack $i_xLE -fill x
       install i_yLE using LabelSpinBox $frame.yLE -label "Y:" -labelwidth 10 \
-					        -range {-320 320 1}
+						-range {-320 320 1}
       pack $i_yLE -fill x
       install i_imfileFE using FileEntry $frame.imfileFE -label "Image:" \
 						       -labelwidth 10 \
 		       -filetypes  { 
-				{"BMP Files"        {.bmp}              }
-				{"GIF Files"        {.gif .GIF}     GIFf}
+				{"BMP Files"	{.bmp}	      }
+				{"GIF Files"	{.gif .GIF}     GIFf}
 				{"JPEG Files"       {.jpeg .jpg}    JPEG}
-				{"PNG Files"        {.png}          PNGF}
+				{"PNG Files"	{.png}	  PNGF}
 				{"TIFF Files"       {.tiff .tif}    TIFF}
-				{"XBM Files"        {.xbm}              }
-				{"XPM Files"        {.xpm}              }
-				{"Postscript Files" {.ps .eps}          } 
-				{"All Files"        *                   } }
+				{"XBM Files"	{.xbm}	      }
+				{"XPM Files"	{.xpm}	      }
+				{"Postscript Files" {.ps .eps}	  } 
+				{"All Files"	*		   } }
       pack $i_imfileFE -fill x
       install i_sheetFileFE using FileEntry $frame.sheetFileFE -label "Sheet File:" \
 							  -labelwidth 10 \
 			-filetypes  {
-				{"Sheet Files"      {*.rpg}             }
-				{"All Files"        *                   } }
+				{"Sheet Files"      {*.rpg}	     }
+				{"All Files"	*		   } }
       pack $i_sheetFileFE -fill x
       install _exitDialog using Dialog $baseW.exitDialog \
       			-image [::RolePlayingDB3::MapEditor getDialogIcon] \
@@ -1593,46 +1581,46 @@ namespace eval RolePlayingDB3 {
       $_exitDialog add -name cancel -text {Cancel}
       set frame [$_exitDialog getframe]
       install e_nameLE using LabelEntry $frame.nameLE -label "Name:" \
-						    -labelwidth 10
+						    -labelwidth 14
       pack $e_nameLE -fill x
       install e_descrLE using LabelEntry $frame.descrLE -label "Description:" \
-						      -labelwidth 10
+						      -labelwidth 14
       pack $e_descrLE -fill x
-      install e_xLE using LabelSpinBox $frame.xLE -label "X:" -labelwidth 10 \
-					        -range {-320 320 1}
+      install e_xLE using LabelSpinBox $frame.xLE -label "X:" -labelwidth 14 \
+						-range {-320 320 1}
       pack $e_xLE -fill x
-      install e_yLE using LabelSpinBox $frame.yLE -label "Y:" -labelwidth 10 \
-					        -range {-320 320 1}
+      install e_yLE using LabelSpinBox $frame.yLE -label "Y:" -labelwidth 14 \
+						-range {-320 320 1}
       pack $e_yLE -fill x
       install e_imfileFE using FileEntry $frame.imfileFE -label "Image:" \
-						       -labelwidth 10 \
+						       -labelwidth 14 \
 		       -filetypes  { 
-				{"BMP Files"        {.bmp}              }
-				{"GIF Files"        {.gif .GIF}     GIFf}
+				{"BMP Files"	{.bmp}	      }
+				{"GIF Files"	{.gif .GIF}     GIFf}
 				{"JPEG Files"       {.jpeg .jpg}    JPEG}
-				{"PNG Files"        {.png}          PNGF}
+				{"PNG Files"	{.png}	  PNGF}
 				{"TIFF Files"       {.tiff .tif}    TIFF}
-				{"XBM Files"        {.xbm}              }
-				{"XPM Files"        {.xpm}              }
-				{"Postscript Files" {.ps .eps}          } 
-				{"All Files"        *                   } }
+				{"XBM Files"	{.xbm}	      }
+				{"XPM Files"	{.xpm}	      }
+				{"Postscript Files" {.ps .eps}	  } 
+				{"All Files"	*		   } }
       pack $e_imfileFE -fill x
-      install e_otherSpaceLevelLE using FileEntry $frame.otherSpaceLevelLE \
+      install e_otherSpaceLevelFE using FileEntry $frame.otherSpaceLevelFE \
 			-filedialog directory \
 			-text [file dirname $options(-spacefile)] \
-			-label "Exit to level:" -labelwidth 10
-      pack $e_otherSpaceLevelLE -fill x
-      install e_otherSpaceNameLE  using FileEntry $frame.otherSpaceNameLE \
+			-label "Exit to level:" -labelwidth 14
+      pack $e_otherSpaceLevelFE -fill x
+      install e_otherSpaceNameFE  using FileEntry $frame.otherSpaceNameFE \
 			-text $options(-spacefile) \
 			-filetypes  {
-				{"Space Files"     {*.xml}             } } \
-			-label "Exit to space:" -labelwidth 10
-      pack $e_otherSpaceNameLE -fill x
+				{"Space Files"     {*.xml}	     } } \
+			-label "Exit to space:" -labelwidth 14
+      pack $e_otherSpaceNameFE -fill x
       install e_sheetFileFE using FileEntry $frame.sheetFileFE -label "Sheet File:" \
-							  -labelwidth 10 \
+							  -labelwidth 14 \
 			-filetypes  {
-				{"Sheet Files"      {*.rpg}             }
-				{"All Files"        *                   } }
+				{"Sheet Files"      {*.rpg}	     }
+				{"All Files"	*		   } }
       pack $e_sheetFileFE -fill x
     }
     method _addnewitem {} {
@@ -1647,7 +1635,7 @@ namespace eval RolePlayingDB3 {
       insertOrReplaceInAttrList Y "[$i_yLE cget -text]" attrList
       set needmediatreeupdated no
       insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$i_imfileFE cget -text]"] attrList
-      insertOrReplaceInAttrList sheet "[$i_sheetFileFE cget -text]" attrList
+      insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$i_sheetFileFE cget -text]"] attrList
       puts stderr "*** $self _addnewitem: attrList = $attrList"
       $itemlist insert end #auto -text "$descr" -data "$attrList"
       $self redrawspace
@@ -1662,12 +1650,12 @@ namespace eval RolePlayingDB3 {
       set attrList [$itemlist itemcget $index -data]
       set descr    [$itemlist itemcget $index -text]
       $_itemDialog itemconfigure 0 -text {Update}
-      $i_nameLE configure -text "[getFromAttrList name]"
+      $i_nameLE configure -text "[getFromAttrList name $attrList]"
       $i_descrLE configure -text "$descr"
-      $i_xLE configure -text [getFromAttrList X]
-      $i_yLE configure -text [getFromAttrList Y]
-      $i_imfileFE configure -text [getFromAttrList imfile]
-      $i_sheetFileFE configure -text [getFromAttrList sheet]
+      $i_xLE configure -text [getFromAttrList X $attrList 0]
+      $i_yLE configure -text [getFromAttrList Y $attrList 0]
+      $i_imfileFE configure -text [getFromAttrList imfile $attrList]
+      $i_sheetFileFE configure -text [getFromAttrList sheet $attrList]
       set ans [$_itemDialog draw]
       if {$ans == 1} {return}
       insertOrReplaceInAttrList name "[$i_nameLE cget -text]" attrList
@@ -1676,7 +1664,7 @@ namespace eval RolePlayingDB3 {
       insertOrReplaceInAttrList Y "[$i_yLE cget -text]" attrList
       set needmediatreeupdated no
       insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$i_imfileFE cget -text]"] attrList
-      insertOrReplaceInAttrList sheet "[$i_sheetFileFE cget -text]" attrList
+      insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$i_sheetFileFE cget -text]"] attrList
       $itemlist itemconfigure $index -data $attrList
       $itemlist itemconfigure $index -text $descr
       $self redrawspace
@@ -1688,6 +1676,48 @@ namespace eval RolePlayingDB3 {
     }
     method _addnewexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
+      $_exitDialog itemconfigure 0 -text {Create}
+      set ans [$_exitDialog draw]
+      if {$ans == 1} {return}
+      set attrList [list]
+      insertOrReplaceInAttrList name "[$e_nameLE cget -text]" attrList
+      set descr "[$e_descrLE cget -text]"
+      insertOrReplaceInAttrList X "[$e_xLE cget -text]" attrList
+      insertOrReplaceInAttrList Y "[$e_yLE cget -text]" attrList
+      set needmediatreeupdated no
+      insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$e_imfileFE cget -text]"] attrList
+      insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$e_sheetFileFE cget -text]"] attrList
+      set spacelevel [$self _checkIsLevel "[$e_otherSpaceLevelFE cget -text]"]
+      if {"$spacelevel" eq ""} {return}
+      insertOrReplaceInAttrList otherlevel "$spacelevel" attrList
+      set spacename [$self _checkIsSpaceOnLevel "[$e_otherSpaceSpaceFE cget -text]" "$spacelevel"]
+      if {"$spacename" eq ""} {return}
+      insertOrReplaceInAttrList otherspace "$spacename" attrList
+      puts stderr "*** $self _addnewexit: attrList = $attrList"
+      $exitlist insert end #auto -text "$descr" -data "$attrList"
+      $self redrawspace
+      set isdirty yes
+      if {$needmediatreeupdated} {$options(-leveleditor) updatemediatree}
+    }
+    method _checkIsLevel {leveldir} {
+      if {[catch {$options(-leveleditor) validateleveldir -leveldir "$leveldir"}
+		 ]} {
+	tk_messageBox  -parent $win -type ok -icon error \
+			-message "[file tail $leveldir] is not a valid level!"
+	return {}
+      } else {
+	return "$leveldir"
+      }
+    }
+    method _checkIsSpaceOnLevel {spacefile leveldir} {
+      if {[file dirname "$spacefile"] eq "$leveldir"} {
+	return "$spacefile"
+      } else {
+        tk_messageBox -type ok -icon error -parent $win \
+			-message "[file rootname [file tail $spacefile]] is not on [file tail $leveldir]!"
+
+	return {}
+      }
     }
     method _editexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
