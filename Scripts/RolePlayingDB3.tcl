@@ -364,16 +364,20 @@ namespace eval RolePlayingDB3 {
 					     -progressmax 100
       pack $main -fill both -expand yes
       set additionalOpts [list]
+#      puts stderr "*** $type create: about to process [list $args]"
       foreach opt {-sheetclass -openfilename -mapbundlemountpoint -mapeditor \
 		   -leveldir -spacefile -leveleditor} {
         set optval [from args $opt {}]
+#	puts stderr "*** [list $type create: opt = $opt, optval = $optval]"
 	if {"$optval" ne ""} {lappend additionalOpts $opt $optval}
       }
+#      puts stderr "*** [list $type create: additionalOpts = $additionalOpts]"
       eval [list install mainframe using $options(-mainframeconstructor) \
 				[$main getframe].mainframe \
 				-template $options(-mainframetemplate)] \
 		$additionalOpts
       pack $mainframe -fill both -expand yes
+#      puts stderr "*** $type create: about to call [list $self configurelist $args]"
       $self configurelist $args
       wm withdraw $win
       update idle
@@ -431,7 +435,7 @@ namespace eval RolePlayingDB3 {
     }
     typemethod closeallwindows {} {
       foreach w [array names Toplevels] {
-	$w close
+	catch {$w close -closingallwindows yes}
       }
     }
   }

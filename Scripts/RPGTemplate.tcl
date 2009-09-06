@@ -236,7 +236,7 @@ namespace eval RolePlayingDB3 {
     }
     method print {} {
     }
-    method close {} {
+    method close {args} {
       if {$isdirty} {
 	set ans [tk_messageBox -type yesnocancel -icon question \
 				-message "Save data before closing window?"]

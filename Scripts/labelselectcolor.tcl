@@ -74,8 +74,6 @@
 #     - LabelSelectColor::configure
 #     - LabelSelectColor::cget
 #     - LabelSelectColor::bind
-#     - LabelSelectColor::setvalue
-#     - LabelSelectColor::getvalue
 # ------------------------------------------------------------------------------
 
 namespace eval LabelSelectColor {
@@ -85,6 +83,9 @@ namespace eval LabelSelectColor {
     proc use {} {}
 
     Widget::define LabelSelectColor labelselectcolor Entry Button LabelFrame
+    Widget::declare LabelSelectColor {
+	{-modifycmd String "" 0}
+    }
 
     Widget::bwinclude LabelSelectColor LabelFrame .labf \
         remove {-relief -borderwidth -focus} \
@@ -169,6 +170,8 @@ proc LabelSelectColor::ColorPopup  {path} {
 				-type popup]
   if {[string length "$newcolor"] > 0} {
      $path.selcolor configure -text "$newcolor"
+     set modifycmd [Widget::getoption $path -modifycmd]
+     if {"$modifycmd" ne ""} {uplevel \#0 $modifycmd}
   }
 }
 
@@ -212,12 +215,23 @@ proc LabelSelectColor::_path_command { path cmd larg } {
     if { [string equal $cmd "configure"] ||
          [string equal $cmd "cget"] ||
          [string equal $cmd ""] ||
-	 [string equal $cmd "setvalue"] ||
-	 [string equal $cmd "getvalue"]} {
+	 [string equal $cmd "bind"]} {
         return [eval [list LabelSelectColor::$cmd $path] $larg]
     } else {
-        return [eval [list $path.e:cmd $cmd] $larg]
+        return [eval [list $path.selcolor:cmd $cmd] $larg]
     }
+}
+
+# ------------------------------------------------------------------------------
+#  Command LabelSelectColor::bind
+# ------------------------------------------------------------------------------
+proc LabelSelectColor::bind { path args } {
+# Bind function.  Passthrough to the entry widget.
+# <in> path -- The path of the megawidget.
+# <in> args -- Bind arguments
+# [index] FileEntry::bind!procedure
+
+    return [eval ::bind [list $path.selcolor] $args]
 }
 
 
