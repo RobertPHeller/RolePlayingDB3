@@ -67,6 +67,8 @@ namespace eval RolePlayingDB3 {
     option {-mapeditor mapEditor MapEditor} \
 		-readonly yes -default {} -validatemethod validatemapeditor
     method validatemapeditor {option value} {
+#
+
 #      puts stderr "*** $self validatemapeditor $option $value"
 #      puts stderr "*** $self validatemapeditor: winfo exists $value = [winfo exists $value]"
 #      puts stderr "*** $self validatemapeditor: winfo toplevel $value = [winfo toplevel $value]"
@@ -84,6 +86,9 @@ namespace eval RolePlayingDB3 {
     option {-leveleditor levelEditor LevelEditor} \
 		-readonly yes -default {} -validatemethod validatemapeditor
     method validatemapeditor {option value} {
+#
+
+
 #      puts stderr "*** $self validateleveleditor $option $value"
 #      puts stderr "*** $self validateleveleditor: winfo exists $value = [winfo exists $value]"
 #      puts stderr "*** $self validateleveleditor: winfo toplevel $value = [winfo toplevel $value]"
@@ -101,6 +106,9 @@ namespace eval RolePlayingDB3 {
     option {-leveldir levelDir LevelDir} \
 		-readonly yes -default {} -validatemethod validateleveldir
     method validateleveldir {option value} {
+#
+
+
 #      puts stderr "*** [list $self validateleveldir $option $value]"
       if {(([file exists $value] && [file isdirectory $value]) ||
 	   ![file exists $value]) &&
@@ -116,6 +124,8 @@ namespace eval RolePlayingDB3 {
     option {-spacefile spaceFile SpaceFile} \
 		-readonly yes -default {} -validatemethod validatespacefile
     method validatespacefile {option value} {
+#
+
 #      puts stderr "*** [list $self validatespacefile $option $value]"
       if {![file isdirectory $value] && 
 	  (([file exists $value] && [file writable $value]) ||
@@ -442,6 +452,8 @@ namespace eval RolePlayingDB3 {
       $mediatree configure -directory [file join /$path media]
     }
     method _sortlevelsbydepth {la lb} {
+#
+
 #      puts stderr "*** $self _sortlevelsbydepth $la $lb"
       if {[catch {open [file join $la levelinfo.xml] r} lfp]} {
 	error "Illformed map bundle: [file join $la levelinfo.xml] cannot be opened: $lfp"
@@ -466,6 +478,8 @@ namespace eval RolePlayingDB3 {
       }
     }
     method _matchfield {matchname tag attrlist arglist} {
+#
+
 #      puts stderr "*** $self _matchfield: matchname = $matchname, tag = $tag, attrlist = $attrlist"
       if {[string totitle $tag] eq "Field"} {
         foreach {n v} $attrlist {
@@ -1000,6 +1014,8 @@ namespace eval RolePlayingDB3 {
       $map configure -scrollregion [$map bbox all]
     }
     method _matchfield {matchname tag attrlist arglist} {
+#
+
 #      puts stderr "*** $self _matchfield: matchname = $matchname, tag = $tag, attrlist = $attrlist"
       if {[string totitle $tag] eq "Field"} {
         foreach {n v} $attrlist {
@@ -1212,8 +1228,12 @@ namespace eval RolePlayingDB3 {
     component   e_otherSpaceNameFE
     component   e_sheetFileFE
 
-    proc isodd {n} {return [expr {($n % 1) == 1}]}
+    proc isodd {n} {
+      return [expr {($n % 1) == 1}]
+    }
     proc getFromAttrList {key attrlist {default {}}} {
+#
+
 #      puts stderr "*** [list getFromAttrList $key $attrlist $default]"
       set index [lsearch $attrlist $key]
 #      puts stderr "*** getFromAttrList: index = $index"

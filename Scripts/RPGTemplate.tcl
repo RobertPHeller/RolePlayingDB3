@@ -136,6 +136,9 @@ namespace eval RolePlayingDB3 {
       $newTop opennew
     }
     method opennew {} {
+#
+
+
       set currentFilename {}
       set currentBaseFilename *noname*
       $sidebartree configure -label "$currentBaseFilename"

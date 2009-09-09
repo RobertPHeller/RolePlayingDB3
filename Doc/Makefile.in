@@ -210,6 +210,7 @@ target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
 SUBDIRS = Support User Internals
+EXTRA_DIST = Cover1.png MyTitlepage.sty RPG.bib titlepage.tex
 all: all-recursive
 
 .SUFFIXES:

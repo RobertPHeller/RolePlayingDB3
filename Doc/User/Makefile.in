@@ -13,10 +13,10 @@
 # PARTICULAR PURPOSE.
 
 @SET_MAKE@
+
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 VPATH = @srcdir@
-pkgdatadir = $(datadir)/@PACKAGE@
 pkglibdir = $(libdir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
 top_builddir = ../..
@@ -46,7 +46,17 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 SOURCES =
 DIST_SOURCES =
+am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
+am__vpath_adj = case $$p in \
+    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
+    *) f=$$p;; \
+  esac;
+am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
+am__installdirs = "$(DESTDIR)$(pkgdatadir)"
+pkgdataDATA_INSTALL = $(INSTALL_DATA)
+DATA = $(noinst_DATA) $(pkgdata_DATA)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+pkgdatadir = $(datadir)/$(PACKAGE)/Doc
 ACLOCAL = @ACLOCAL@
 AMDEP_FALSE = @AMDEP_FALSE@
 AMDEP_TRUE = @AMDEP_TRUE@
@@ -200,7 +210,27 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-all: all-am
+USERMAN_TEXS = UserManual.tex Preface.tex Introduction.tex \
+	Help.tex Tutorial.tex Reference.tex
+
+USERMAN_FIGS = CharacterEditor.png   CreateOrOpenTemplate.png  \
+	       TemplateEditor1.png   CreateOrOpenChar.png  \
+	       MainWindow.png        TemplateEditor2.png
+
+USERMAN = UserManual
+USERMAN_PDF = $(USERMAN).pdf
+USERMANHBase = UserManual
+USERMAN_HTML = $(USERMANHBase)/$(USERMAN).html
+BIBLIO = ../RPG.bib
+EXTRA_DIST = $(USERMAN_TEXS) $(USERMAN_FIGS) COPYING.tex
+pkgdata_DATA = $(USERMAN_PDF) 
+noinst_DATA = $(USERMAN_HTML)
+CLEANFILES = UserManual.pdf *.aux *.bbl *.blg *.idx *.ilg \
+	*.ind *.lof *.lot *.lol *.toc *.css UserManual
+
+BUILT_SOURCES = $(USERMAN)_Version.tex
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -242,6 +272,23 @@ clean-libtool:
 distclean-libtool:
 	-rm -f libtool
 uninstall-info-am:
+install-pkgdataDATA: $(pkgdata_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(pkgdatadir)" || $(mkdir_p) "$(DESTDIR)$(pkgdatadir)"
+	@list='$(pkgdata_DATA)'; for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  f=$(am__strip_dir) \
+	  echo " $(pkgdataDATA_INSTALL) '$$d$$p' '$(DESTDIR)$(pkgdatadir)/$$f'"; \
+	  $(pkgdataDATA_INSTALL) "$$d$$p" "$(DESTDIR)$(pkgdatadir)/$$f"; \
+	done
+
+uninstall-pkgdataDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(pkgdata_DATA)'; for p in $$list; do \
+	  f=$(am__strip_dir) \
+	  echo " rm -f '$(DESTDIR)$(pkgdatadir)/$$f'"; \
+	  rm -f "$(DESTDIR)$(pkgdatadir)/$$f"; \
+	done
 tags: TAGS
 TAGS:
 
@@ -277,10 +324,15 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: check-am
-all-am: Makefile
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
+all-am: Makefile $(DATA)
 installdirs:
-install: install-am
+	for dir in "$(DESTDIR)$(pkgdatadir)"; do \
+	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
+	done
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -297,6 +349,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -304,6 +357,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-libtool mostlyclean-am
@@ -322,7 +376,9 @@ info: info-am
 
 info-am:
 
-install-data-am:
+install-data-am: install-pkgdataDATA
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) install-data-hook
 
 install-exec-am:
 
@@ -348,18 +404,73 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-info-am
+uninstall-am: uninstall-info-am uninstall-pkgdataDATA
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
 	distclean distclean-generic distclean-libtool distdir dvi \
 	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-exec install-exec-am \
-	install-info install-info-am install-man install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am \
-	uninstall-info-am
+	install-data install-data-am install-data-hook install-exec \
+	install-exec-am install-info install-info-am install-man \
+	install-pkgdataDATA install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
+	ps ps-am uninstall uninstall-am uninstall-hook \
+	uninstall-info-am uninstall-pkgdataDATA
 
+
+$(USERMAN)_Version.tex : $(top_builddir)/config.status
+	echo '\chapter*{Version}'               >$(USERMAN)_Version.tex
+	echo '\addcontentsline{toc}{chapter}{Version}' \
+						>>$(USERMAN)_Version.tex
+	echo "System version is $(VERSION).\\\\" >>$(USERMAN)_Version.tex
+
+$(USERMAN_PDF) : $(USERMAN_TEXS) $(USERMAN_FIGS) $(BIBLIO) \
+	$(USERMAN)_Version.tex ../MyTitlepage.sty ../titlepage.tex \
+		 COPYING.tex  ../Cover1.png
+	for f in $(USERMAN_TEXS) $(USERMAN_FIGS); do \
+	    if test -f "./$$f"; then continue; else ln -s $(srcdir)/$$f ./; fi; \
+	done
+	-ln -s $(srcdir)/COPYING.tex ./
+	-ln -s $(srcdir)/../Cover1.png ./
+	-ln -s $(srcdir)/$(BIBLIO) ./
+	-ln -s $(srcdir)/../MyTitlepage.sty ./
+	-ln -s $(srcdir)/../titlepage.tex ./
+	$(PDFLATEX) $(USERMAN)
+	-$(BIBTEX) $(USERMAN)
+	echo '\begin{theindex}' > $(USERMAN).ind
+	echo '\item Dummy, 0' >> $(USERMAN).ind
+	echo '\end{theindex}' >> $(USERMAN).ind
+	$(PDFLATEX) $(USERMAN)
+	$(MAKEINDEX) $(USERMAN).idx
+	$(PDFLATEX) $(USERMAN)
+
+$(USERMAN_HTML) : $(USERMAN_PDF)
+	-rm -rf $(USERMANHBase)
+	-mkdir $(USERMANHBase)
+	$(HTLATEX) $(USERMAN) "html,2,info" "" "-d$(USERMANHBase)/"
+	(cd $(USERMANHBase)&&ln -s ../*.png ./)
+	-rm -f zz$(USERMAN).p* $(USERMAN).4ct $(USERMAN).xref \
+		 $(USERMAN).4tc tex4ht.fls $(USERMAN).tmp $(USERMAN).lg \
+		 $(USERMAN).idv $(USERMAN).dvi $(USERMAN)*.html
+
+install-data-hook: $(USERMAN_HTML)
+	$(INSTALL) -d $(DESTDIR)$(pkgdatadir)/$(USERMANHBase)
+	for p in $(USERMANHBase)/*; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  f=$(am__strip_dir) \
+	  echo " $(pkgdataDATA_INSTALL) '$$d$$p' '$(DESTDIR)$(pkgdatadir)/$(USERMANHBase)$$f'"; \
+	  $(pkgdataDATA_INSTALL) "$$d$$p" "$(DESTDIR)$(pkgdatadir)/$(USERMANHBase)/$$f"; \
+	done
+
+uninstall-hook: 
+	for p in $(DESTDIR)$(pkgdatadir)/$(USERMANHBase)/*; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  f=$(am__strip_dir) \
+	  echo " rm -f '$(DESTDIR)$(pkgdatadir)/$(USERMANHBase)$$f'"; \
+	  rm -f "$(DESTDIR)$(pkgdatadir)/$(USERMANHBase)/$$f"; \
+	done
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

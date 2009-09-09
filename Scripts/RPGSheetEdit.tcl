@@ -299,6 +299,8 @@ namespace eval RolePlayingDB3 {
       destroy [winfo toplevel $win]
     }
     constructor {args} {
+#
+
       set options(-template) [from args -template]
       set options(-sheetclass) [from args -sheetclass]
       set options(-openfilename) [from args -openfilename]

@@ -245,6 +245,26 @@ proc RolePlayingDB3::CreateMainWindow {} {
       set y 0
   }
   wm geom .  +$x+$y
+
+  set helpmenu [$Main getmenu help]
+
+  $helpmenu delete "On Keys..."
+  $helpmenu delete "Index..."
+  $helpmenu add command -label "Reference Manual" \
+		-command "::HTMLHelp::HTMLHelp help Reference"
+  $helpmenu entryconfigure "On Help..." \
+		-command "::HTMLHelp::HTMLHelp help Help"
+  $helpmenu entryconfigure "On Version" \
+		-command "::HTMLHelp::HTMLHelp help Version"
+  $helpmenu entryconfigure "Copying" \
+        -command "::HTMLHelp::HTMLHelp help Copying"
+  $helpmenu entryconfigure "Warranty" \
+        -command "::HTMLHelp::HTMLHelp help Warranty"
+  $helpmenu entryconfigure "Tutorial..." \
+	-command "::HTMLHelp::HTMLHelp help Tutorial"
+
+  ::HTMLHelp::HTMLHelp setDefaults "$HelpDir" UserManualli1.html
+
   wm deiconify .
 
 }

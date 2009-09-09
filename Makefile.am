@@ -12,8 +12,10 @@ AllScripts = $(wildcard $(top_srcdir)/Scripts/*.tcl) $(wildcard Scripts/*.tcl)
 LibScripts = $(filter-out %RolePlayingDB3.tcl,$(AllScripts))
 AllImages  = $(wildcard $(top_srcdir)/Scripts/*.gif) \
 		$(wildcard $(top_srcdir)/Scripts/*.png)
+AllHelpDep = Doc/User/UserManual/UserManual.html
+AllHelpFiles = $(wildcard Doc/User/UserManual/*)
 
-RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages)
+RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages) $(AllHelpDep)
 	-rm -rf RolePlayingDB3.vfs
 	$(TCLKIT) $(top_srcdir)/BuildScripts/sdx.kit qwrap \
 					$(srcdir)/Scripts/RolePlayingDB3.tcl
@@ -35,6 +37,8 @@ RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages)
 		Common 
 	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitFile.kit -srcdir $(srcdir) \
 		RolePlayingDB3 Images $(AllImages)
+	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitFile.kit -srcdir $(srcdir) \
+		RolePlayingDB3 Help $(AllHelpFiles)
 	$(TCLKIT) $(top_srcdir)/BuildScripts/sdx.kit wrap \
 		RolePlayingDB3$(EXEEXT) \
 		-runtime $(top_srcdir)/BuildData/$(TCLKITRUN)
@@ -49,3 +53,5 @@ $(top_builddir)/Scripts/Version.tcl: $(top_builddir)/config.status
 
 FORCE:
 
+Doc/User/UserManual/UserManual.html: FORCE
+	$(MAKE) -C $(top_builddir)/Doc/User UserManual/UserManual.html
