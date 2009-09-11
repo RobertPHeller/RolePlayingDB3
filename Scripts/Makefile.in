@@ -107,6 +107,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PDF4TCLLIB = @PDF4TCLLIB@
 PDFLATEX = @PDFLATEX@
 PS2PDF = @PS2PDF@
 RANLIB = @RANLIB@
@@ -220,7 +221,7 @@ Images = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
 	  DressingDialogIcon.png MonsterDialogIcon.png SpellDialogIcon.png \
 	  TreasureDialogIcon.png TrickTrapDialogIcon.png \
 	  SheetEditDialogIcon.png LevelBanner.png CreateLevelBanner.png \
-	  MapDialogIcon.png
+	  MapDialogIcon.png largePrinter.gif
 
 BUILT_SOURCES = Version.tcl $(TCLKIT)
 noinst_DATA = Version.tcl

@@ -288,6 +288,23 @@ else
 fi
 AC_SUBST(URILIB)
 
+AC_MSG_CHECKING(pdf4tcl dir)
+PDF4TCLLIB=`echo 'puts $tcl_library'|${HOSTTCLSH}`
+
+dirs="${TCL_PREFIX}/lib/pdf4tcl* ${PDF4TCLLIB}/pdf4tcl*"
+for i in $dirs ; do
+  if test -d "$i" -a -f "$i/pkgIndex.tcl"; then
+    PDF4TCLLIB=`cd $i; pwd`
+  fi
+done
+AC_ARG_WITH(pdf4tcllib, [  --with-pdf4tcllib=DIR          use pdf4tcl from DIR], PDF4TCLLIB=$withval,)
+if test -d $PDF4TCLLIB; then
+   AC_MSG_RESULT([using pdf4tcl library in $PDF4TCLLIB])
+else
+   AC_MSG_ERROR(Pdf4tcl library directory $PDF4TCLLIB doesn't exist)
+fi
+AC_SUBST(PDF4TCLLIB)
+
 AC_PATH_PROGS(UNZIP,unzip)
 
 AC_MSG_CHECKING([Checking target Img, Tclxml,  and tclkit])

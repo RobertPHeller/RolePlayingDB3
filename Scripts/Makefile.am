@@ -15,7 +15,7 @@ Images  = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
 	  DressingDialogIcon.png MonsterDialogIcon.png SpellDialogIcon.png \
 	  TreasureDialogIcon.png TrickTrapDialogIcon.png \
 	  SheetEditDialogIcon.png LevelBanner.png CreateLevelBanner.png \
-	  MapDialogIcon.png
+	  MapDialogIcon.png largePrinter.gif
 	  
 BUILT_SOURCES = Version.tcl
 noinst_DATA = Version.tcl

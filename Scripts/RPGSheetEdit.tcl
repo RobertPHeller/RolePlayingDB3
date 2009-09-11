@@ -40,6 +40,7 @@ package require vfs::mk4
 package require ZipArchive
 package require RPGUtilities
 package require BWLabelComboBox
+package require pdf4tcl
 
 namespace eval RolePlayingDB3 {
   snit::widget SheetEdit {
@@ -283,6 +284,15 @@ namespace eval RolePlayingDB3 {
       }
     }
     method print {} {
+      set printfile "[file rootname $currentFilename].pdf"
+      if {"$printfile" eq ".pdf"} {set printfile "$options(-sheetclass).pdf"}
+      set pdfobj [::RolePlayingDB3::PrintDialog draw \
+					-parent $win \
+					-what $options(-sheetclass) \
+					-filename $printfile]
+      if {"$pdfobj" eq ""} {return}
+      $sheetframe outputXMLToPDF $pdfobj $options(-sheetclass)
+      $pdfobj destroy
     }
     method close {args} {
       if {$isdirty} {
