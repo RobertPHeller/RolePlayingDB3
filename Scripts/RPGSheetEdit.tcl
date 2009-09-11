@@ -286,12 +286,17 @@ namespace eval RolePlayingDB3 {
     method print {} {
       set printfile "[file rootname $currentFilename].pdf"
       if {"$printfile" eq ".pdf"} {set printfile "$options(-sheetclass).pdf"}
-      set pdfobj [::RolePlayingDB3::PrintDialog draw \
+      set pdfobj [::RolePlayingDB3::PrintDialog drawPrintDialog \
 					-parent $win \
 					-what $options(-sheetclass) \
 					-filename $printfile]
       if {"$pdfobj" eq ""} {return}
-      $sheetframe outputXMLToPDF $pdfobj $options(-sheetclass)
+      if {"$currentFilename" eq ""} {
+	set heading "$currentBaseFilename"
+      } else {
+	set heading "$currentFilename"
+      }
+      $sheetframe outputXMLToPDF $pdfobj $heading
       $pdfobj destroy
     }
     method close {args} {

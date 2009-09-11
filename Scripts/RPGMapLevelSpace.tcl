@@ -215,6 +215,14 @@ namespace eval RolePlayingDB3 {
       $canvas scale $index 0 0 $size $size
       $canvas move $index $X $Y
     }
+    ::RolePlayingDB3::GeneratePrintDialog {printLevelsLCB} {
+      set printLevelsLCB [LabelComboBox $frame.printLevelsLCB \
+				-label "Print Levels?" -labelwidth 12 \
+				-editable no \
+				-values {yes no}]
+      pack $printLevelsLCB -fill x
+      $printLevelsLCB setvalue first
+    }
     typeconstructor {
       set bannerImage [image create photo \
 				-file [file join $::RolePlayingDB3::ImageDir \
@@ -222,6 +230,10 @@ namespace eval RolePlayingDB3 {
       set dialogIcon [image create photo \
 				-file [file join $::RolePlayingDB3::ImageDir \
 						 MapDialogIcon.png]]
+      set printerIcon [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						 largePrinter.gif]]
+      set _printdialog {}
       set _editDialog {}
     }
     
@@ -360,6 +372,31 @@ namespace eval RolePlayingDB3 {
       }
     }
     method print {} {
+      set printfile "[file rootname $currentFilename].pdf"
+      if {"$printfile" eq ".pdf"} {set printfile "Map.pdf"}
+      set pdfobj [$type drawPrintDialog \
+				-parent $win \
+				-what Map -filename $printfile]
+      if {"$pdfobj" eq ""} {return}
+      if {"$currentFilename" eq ""} {
+	set heading [file tail "$currentBaseFilename"]
+      } else {
+        set heading [file tail "$currentFilename"]
+      }
+      $mapframe outputXMLToPDF $pdfobj "$heading: map info"
+      set curpage [$mapframe getpageno]
+      set curline [$mapframe getlineno]
+      if {[$printLevelsLCB cget -text]} {
+	foreach l [lsort -command [mymethod _sortlevelsbydepth] \
+				  [glob -nocomplain -type d \
+						[file join /$path Levels *]]] {
+	  ::RolePlayingDB3::LevelEditor printLevel $pdfobj $l curpage curline \
+				"$heading: level info for [file tail $l]" \
+				-mapbundlemountpoint /$path -parent $win \
+				-mapeditor [winfo toplevel $win]
+        }
+      }
+      $pdfobj destroy
     }
     method close {args} {
       set dontsave no
@@ -786,10 +823,22 @@ namespace eval RolePlayingDB3 {
   </rpgv3:LevelMap >  
 </rpgv3:Level>
     }
+    ::RolePlayingDB3::GeneratePrintDialog {printSpacesLCB} {
+      set printSpacesLCB [LabelComboBox $frame.printSpacesLCB \
+				-label "Print Spaces?" -labelwidth 12 \
+				-editable no \
+				-values {yes no}]
+      pack $printSpacesLCB -fill x
+      $printSpacesLCB setvalue first
+    }
     typeconstructor {
       set bannerImage [image create photo \
 				-file [file join $::RolePlayingDB3::ImageDir \
 						 LevelBanner.png]]
+      set printerIcon [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						 largePrinter.gif]]
+      set _printdialog {}
     }
     method new {} {
       $options(-mapeditor) _newlevel -parent $win
@@ -852,8 +901,69 @@ namespace eval RolePlayingDB3 {
     method saveas {{_filename {}}} {
       $options(-mapeditor) saveas $_filename
     }
+    typemethod printLevel {pdfobj leveldir curpageV curlineV heading args} {
+      upvar $curpageV curpage
+      upvar $curlineV curline
+      set mapbundlemountpoint [from args -mapbundlemountpoint]
+      set mapeditor           [from args -mapeditor]
+      set parent              [from args -parent]
+      if {[catch {open [file join $leveldir levelinfo.xml] r} shfp]} {
+	error "Illformed map bundle: [file join $currentLevelDir levelinfo.xml] cannot be opened: $shfp"
+      }
+      set XML [read $shfp]
+      close $shfp
+      set temppath [::RolePlayingDB3::XMLContentEditor $parent.templevel%AUTO% \
+			-xml $XML -isnewobject no -dirtyvariable {} \
+			-filewidgethandler {}  -xmlfile {} \
+			-basedirectory $mapbundlemountpoint]
+      set map [$temppath getElementWidgetById map]
+      foreach s [lsort -dictionary [glob -nocomplain [file join $leveldir *.xml]]] {
+	if {[file tail $s] eq "levelinfo.xml"} {continue}
+	drawonespace_forprint $map $s $mapeditor
+      }
+      $temppath outputXMLToPDF $pdfobj $heading $curpage $curline
+      set curpage [$temppath getpageno]
+      set curline [$temppath getlineno]
+      foreach s [lsort -dictionary [glob -nocomplain [file join $leveldir *.xml]]] {
+	if {[file tail $s] eq "levelinfo.xml"} {continue}
+	::RolePlayingDB3::SpaceEditor printSpace $pdfobj $s curpage curline \
+			"$heading: Space [file rootname [file tail $s]]" \
+			-mapbundlemountpoint $mapbundlemountpoint \
+			-leveldir $leveldir -parent $temppath \
+			-mapeditor $mapeditor
+      }
+      destroy $temppath
+    }
     method print {} {
-      $options(-mapeditor) print
+      #$options(-mapeditor) print
+      set printfile "[file tail $currentLevelDir].pdf"
+      if {"$printfile" eq ".pdf"} {set printfile "Level.pdf"}
+      set pdfobj [$type drawPrintDialog \
+				-parent $win \
+				-what Level -filename $printfile]
+      if {"$pdfobj" eq ""} {return}
+      set heading $currentLevelDir
+      set map [$levelframe getElementWidgetById map]
+      set scalingfactor [expr {1.0 / double($oldscalefactor)}]
+      $map scale all 0 0 $scalingfactor $scalingfactor
+      $map configure -scrollregion [$map bbox all]
+      $levelframe outputXMLToPDF $pdfobj "$heading: level info"
+      set scalingfactor $zoomfactor
+      $map scale all 0 0 $scalingfactor $scalingfactor
+      $map configure -scrollregion [$map bbox all]
+      set curpage [$levelframe getpageno]
+      set curline [$levelframe getlineno]
+      if {[$printSpacesLCB cget -text]} {
+	foreach s [lsort [glob -nocomplain [file join $options(-leveldir) *.xml]]] {
+	  if {[file tail $s] eq "levelinfo.xml"} {continue}
+	  ::RolePlayingDB3::SpaceEditor printSpace $pdfobj $s curpage curline \
+			"$heading: Space [file rootname [file tail $s]]" \
+			-mapbundlemountpoint $options(-mapbundlemountpoint) \
+			-leveldir $options(-leveldir) -parent $win \
+			-mapeditor $options(-mapeditor)
+        }
+      }
+      $pdfobj destroy
     }
     method close {args} {
       set dontask [from args -dontask no]
@@ -976,6 +1086,24 @@ namespace eval RolePlayingDB3 {
       set oldscalefactor $zoomfactor
       $map configure -scrollregion [$map bbox all]
     }
+    proc drawonespace_forprint {canvas spacefile mapeditor} {
+      if {[catch {open $spacefile r} xmlfp]} {
+	error "Illformed map bundle: $spacefile cannot be opened: $xmlfp"
+      }
+      set spacexml [read $xmlfp]
+      set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "X Coord"] 0]
+      set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "Y Coord"] 0]
+      set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "Color"] white]
+      set yc [expr {$Y * 32}]
+      set xc [expr {$X * 32}]
+      if {"[$mapeditor spaceshape]" eq "Hexigonal"} {
+	set xc [expr {$xc + 16}]
+      }
+      $mapeditor drawspace $canvas $xc $yc $color 32 \
+			-tag "[file tail [file rootname $spacefile]]"
+	
+    }
+
     method drawonespace {X Y color spacetag} {
       set map [$levelframe getElementWidgetById map]
       set yc [expr {$Y * 32 * $zoomfactor}]
@@ -1000,9 +1128,9 @@ namespace eval RolePlayingDB3 {
 	}
 	set spacexml [read $xmlfp]
 	close $xmlfp
-	set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [mymethod _matchfield "X Coord"] 0]
-	set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [mymethod _matchfield "Y Coord"] 0]
-	set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [mymethod _matchfield "Color"] white]
+	set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "X Coord"] 0]
+	set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "Y Coord"] 0]
+	set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "Color"] white]
 	set yc [expr {$Y * 32 * $zoomfactor}]
 	set xc [expr {$X * 32 * $zoomfactor}]
 	if {[$options(-mapeditor) spaceshape] eq "Hexigonal"} {
@@ -1013,7 +1141,7 @@ namespace eval RolePlayingDB3 {
       }
       $map configure -scrollregion [$map bbox all]
     }
-    method _matchfield {matchname tag attrlist arglist} {
+    proc _matchfield {matchname tag attrlist arglist} {
 #
 
 #      puts stderr "*** $self _matchfield: matchname = $matchname, tag = $tag, attrlist = $attrlist"
@@ -1363,8 +1491,48 @@ namespace eval RolePlayingDB3 {
     method saveas {{_filename {}}} {
       $options(-leveleditor) saveas $_filename
     }
+    typemethod printSpace {pdfobj spacefile curpageV curlineV heading args} {
+      upvar $curpageV curpage
+      upvar $curlineV curline
+      set mapbundlemountpoint [from args -mapbundlemountpoint]
+      set leveldir	      [from args -leveldir]
+      set parent              [from args -parent]
+      set mapeditor	      [from args -mapeditor]
+      if {[catch {open $spacefile r} shfp]} {
+	error "Illformed map bundle: $spacefile cannot be opened: $shfp"
+      }
+      set XML [read $shfp]
+      close $shfp
+      set temppath [::RolePlayingDB3::XMLContentEditor $parent.tempspace%AUTO% \
+			-xml $XML -isnewobject no -dirtyvariable {} \
+			-filewidgethandler {}  -xmlfile {} \
+			-basedirectory $mapbundlemountpoint]
+      drawspace [$temppath getElementWidgetById map] \
+		[$temppath getElementWidgetById itemlist] \
+		[$temppath getElementWidgetById exitlist] \
+		$mapeditor \
+		[[$temppath getElementWidgetById color] cget -text] \
+		1.0 $mapbundlemountpoint
+      $temppath outputXMLToPDF $pdfobj $heading $curpage $curline
+      set curpage [$temppath getpageno]
+      set curline [$temppath getlineno]
+      destroy $temppath
+    }
     method print {} {
-      $options(-leveleditor) print
+      set printfile "[file rootname [file tail $currentSpaceFile]].pdf"
+      if {"$printfile" eq ".pdf"} {set printfile "Space.pdf"}
+      set pdfobj [::RolePlayingDB3::PrintDialog drawPrintDialog \
+     				-what Space -filename $printfile]
+     
+      if {"$pdfobj" eq ""} {return}
+      set heading $currentSpaceFile
+      set savedzoomfactor $zoomfactor
+      set zoomfactor 1.0
+      $self redrawspace
+      $spaceframe outputXMLToPDF $pdfobj "$heading: space info"
+      set zoomfactor $savedzoomfactor
+      $self redrawspace
+      $pdfobj destroy
     }
     method close {args} {
       set dontask [from args -dontask no]
@@ -1512,28 +1680,34 @@ namespace eval RolePlayingDB3 {
 	}
       }
     }
-    method redrawspace {} {
+    proc drawspace {spacecanvas itemlist exitlist editor color zoomfactor mp} {
       $spacecanvas delete all
-      $options(-leveleditor) drawspace $spacecanvas 0 0 [$self getcolor] \
+      $editor drawspace $spacecanvas 0 0 $color \
 				[expr {$zoomfactor * 320}] \
 				-tag background
-      set itemlist [$spaceframe getElementWidgetById itemlist]
       foreach i [$itemlist items] {
 	set iData [$itemlist itemcget $i -data]
 	set xc [expr {$zoomfactor * [getFromAttrList X $iData 0]}]
 	set yc [expr {$zoomfactor * [getFromAttrList Y $iData 0]}]
-	set imfile [file join $options(-mapbundlemountpoint) [getFromAttrList imfile $iData]]
+	set imfile [file join $mp [getFromAttrList imfile $iData]]
 	$spacecanvas create image $xc $yc -image [image create photo -file $imfile]
       }
-      set exitlist [$spaceframe getElementWidgetById exitlist]
       foreach e [$exitlist items] {
 	set eData [$itemlist itemcget $e -data]
 	set xc [expr {$zoomfactor * [getFromAttrList X $eData 0]}]
 	set yc [expr {$zoomfactor * [getFromAttrList Y $eData 0]}]
-	set imfile [file join $options(-mapbundlemountpoint) [getFromAttrList imfile $eData]]
+	set imfile [file join $mp [getFromAttrList imfile $eData]]
 	$spacecanvas create image $xc $yc -image [image create photo -file $imfile]
       }
       $spacecanvas configure -scrollregion [$spacecanvas bbox all]
+    }
+    method redrawspace {} {
+      drawspace $spacecanvas [$spaceframe getElementWidgetById itemlist] \
+			     [$spaceframe getElementWidgetById exitlist] \
+			     $options(-leveleditor) \
+			     [$self getcolor] \
+			     $zoomfactor \
+			     $options(-mapbundlemountpoint)
     }
     method recreateXML {} {
       set needmediatreeupdated no
@@ -1693,6 +1867,17 @@ namespace eval RolePlayingDB3 {
     }
     method _deleteitem {} {
       set itemlist [$spaceframe getElementWidgetById itemlist]
+      set selection [$itemlist selection get]
+      if {[llength $selection] < 1} {return}
+      set index [lindex $selection 0]
+      set attrList [$itemlist itemcget $index -data]
+      set descr    [$itemlist itemcget $index -text]
+      if {[tk_messageBox -type yesno -default no -icon question -parent $win \
+			 -message "Really delete $descr?"]} {
+	$itemlist delete $index
+	set isdirty yes
+	$self redrawspace
+      }
     }
     method _addnewexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
@@ -1741,9 +1926,55 @@ namespace eval RolePlayingDB3 {
     }
     method _editexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
+      set selection [$exitlistt selection get]
+      if {[llength $selection] < 1} {return}
+      set index [lindex $selection 0]
+      set attrList [$exitlist itemcget $index -data]
+      set descr    [$exitlist itemcget $index -text]
+      $_exitDialog itemconfigure 0 -text {Update}
+      $e_nameLE configure -text "[getFromAttrList name $attrList]"
+      $e_descrLE configure -text "$descr"
+      $e_xLE configure -text "[getFromAttrList X $attrList]"
+      $e_yLE configure -text "[getFromAttrList Y $attrList]"
+      $e_imfileFE configure -text "[getFromAttrList imfile $attrList]"
+      $e_sheetFileFE configure -text "[getFromAttrList sheet $attrList]"
+      $e_otherSpaceLevelFE configure -text "[getFromAttrList otherlevel  $attrList]"
+      $e_otherSpaceSpaceFE configure -text "[getFromAttrList otherspace $attrList]"
+      set ans [$_exitDialog draw]
+      if {$ans == 1} {return}
+      set attrList [list]
+      insertOrReplaceInAttrList name "[$e_nameLE cget -text]" attrList
+      set descr "[$e_descrLE cget -text]"
+      insertOrReplaceInAttrList X "[$e_xLE cget -text]" attrList
+      insertOrReplaceInAttrList Y "[$e_yLE cget -text]" attrList
+      set needmediatreeupdated no
+      insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$e_imfileFE cget -text]"] attrList
+      insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$e_sheetFileFE cget -text]"] attrList
+      set spacelevel [$self _checkIsLevel "[$e_otherSpaceLevelFE cget -text]"]
+      if {"$spacelevel" eq ""} {return}
+      insertOrReplaceInAttrList otherlevel "$spacelevel" attrList
+      set spacename [$self _checkIsSpaceOnLevel "[$e_otherSpaceSpaceFE cget -text]" "$spacelevel"]
+      if {"$spacename" eq ""} {return}
+      insertOrReplaceInAttrList otherspace "$spacename" attrList
+      puts stderr "*** $self _editexit: attrList = $attrList"
+      $exitlist insert end #auto -text "$descr" -data "$attrList"
+      $self redrawspace
+      set isdirty yes
+      if {$needmediatreeupdated} {$options(-leveleditor) updatemediatree}
     }
     method _deleteexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
+      set selection [$exitlistt selection get]
+      if {[llength $selection] < 1} {return}
+      set index [lindex $selection 0]
+      set attrList [$exitlist itemcget $index -data]
+      set descr    [$exitlist itemcget $index -text]
+      if {[tk_messageBox -type yesno -default no -icon question -parent $win \
+      			 -message "Really delete $descr?"]} {
+	$exitlist delete $index
+	set isdirty yes
+	$self redrawspace
+      }
     }
   }
 }

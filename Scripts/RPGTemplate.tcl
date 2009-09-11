@@ -238,6 +238,68 @@ namespace eval RolePlayingDB3 {
       }
     }
     method print {} {
+      set printfile "[file rootname $currentFilename].pdf"
+      if {"$printfile" eq ".pdf"} {set printfile "Template.pdf"}
+      set pdfobj [::RolePlayingDB3::PrintDialog drawPrintDialog \
+					-parent $win \
+					-what Template \
+					-filename $printfile]
+      if {"$pdfobj" eq ""} {return}
+      if {"$currentFilename" eq ""} {
+	set heading [file tail "$currentBaseFilename"]
+      } else {
+	set heading [file tail "$currentFilename"]
+      }
+      $self outputXMLToPDF $pdfobj $heading
+      $pdfobj destroy
+    }
+    variable pageno 0
+    variable lineno 1000    
+    method outputXMLToPDF {pdfobj {heading "Sheet"}} {
+      $pdfobj setFont 10 Courier
+      $pdfobj setLineSpacing [expr {14.0 / 10.0}]
+      set pageno 0
+      set lineno 1000
+      $self _outputXMLToPDF_processNodesAt $heading {} root $pdfobj
+    }
+    method newPDFPage {pdfobj heading subheading} {
+      incr pageno
+      set lineno 1
+      $pdfobj startPage
+      set width [lindex [$pdfobj getDrawableArea] 0]
+      $pdfobj text "$subheading" -x 0 -y 0
+      $pdfobj text "$heading" -align center -x [expr {$width/2.0}] -y 0
+      $pdfobj text "Page $pageno" -align right -x $width -y 0
+      $pdfobj setTextPosition 0 [expr {$lineno * 14}]
+    }
+    method _outputXMLToPDF_processNodesAt {heading subheading node pdfobj {indent 0}} {
+      foreach n [$templatetree nodes "$node"] {
+	if {[string is integer -strict $n]} {
+	  set subheading "[$templatetree itemcget "$n" -data]"
+	  set dheight [expr {[lindex [$pdfobj getDrawableArea] 1] - ($lineno * 14)}]
+#	  puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
+	  if {$pageno < 1 || $dheight < 28} {
+	    $self newPDFPage $pdfobj "$heading" "$subheading"
+	  }
+	  $pdfobj setFont 10 Courier-Bold
+	  $pdfobj text "$subheading" -x $indent
+	  $pdfobj newLine
+	  incr lineno
+#	  puts stderr "*** $self _outputXMLToPDF_processNodesAt: lineno = $lineno (after Container)"
+	  $pdfobj setFont 10 Courier
+	} else {
+	  set text [$templatetree itemcget "$n" -text]
+	  set dheight [expr {[lindex [$pdfobj getDrawableArea] 1] - ($lineno * 14)}]
+#	  puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
+	  if {$pageno < 1 || $dheight < 28} {
+	    $self newPDFPage $pdfobj "$heading" "$subheading"
+	  }
+	  $pdfobj text "$text" -x $indent
+	  $pdfobj newLine
+	  incr lineno
+	  $self _outputXMLToPDF_processNodesAt "$heading" "$subheading" $n $pdfobj [expr {$indent + 24}]
+	}
+      }
     }
     method close {args} {
       if {$isdirty} {
