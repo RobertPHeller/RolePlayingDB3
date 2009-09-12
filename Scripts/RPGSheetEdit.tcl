@@ -43,12 +43,14 @@ package require BWLabelComboBox
 package require pdf4tcl
 
 namespace eval RolePlayingDB3 {
+  snit::enum SheetClasses -values {Character Dressing Monster Spell Treasure 
+				     TrickTrap}
   snit::widget SheetEdit {
     option -template -readonly yes -default {}
+    
     option {-sheetclass sheetClass SheetClass} \
 		-readonly yes -default Character \
-		-type { snit::enum -values {Character Dressing Monster Spell 
-					    Treasure TrickTrap} }
+		-type ::RolePlayingDB3::SheetClasses
     ::RolePlayingDB3::OpenFilename
     variable currentFilename
     variable currentBaseFilename
@@ -333,6 +335,16 @@ namespace eval RolePlayingDB3 {
 	set XML [read $shfp]
 	close $shfp
 	set isnew no
+	set tree [::RolePlayingDB3::XMLContentEditor ContainerTree $XML]
+	#puts stderr "[list *** $type create $self: tree = $tree]"
+	set fileSheet [lindex $tree 0]
+	if {"$fileSheet" ne "$options(-sheetclass)"} {
+	  if {[catch {::RolePlayingDB3::SheetClasses validate $fileSheet}]} {
+	    error "Not a valid sheet file: $options(-openfilename)"	    
+	  }
+	  tk_messageBox -type ok -icon warning -message "Expected a $options(-sheetclass) file, but got a $fileSheet file."
+	  set options(-sheetclass) $fileSheet
+	}
       } else {
 	error "Neither -template nor -openfilename was passed!"
       }
