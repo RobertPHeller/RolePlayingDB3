@@ -221,7 +221,9 @@ Images = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
 	  DressingDialogIcon.png MonsterDialogIcon.png SpellDialogIcon.png \
 	  TreasureDialogIcon.png TrickTrapDialogIcon.png \
 	  SheetEditDialogIcon.png LevelBanner.png CreateLevelBanner.png \
-	  MapDialogIcon.png largePrinter.gif
+	  MapDialogIcon.png largePrinter.gif SelectLevelBanner.png \
+	  CreateNewMediaFolderBanner.png SelectMediaFolderBanner.png \
+	  SaveMediaFileBanner.png OpenMediaFileBanner.png
 
 BUILT_SOURCES = Version.tcl $(TCLKIT)
 noinst_DATA = Version.tcl

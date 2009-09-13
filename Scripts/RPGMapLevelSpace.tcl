@@ -41,6 +41,888 @@ package require ZipArchive
 package require RPGUtilities
 
 namespace eval RolePlayingDB3 {
+  snit::widget chroot_chooseDirectory {
+    hulltype toplevel
+    delegate option -cursor to hull
+    option {-initialdir initialDir InitialDir} -default {}
+    option -root -default / -validatemethod validexistingdirectory
+    method validexistingdirectory {option value} {
+      if {[file exists $value] && [file isdirectory $value]} {
+	return $value
+      }
+      error "Expected a valid existing directory name for $option, got $value"
+    }
+    option -title -default "Select a directory"
+    delegate option {-bannerimage bannerImage BannerImage} to banner as -image
+    delegate option {-bannerbackground bannerBackground BannerBackground} to banner as -background
+    option -parent -default .
+    option {-mustexist mustExist MustExist} -default no -type snit::boolean
+    typevariable updirImage
+    typevariable folderImage
+    typeconstructor {
+      set updirImage [image create bitmap -data {
+#define updir_width 28
+#define updir_height 16
+static char updir_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x80, 0x1f, 0x00, 0x00, 0x40, 0x20, 0x00, 0x00,
+   0x20, 0x40, 0x00, 0x00, 0xf0, 0xff, 0xff, 0x01, 0x10, 0x00, 0x00, 0x01,
+   0x10, 0x02, 0x00, 0x01, 0x10, 0x07, 0x00, 0x01, 0x90, 0x0f, 0x00, 0x01,
+   0x10, 0x02, 0x00, 0x01, 0x10, 0x02, 0x00, 0x01, 0x10, 0x02, 0x00, 0x01,
+   0x10, 0xfe, 0x07, 0x01, 0x10, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x01,
+   0xf0, 0xff, 0xff, 0x01};}]
+      set folderImage [image create photo -data {
+R0lGODlhEAAMAKEAAAD//wAAAPD/gAAAACH5BAEAAAAALAAAAAAQAAwAAAIghINhyycvVFsB
+QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
+    }
+    component banner
+    component topframe
+    component   dirlabel
+    component   dirmenubtn
+    component   dirmenu
+    component   dirupbutton
+    component iconList
+    component bottomframe
+    component   caption
+    component   entry
+    component   okButton
+    component   cancelButton
+
+    variable selectPath {}
+    variable updateId
+    variable selectFilePath
+    constructor {args} {
+      install banner using Label $win.banner -anchor w
+      pack $banner -fill x
+      install topframe using frame $win.topframe
+      install dirlabel using Label $topframe.dirlabel -text "Directory:" \
+						      -underline 0
+      set dirmenubtn $topframe.dirmenu
+      bind $dirlabel <<AltUnderlined>> [list focus $dirmenubtn]
+      install dirmenu using tk_optionMenu $topframe.dirmenu \
+						[myvar selectPath] ""
+      install dirupbutton using Button $topframe.dirupbutton -image $updirImage
+      $dirmenubtn configure -takefocus 1 -highlightthickness 2
+      pack $dirupbutton -side right -padx 4 -fill both
+      pack $dirlabel -side left -padx 4 -fill both
+      pack $dirmenubtn -expand yes -fill both -padx 4
+      install iconList using ::tk::IconList $win.iconList \
+				-command [mymethod DblClick] -multiple no
+      bind $iconList <<ListboxSelect>> [mymethod ListBrowse]
+      install bottomframe using frame $win.bottomframe -bd 0
+      install caption using Label $bottomframe.caption -text "Selection:" \
+						       -underline 0 -anchor e \
+						       -pady 0
+      bind $caption <<AltUnderlined>> [list focus $bottomframe.entry]
+      install entry using Entry $bottomframe.entry
+      set iconlistData "::tk::$iconList"
+      append iconlistData (font)
+      set $iconlistData [$entry cget -font]
+      install okButton using Button $bottomframe.okButton -text "OK" \
+							  -underline 0 \
+							  -default active \
+							  -pady 3
+      bind $okButton <<AltUnderlined>> [list $okButton invoke]
+      install cancelButton  using Button $bottomframe.cancelButton \
+							-text "Cancel" \
+							-underline 0 \
+							-default normal \
+							-pady 3
+      bind $cancelButton <<AltUnderlined>> [list $cancelButton invoke]
+      grid $caption $entry $okButton -padx 4 -sticky ew
+      grid configure $entry -padx 2
+      grid  x x $cancelButton -padx 4 -sticky ew
+      grid columnconfigure $bottomframe  1 -weight 1
+      pack $topframe -side top -fill x -pady 4
+      pack $bottomframe -side bottom -fill x
+      pack $iconList -expand yes -fill both -padx 4 -pady 1
+      wm protocol $win WM_DELETE_WINDOW [mymethod CancelCmd]
+      $dirupbutton configure -command [mymethod UpDirCmd]
+      $cancelButton configure -command [mymethod CancelCmd]
+      bind $win <KeyPress-Escape> [mymethod CancelCmd]
+      bind $win <Alt-Key> [list tk::AltKeyInDialog $win %A]
+      set okCmd [mymethod OkCmd]
+      bind $entry <Return> $okCmd
+      $okButton configure -command $okCmd
+      bind $win <Alt-s> [list focus $entry]
+      bind $win <Alt-o> [list tk::ButtonInvoke $okButton]
+      ::tk::FocusGroup_Create $win
+      ::tk::FocusGroup_BindIn $win $entry [mymethod SelectionFocusIn]
+      ::tk::FocusGroup_BindOut $win $entry [mymethod SelectionFocusOut]
+      $self configurelist $args
+      wm withdraw $win
+    }
+    method draw {args} {
+      $self configurelist $args
+      set initialdir $options(-initialdir)
+      set initdirpathtype [file pathtype $initialdir]
+      if {"$initdirpathtype" eq "absolute" || 
+	  "$initdirpathtype" eq "volumerelative"} {
+	set initialdir [eval [linsert [lrange \
+					[file split $options(-initialdir)] \
+					1 end] \
+				      0 file join]]
+				      
+      }
+      if {[winfo viewable [winfo toplevel $options(-parent)]]} {
+	wm transient $win $options(-parent)
+      }
+      if {$initialdir ne "" && [file exists [file join $options(-root) $initialdir]] &&
+	  [file isdirectory [file join $options(-root) $initialdir]]} {
+	set selectPath $initialdir
+      }
+      trace variable [myvar selectPath] w [mymethod SetPath]
+      $dirmenubtn configure -textvariable [myvar selectPath]
+      set previousEntryText ""
+      $self UpdateWhenIdle
+      ::tk::PlaceWindow $win widget $options(-parent)
+      wm title $win $options(-title)
+      ::tk::SetFocusGrab $win $entry
+      $entry delete 0 end
+      $entry insert 0 $selectPath
+      $entry selection range 0 end
+      $entry icursor end
+      vwait [myvar selectFilePath]
+      ::tk::RestoreFocusGrab $win $entry withdraw
+      foreach trace [trace vinfo [myvar selectPath]] {
+	trace vdelete [myvar selectPath] [lindex $trace 0] [lindex $trace 1]
+      }
+      $dirmenubtn configure -textvariable {}
+      if {"$selectFilePath" eq ""} {
+	return $selectFilePath
+      } else {
+	return [file join $options(-root) $selectFilePath]
+      }
+    }
+    method UpdateWhenIdle {} {
+      if {![info exists updateId]} {
+	set updateId [after idle [mymethod Update]]
+      }
+    }
+    method DblClick {} {
+      set selection  [tk::IconList_Curselection $iconList]
+      if { [llength $selection] != 0 } {
+	set filenameFragment \
+	    [tk::IconList_Get $iconList [lindex $selection 0]]
+	set file [file join $options(-root) $selectPath]
+#	puts stderr "*** $self DblClick: file = $file"
+	if {[file isdirectory $file]} {
+	  $self ListInvoke [list $filenameFragment]
+	  return
+	}
+      }
+    }
+    method ListInvoke {filenames} {
+      if {[llength $filenames] == 0} {
+	return
+      }
+      set file [::tk::dialog::file::JoinFile $selectPath \
+		[lindex $filenames 0]]
+#      puts stderr "*** $self ListInvoke: file = $file"
+#      puts stderr "*** $self ListInvoke: file join $options(-root) $file = [file join $options(-root) $file]"
+      if {[file isdirectory [file join $options(-root) $file]]} {
+	set selectPath $file
+      }
+    }
+    method ListBrowse {} {
+      set text {}
+      foreach item [::tk::IconList_Curselection $iconList] {
+	lappend text [::tk::IconList_Get $iconList $item]
+      }
+      if {[llength $text] == 0} {
+	return
+      }
+      set text [lindex $text 0]
+      set file [::tk::dialog::file::JoinFile $selectPath $text]
+      $entry delete 0 end
+      $entry insert 0 $file
+    }
+    method CancelCmd {} {
+      set selectFilePath ""
+    }
+    method UpDirCmd {} {
+      if {"$selectPath" ne ""} {
+#	puts stderr "[list *** $self UpDirCmd: selectPath = $selectPath]"
+#	puts stderr "[list *** $self UpDirCmd: file dirname $selectPath = [file dirname $selectPath]]"
+        set selectPath [file dirname $selectPath]
+      }
+    }
+    method OkCmd {} {
+      set selection [tk::IconList_Curselection $iconList]
+      if { [llength $selection] != 0 } {
+	set iconText [tk::IconList_Get $iconList [lindex $selection 0]]
+	set iconText [file join $selectPath $iconText]
+	$self Done "$iconText"
+      } else {
+	set text [$entry get]
+	if {"$text" eq ""} {return}
+	set text [eval file join [file split [string trim $text]]]
+	if { "$text" eq "$selectPath" } {
+	  $self Done "$text"
+	} else {
+	  set selectPath "$text"
+        }
+      }
+      return
+    }
+    method SelectionFocusIn {} {
+      if {[string compare [$entry get] ""]} {
+	$entry selection range 0 end
+	$entry icursor end
+      } else {
+	$entry selection clear
+      }
+    }
+    method SelectionFocusOut {} {
+      $entry selection clear
+    }
+    method SetPath {name1 name2 op} {
+#      puts stderr "*** $self SetPath $name1 $name2 $op"
+#      puts stderr "*** $self SetPath: winfo exists $win = [winfo exists $win]"
+      if {[winfo exists $win]} {
+	$self UpdateWhenIdle
+	$entry delete 0 end
+	$entry insert end $selectPath
+      }      
+    }
+    method Update {} {
+      if {![winfo exists $win]} {return}
+      catch {unset updateId}
+      set entCursor [$entry cget -cursor]
+      set dlgCursor [$win       cget -cursor]
+      $entry configure -cursor watch
+      $win       configure -cursor watch
+      update idletasks
+
+#      puts stderr "*** $self Update: selectPath = $selectPath"
+
+      ::tk::IconList_DeleteAll $iconList
+      set dirs [lsort -dictionary -unique \
+			[glob -tails \
+			      -directory [file join $options(-root) \
+						    $selectPath] -type d \
+				-nocomplain *]]
+
+#      puts stderr "[list *** $self Update: dirs = $dirs]"
+      set dirList {}
+      foreach d $dirs {
+	lappend dirList $d
+      }
+      ::tk::IconList_Add $iconList $folderImage $dirList
+      ::tk::IconList_Arrange $iconList
+      set list "."
+      set dir ""
+#      puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
+      foreach subdir [file split $selectPath] {
+	set dir [file join $dir $subdir]
+	lappend list $dir
+      }
+#      puts stderr "[list *** $self Update: list = $list]"
+      $dirmenu delete 0 end
+      set var [myvar selectPath]
+      foreach path $list {
+	$dirmenu add command -label $path -command [list set $var $path]
+      }
+      $entry configure -cursor $entCursor
+      $win       configure -cursor $dlgCursor
+    }
+    method Done {{_selectFilePath ""}} {
+      if {[string equal $_selectFilePath ""]} {
+	set _selectFilePath $selectPath
+      }
+      if { $options(-mustexist) } {
+	if { ![file exists [file join $options(-root) $_selectFilePath]] || \
+		![file isdir [file join $options(-root) $_selectFilePath]] } {
+	    return
+	}
+      }
+      set selectFilePath $_selectFilePath
+    }
+  }
+  snit::widget chroot_getFile {
+    hulltype toplevel
+    delegate option -cursor to hull
+    option {-initialdir initialDir InitialDir} -default {}
+    option {-initialfile initialFile InitialFile} -default {}
+    option {-filetypes fileTypes FileTypes} -default {}
+    option {-defaultextension defaultExtension DefaultExtension} -default {}
+    option {-saveoropen saveOrOpen SaveOrOpen} \
+	    -type { snit::enum -values {save open}} \
+	    -default open
+    option -root -default / -validatemethod validexistingdirectory
+    method validexistingdirectory {option value} {
+      if {[file exists $value] && [file isdirectory $value]} {
+	return $value
+      }
+      error "Expected a valid existing directory name for $option, got $value"
+    }
+    option -title -default "Select a directory"
+    delegate option {-bannerimage bannerImage BannerImage} to banner as -image
+    delegate option {-bannerbackground bannerBackground BannerBackground} to banner as -background
+    option -parent -default .
+    typevariable updirImage
+    typevariable folderImage
+    typevariable fileImage
+    typeconstructor {
+      set updirImage [image create bitmap -data {
+#define updir_width 28
+#define updir_height 16
+static char updir_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x80, 0x1f, 0x00, 0x00, 0x40, 0x20, 0x00, 0x00,
+   0x20, 0x40, 0x00, 0x00, 0xf0, 0xff, 0xff, 0x01, 0x10, 0x00, 0x00, 0x01,
+   0x10, 0x02, 0x00, 0x01, 0x10, 0x07, 0x00, 0x01, 0x90, 0x0f, 0x00, 0x01,
+   0x10, 0x02, 0x00, 0x01, 0x10, 0x02, 0x00, 0x01, 0x10, 0x02, 0x00, 0x01,
+   0x10, 0xfe, 0x07, 0x01, 0x10, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x01,
+   0xf0, 0xff, 0xff, 0x01};}]
+      set folderImage [image create photo -data {
+R0lGODlhEAAMAKEAAAD//wAAAPD/gAAAACH5BAEAAAAALAAAAAAQAAwAAAIghINhyycvVFsB
+QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
+      set fileImage    [image create photo -data {
+R0lGODlhDAAMAKEAALLA3AAAAP//8wAAACH5BAEAAAAALAAAAAAMAAwAAAIgRI4Ha+IfWHsO
+rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
+    }
+    component banner
+    component topframe
+    component   dirlabel
+    component   dirmenubtn
+    component   dirmenu
+    component   dirupbutton
+    component iconList
+    component bottomframe
+    component   caption
+    component   entry
+    component   typeMenuLab
+    component   typeMenuBtn
+    component     typeMenu
+    component   okButton
+    component   cancelButton
+    
+    variable selectPath {}
+    variable selectFile {}
+    variable updateId
+    variable selectFilePath
+    variable filter "*"
+    variable extUsed
+    constructor {args} {
+      install banner using Label $win.banner -anchor w
+      pack $banner -fill x
+      install topframe using frame $win.topframe
+      install dirlabel using Label $topframe.dirlabel -text "Directory:" \
+						      -underline 0
+      set dirmenubtn $topframe.dirmenu
+      bind $dirlabel <<AltUnderlined>> [list focus $dirmenubtn]
+      install dirmenu using tk_optionMenu $topframe.dirmenu \
+						[myvar selectPath] ""
+      install dirupbutton using Button $topframe.dirupbutton -image $updirImage
+      $dirmenubtn configure -takefocus 1 -highlightthickness 2
+      pack $dirupbutton -side right -padx 4 -fill both
+      pack $dirlabel -side left -padx 4 -fill both
+      pack $dirmenubtn -expand yes -fill both -padx 4
+      install iconList using ::tk::IconList $win.iconList \
+				-command [mymethod OkCmd] -multiple no
+      bind $iconList <<ListboxSelect>> [mymethod ListBrowse]
+      install bottomframe using frame $win.bottomframe -bd 0
+      install caption using Label $bottomframe.caption -text "File name:" \
+						       -underline 5 -anchor e \
+						       -pady 0
+      bind $caption <<AltUnderlined>> [list focus $bottomframe.entry]
+      install entry using Entry $bottomframe.entry
+      set iconlistData "::tk::$iconList"
+      append iconlistData (font)
+      set $iconlistData [$entry cget -font]
+      install typeMenuLab using Button $bottomframe.typeMenuLab \
+		-text "Files of type:" -underline 9 -anchor e  \
+		-bd [$caption cget -bd] -relief [$caption cget -relief] \
+		-padx [$caption cget  -padx] -pady [$caption cget  -pady]
+      bindtags $typeMenuLab [list $typeMenuLab Label \
+		[winfo toplevel $typeMenuLab] all]
+      install typeMenuBtn using menubutton $bottomframe.typeMenuBtn \
+				-indicatoron 1 -menu $bottomframe.typeMenuBtn.m
+      install typeMenu using menu $typeMenuBtn.m -tearoff 0
+      $typeMenuBtn configure -takefocus 1 -highlightthickness 2 \
+		-relief raised -bd 2 -anchor w
+      bind $typeMenuLab <<AltUnderlined>> [list focus $typeMenuBtn]
+      install okButton using Button $bottomframe.okButton -text "OK" \
+							  -underline 0 \
+							  -default active \
+							  -pady 3
+      bind $okButton <<AltUnderlined>> [list $okButton invoke]
+      install cancelButton  using Button $bottomframe.cancelButton \
+							-text "Cancel" \
+							-underline 0 \
+							-default normal \
+							-pady 3
+      bind $cancelButton <<AltUnderlined>> [list $cancelButton invoke]
+      grid $caption $entry $okButton -padx 4 -sticky ew
+      grid configure $entry -padx 2
+      grid $typeMenuLab $typeMenuBtn   $cancelButton -padx 4 -sticky ew
+      grid configure $typeMenuBtn -padx 0
+      grid columnconfigure $bottomframe  1 -weight 1
+      pack $topframe -side top -fill x -pady 4
+      pack $bottomframe -side bottom -fill x
+      pack $iconList -expand yes -fill both -padx 4 -pady 1
+      wm protocol $win WM_DELETE_WINDOW [mymethod CancelCmd]
+      $dirupbutton configure -command [mymethod UpDirCmd]
+      $cancelButton configure -command [mymethod CancelCmd]
+      bind $win <KeyPress-Escape> [mymethod CancelCmd]
+      bind $win <Alt-Key> [list tk::AltKeyInDialog $win %A]
+      bind $entry <Return> [mymethod ActivateEntry]
+      $okButton configure -command [mymethod OkCmd]
+      bind $win <Alt-t> [format {
+	if {[string equal [%s cget -state] "normal"]} {
+		focus %s
+	}
+      } $typeMenuBtn $typeMenuBtn]
+      ::tk::FocusGroup_Create $win
+      ::tk::FocusGroup_BindIn $win $entry [mymethod SelectionFocusIn]
+      ::tk::FocusGroup_BindOut $win $entry [mymethod SelectionFocusOut]
+      $self configurelist $args
+      wm withdraw $win
+    }
+    method draw {args} {
+      $self configurelist $args
+      set initialdir $options(-initialdir)
+      set initialfile $options(-initialfile)
+      if {"$initialdir" eq ""} {set initialdir [file dirname $initialfile]}
+      set initdirpathtype [file pathtype $initialdir]
+      if {"$initdirpathtype" eq "absolute" || 
+	  "$initdirpathtype" eq "volumerelative"} {
+	set initialdir [eval [linsert [lrange \
+					[file split $options(-initialdir)] \
+					1 end] \
+				      0 file join]]
+				      
+      }
+      set initialfile [file join $initialdir [file tail $initialfile]]
+
+      if {[winfo viewable [winfo toplevel $options(-parent)]]} {
+	wm transient $win $options(-parent)
+      }
+      trace variable [myvar selectPath] w [mymethod SetPath]
+      $dirmenubtn configure -textvariable [myvar selectPath]
+
+      # Initialize the file types menu
+      #
+      if {[llength $options(-filetypes)]} {
+	$typeMenu delete 0 end
+	foreach ftype $options(-filetypes) {
+	  set title  [lindex $ftype 0]
+	  set filter [lindex $ftype 1]
+	  $typeMenu add command -label $title \
+		-command [mymethod SetFilter $ftype]
+	}
+	$self SetFilter [lindex $options(-filetypes) 0]
+	$typeMenuBtn configure -state normal
+	$typeMenuBtn configure -state normal
+      } else {
+	set filter "*"
+	$typeMenuBtn configure -state disabled -takefocus 0
+	$typeMenuBtn configure -state disabled
+      }
+
+      set previousEntryText ""
+      $self UpdateWhenIdle
+      ::tk::PlaceWindow $win widget $options(-parent)
+      wm title $win $options(-title)
+      ::tk::SetFocusGrab $win $entry
+      if {$initialfile ne "" && [file exists [file join $options(-root) $initialdir]] &&
+	  [file isdirectory [file join $options(-root) $initialdir]]} {
+	set selectFile $initialfile
+	set selectPath [file dirname $initialfile]
+      }
+      $entry delete 0 end
+      $entry insert 0 $selectFile
+      $entry selection range 0 end
+      $entry icursor end
+      vwait [myvar selectFilePath]
+      ::tk::RestoreFocusGrab $win $entry withdraw
+      foreach trace [trace vinfo [myvar selectPath]] {
+	trace vdelete [myvar selectPath] [lindex $trace 0] [lindex $trace 1]
+      }
+      $dirmenubtn configure -textvariable {}
+      puts stderr "*** method draw (after vwait): selectFilePath = $selectFilePath"
+      puts stderr "*** method draw (after vwait): file join $options(-root) $selectFilePath = [file join $options(-root) $selectFilePath]"
+      if {"$selectFilePath" eq ""} {
+	return $selectFilePath
+      } else {
+	return [file join $options(-root) $selectFilePath]
+      }
+    }
+    method UpdateWhenIdle {} {
+      if {![info exists updateId]} {
+	set updateId [after idle [mymethod Update]]
+      }
+    }
+    method ListInvoke {filenames} {
+      if {[llength $filenames] == 0} {
+	return
+      }
+      set file [::tk::dialog::file::JoinFile $selectPath \
+		[lindex $filenames 0]]
+      puts stderr "*** $self ListInvoke: file = $file"
+      puts stderr "*** $self ListInvoke: file join $options(-root) $file = [file join $options(-root) $file]"
+      if {[file isdirectory [file join $options(-root) $file]]} {
+      	set appPWD [pwd]
+	if {[catch {cd [file join $options(-root) $file]}]} {
+	  tk_messageBox -type ok -parent $win  -message \
+	  	[format "Cannot change to the directory %s.\nPermission denied." $file]] \
+	  	-icon warning
+	} else {
+	  cd $appPWD
+	  set selectPath $file
+        }
+      } else {
+        set selectFile $file
+        $self Done
+      }
+    }
+    method ListBrowse {} {
+      set text {}
+      foreach item [::tk::IconList_Curselection $iconList] {
+	lappend text [::tk::IconList_Get $iconList $item]
+      }
+      if {[llength $text] == 0} {
+	return
+      }
+      set text [lindex $text 0]
+      set file [::tk::dialog::file::JoinFile $selectPath $text]
+      set isDir [file isdirectory [file join $options(-root) $file]]
+      if {!$isDir} {
+	$entry delete 0 end
+	$entry insert 0 $text
+	switch $options(-saveoropen) {
+	  open {
+	    $okButton configure -text Open -underline 0
+	  }
+	  save {
+	    $okButton configure -text Save -underline 0
+	  }
+	}
+      } else {
+	$okButton configure -text Open -underline 0
+      }
+    }
+    method CancelCmd {} {
+      set selectFilePath ""
+    }
+    method UpDirCmd {} {
+      if {"$selectPath" ne ""} {
+#	puts stderr "[list *** $self UpDirCmd: selectPath = $selectPath]"
+#	puts stderr "[list *** $self UpDirCmd: file dirname $selectPath = [file dirname $selectPath]]"
+        set selectPath [file dirname $selectPath]
+      }
+    }
+    method OkCmd {} {
+      set filenames {}
+      foreach item [::tk::IconList_Curselection $iconList] {
+	append filenames [::tk::IconList_Get $iconList $item]
+      }
+
+      if {[llength $filenames] == 1} {
+	set filename [lindex $filenames 0]
+	set file [::tk::dialog::file::JoinFile $selectPath $filename]
+	if {[file isdirectory [file join $options(-root) $file]]} {
+	  $self ListInvoke [list $filename]
+	  return
+	}
+      }
+      $self ActivateEntry
+    }
+    method SelectionFocusIn {} {
+      if {[string compare [$entry get] ""]} {
+	$entry selection range 0 end
+	$entry icursor end
+      } else {
+	$entry selection clear
+      }
+      switch $options(-saveoropen) {
+	open {
+	  $okButton configure -text Open -underline 0
+	}
+	save {
+	  $okButton configure -text Save -underline 0
+	}
+      }
+    }
+    method SelectionFocusOut {} {
+      $entry selection clear
+    }
+    method ActivateEntry {} {
+      set text [$entry get]
+      $self VerifyFileName $text
+    }
+    method VerifyFileName {filename} {
+      set list [$self ResolveFile $selectPath $filename $options(-defaultextension)]
+      foreach {flag path file} $list {break}
+      puts stderr "*** $self VerifyFileName: filename is $filename, flag is $flag, path is $path, file is $file"
+      switch -- $flag {
+	OK {
+	  if {[string equal $file ""]} {
+	    set selectPath $path
+	    $entry delete 0 end
+	  } else {
+	    $self SetPathSilently $path
+	    set selectFile $file
+	    $self Done
+	  }
+	}
+	PATTERN {
+	  set selectPath $path
+	  set filter $file
+	}
+	FILE {
+	  if {[string equal $options(-saveoropen) open]} {
+	    tk_messageBox -icon warning -type ok -parent $win \
+		-message "[format {File %s  does not exist.} [file join $path $file]]"
+	    $entry selection range 0 end
+	    $entry icursor end
+	  } else {
+	    $self SetPathSilently $path
+	    set selectFile $file
+	    $self Done
+	  }
+	}
+	PATH {
+	  tk_messageBox -icon warning -type ok -parent $win \
+		-message "[format {Directory %s  does not exist.} $path]"
+	  $entry selection range 0 end
+	  $entry icursor end
+	}
+	CHDIR {
+	  tk_messageBox -icon warning -type ok -parent $win \
+		-message [format "Cannot change to the directory %s.\nPermission denied." $path]
+	  $entry selection range 0 end
+	  $entry icursor end
+	}
+	ERROR {
+	  tk_messageBox -icon warning -type ok -parent $win \
+		-message "[format {Invalid file name %s.} $path]"
+	  $entry selection range 0 end
+	  $entry icursor end
+	}
+      }
+    }
+    # method ResolveFile --
+    #
+    #	Interpret the user's text input in a file selection dialog.
+    #	Performs:
+    #
+    #	(1) ~ substitution
+    #	(2) resolve all instances of . and ..
+    #	(3) check for non-existent files/directories
+    #	(4) check for chdir permissions
+    #
+    # Arguments:
+    #	context:  the current directory you are in
+    #	text:	  the text entered by the user
+    #	defaultext: the default extension to add to files with no extension
+    #
+    # Return vaue:
+    #	[list $flag $directory $file]
+    #
+    #	 flag = OK	: valid input
+    #	      = PATTERN	: valid directory/pattern
+    #	      = PATH	: the directory does not exist
+    #	      = FILE	: the directory exists by the file doesn't
+    #			  exist
+    #	      = CHDIR	: Cannot change to the directory
+    #	      = ERROR	: Invalid entry
+    #
+    #	 directory      : valid only if flag = OK or PATTERN or FILE
+    #	 file           : valid only if flag = OK or PATTERN
+    #
+    #	directory may not be the same as context, because text may contain
+    #	a subdirectory name
+    #
+    method ResolveFile {context text defaultext} {
+
+      set appPWD [pwd]
+
+      set path [::tk::dialog::file::JoinFile $context $text]
+
+      # If the file has no extension, append the default.  Be careful not
+      # to do this for directories, otherwise typing a dirname in the box
+      # will give back "dirname.extension" instead of trying to change dir.
+      if {![file isdirectory [file join $options(-root) $path]] && 
+	  [string equal [file ext $path] ""]} {
+	set path "$path$defaultext"
+      }
+
+
+      if {[catch {file exists [file join $options(-root) $path]}]} {
+	# This "if" block can be safely removed if the following code
+	# stop generating errors.
+	#
+	#	file exists ~nonsuchuser
+	#
+	return [list ERROR $path ""]
+      }
+
+      if {[file exists [file join $options(-root) $path]]} {
+	if {[file isdirectory [file join $options(-root) $path]]} {
+	    if {[catch {cd [file join $options(-root) $path]}]} {
+		return [list CHDIR $path ""]
+	    }
+	    set directory [pwd]
+	    set file ""
+	    set flag OK
+	    cd $appPWD
+	} else {
+	    if {[catch {cd [file dirname [file join $options(-root) $path]]}]} {
+		return [list CHDIR [file dirname $path] ""]
+	    }
+	    set directory [pwd]
+	    set file [file tail $path]
+	    set flag OK
+	    cd $appPWD
+	}
+      } else {
+	set dirname [file dirname $path]
+	if {[file exists [file join $options(-root) $dirname]]} {
+	    if {[catch {cd [file join $options(-root) $dirname]}]} {
+		return [list CHDIR $dirname ""]
+	    }
+	    set directory [pwd]
+	    set file [file tail $path]
+	    if {[regexp {[*]|[?]} $file]} {
+		set flag PATTERN
+	    } else {
+		set flag FILE
+	    }
+	    cd $appPWD
+	} else {
+	    set directory $dirname
+	    set file [file tail $path]
+	    set flag PATH
+	}
+      }
+
+      set l [string length [file normalize $options(-root)]]
+      incr l
+      set directory [string range [file normalize $directory] $l end]
+
+      return [list $flag $directory $file]
+    }
+    method SetPathSilently {path} {
+      trace vdelete selectPath w [mymethod SetPath]
+      set selectPath $path
+      trace variable selectPath w [mymethod SetPath]
+    }
+    method SetPath {name1 name2 op} {
+#      puts stderr "*** $self SetPath $name1 $name2 $op"
+#      puts stderr "*** $self SetPath: winfo exists $win = [winfo exists $win]"
+      if {[winfo exists $win]} {
+	$self UpdateWhenIdle
+      }      
+    }
+    method SetFilter {ftype} {
+      set filter [lindex $ftype 1]
+      $typeMenuBtn configure -text [lindex $ftype 0] -indicatoron 1
+      if {![info exists $extUsed]} {
+	if {[string length $options(-defaultextension)]} {
+	  set extUsed yes
+	} else {
+	  set extUsed no
+	}
+      }
+      if {!$extUsed} {
+	# Get the first extension in the list that matches {^\*\.\w+$}
+	# and remove all * from the filter.
+	set index [lsearch -regexp $filter {^\*\.\w+$}]
+	if {$index >= 0} {
+	  set options(-defaultextension) \
+		[string trimleft [lindex $filter $index] "*"]
+	} else {
+	  # Couldn't find anything!  Reset to a safe default...
+	  set options(-defaultextension) ""
+	}
+      }
+      set iconlistData "::tk::$iconList"
+      append iconlistData (sbar)
+      [set $iconlistData] set 0.0 0.0
+      $self UpdateWhenIdle
+    }
+    method Update {} {
+      if {![winfo exists $win]} {return}
+      catch {unset updateId}
+      set entCursor [$entry cget -cursor]
+      set dlgCursor [$win       cget -cursor]
+      $entry configure -cursor watch
+      $win       configure -cursor watch
+      update idletasks
+
+#      puts stderr "*** $self Update: selectPath = $selectPath"
+
+      set selectDir [file dirname $selectPath]
+
+      ::tk::IconList_DeleteAll $iconList
+      set dirs [lsort -dictionary -unique \
+			[glob -tails \
+			      -directory [file join $options(-root) \
+						    $selectDir] -type d \
+				-nocomplain *]]
+
+#      puts stderr "[list *** $self Update: dirs = $dirs]"
+      set dirList {}
+      foreach d $dirs {
+	lappend dirList $d
+      }
+      ::tk::IconList_Add $iconList $folderImage $dirList
+
+      set cmd [list glob -tails -directory [file join $options(-root) \
+						    $selectDir] \
+			 -type {f b c l p s} -nocomplain]
+      if {[string equal $filter *]} {
+	lappend cmd .* *
+      } else {
+	eval [list lappend cmd] $filter
+      }
+      set fileList [lsort -dictionary -unique [eval $cmd]]
+      ::tk::IconList_Add $iconList $fileImage $fileList
+
+      ::tk::IconList_Arrange $iconList
+
+      set list "."
+      set dir ""
+#      puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
+      foreach subdir [file split $selectDir] {
+	set dir [file join $dir $subdir]
+	lappend list $dir
+      }
+#      puts stderr "[list *** $self Update: list = $list]"
+      $dirmenu delete 0 end
+      set var [myvar selectPath]
+      foreach path $list {
+	$dirmenu add command -label $path -command [list set $var $path]
+      }
+      switch $options(-saveoropen) {
+	open {
+	  $okButton configure -text Open -underline 0
+	}
+	save {
+	  $okButton configure -text Save -underline 0
+	}
+      }
+
+      $entry configure -cursor $entCursor
+      $win       configure -cursor $dlgCursor
+    }
+    method Done {{_selectFilePath ""}} {
+      if {[string equal $_selectFilePath ""]} {
+	set _selectFilePath [::tk::dialog::file::JoinFile \
+		$selectPath $selectFile]
+      }
+      if {"$options(-saveoropen)" eq "save"} {
+	puts stderr "*** $self Done _selectFilePath = $_selectFilePath"
+	if {[file exists [file join $options(-root) $_selectFilePath]]} {
+	  set reply [tk_messageBox -icon warning -type yesno\
+		-parent $win -message \
+			[format "File %s already exists.\nDo you want to overwrite it?" $_selectFilePath]]
+	  if {[string equal $reply "no"]} {return}
+	}
+      }
+      set selectFilePath $_selectFilePath
+    }
+  }
   snit::macro ::RolePlayingDB3::MapBundleMountPoint {} {
     option {-mapbundlemountpoint mapBundleMountPoint MapBundleMountPoint} \
 		-readonly yes -default /MAP -validatemethod validatemountpoint
@@ -173,7 +1055,16 @@ namespace eval RolePlayingDB3 {
     }
     typemethod myfiletypes {} {return $filetypes}
     typecomponent _editDialog
+    typecomponent _chooseLevelDialog
+    typecomponent _chooseMediaFolderDialog
+    typecomponent _getMediaFileDialog
     typevariable bannerImage
+    typevariable newLevelDialogBanner
+    typevariable oldLevelDialogBanner
+    typevariable newMediaFolderDialogBanner
+    typevariable oldMediaFolderDialogBanner
+    typevariable openMediaFileDialogBanner
+    typevariable saveMediaFileDialogBanner
     typevariable dialogIcon
     typemethod   getDialogIcon {} {return $dialogIcon}
     typevariable bannerBackground #a2de86
@@ -233,8 +1124,29 @@ namespace eval RolePlayingDB3 {
       set printerIcon [image create photo \
 				-file [file join $::RolePlayingDB3::ImageDir \
 						 largePrinter.gif]]
+      set newLevelDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						 CreateLevelBanner.png]]
+      set oldLevelDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						SelectLevelBanner.png]]
+      set newMediaFolderDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						CreateNewMediaFolderBanner.png]]
+      set oldMediaFolderDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						SelectMediaFolderBanner.png]]
+      set openMediaFileDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						OpenMediaFileBanner.png]]
+      set saveMediaFileDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						SaveMediaFileBanner.png]]
       set _printdialog {}
       set _editDialog {}
+      set _chooseLevelDialog {}
+      set _chooseMediaFolderDialog {}
+      set _getMediaFileDialog {}
     }
     
     typemethod _createEditDialog {} {
@@ -263,6 +1175,39 @@ namespace eval RolePlayingDB3 {
 	}
 	2 {return}
       }
+    }
+    typemethod createChooseLevelDialog {} {
+      if {"$_chooseLevelDialog" ne "" && [winfo exists "$_chooseLevelDialog"]} {return}
+      set _chooseLevelDialog [::RolePlayingDB3::chroot_chooseDirectory \
+				.chooseLevelDialog \
+				-bannerimage $newLevelDialogBanner \
+				-bannerbackground $bannerBackground]
+    }
+    typemethod draw_chooseLevelDialog {args} {
+      $type createChooseLevelDialog
+      return [eval [list $_chooseLevelDialog draw] $args]
+    }
+    typemethod createChooseMediaFolderDialog {} {
+      if {"$_chooseMediaFolderDialog" ne "" && [winfo exists "$_chooseMediaFolderDialog"]} {return}
+      set _chooseMediaFolderDialog [::RolePlayingDB3::chroot_chooseDirectory \
+				.chooseMediaFolderDialog \
+				-bannerimage $newMediaFolderDialogBanner \
+				-bannerbackground $bannerBackground]
+    }
+    typemethod draw_chooseMediaFolderDialog {args} {
+      $type createChooseMediaFolderDialog
+      return [eval [list $_chooseMediaFolderDialog draw] $args]
+    }
+    typemethod createGetMediaFileDialog {} {
+      if {"$_getMediaFileDialog" ne "" && [winfo exists "$_getMediaFileDialog"]} {return}
+      set _getMediaFileDialog [::RolePlayingDB3::chroot_getFile \
+				.getMediaFileDialog \
+				-bannerimage $saveMediaFileDialogBanner \
+				-bannerbackground $bannerBackground]
+    }
+    typemethod draw_getMediaFileDialog {args} {
+      $type createGetMediaFileDialog
+      return [eval [list $_getMediaFileDialog draw] $args]
     }
     method getfile {} {return "$currentFilename"}
     typemethod new {args} {
@@ -551,9 +1496,36 @@ namespace eval RolePlayingDB3 {
     }
     method _newlevel {args} {
       set parent [from args -parent $win]
+      set leveldir [$type draw_chooseLevelDialog \
+					-bannerimage $newLevelDialogBanner \
+					-root [file join /$path Levels] \
+					-mustexist no \
+					-initialdir "New Level" \
+					-parent $win \
+					-title "Level to create"]
+#      puts stderr "*** $self _newlevel: leveldir = $leveldir"
+      if {"$leveldir" eq ""} {return ""}
+      if {[file system [file dirname $leveldir]] ne [file system /$path]} {
+	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
+	return
+      }
+      if {![string match [file normalize [file join /$path Levels]]/* [file normalize $leveldir]]} {
+	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the Levels folder!"
+	return
+      }
+      if {[file normalize "$leveldir"] eq [file normalize [file join /$path Levels]]} {
+	tk_messageBox -parent $win -type ok -icon info -message "You cannot use the Levels folder itself as a level!"
+	return
+      }
+      if {[file exists "$leveldir"]} {
+	tk_messageBox -parent $win -type ok -icon info -message "Level [file tail $leveldir] already exists!"
+	return
+      }
+
       set newleveleditor [::RolePlayingDB3::LevelEditor new \
 						-mapbundlemountpoint /$path \
 						-parent $parent \
+						-leveldir $leveldir \
 						-mapeditor [winfo toplevel $win]]
       if {"$newleveleditor" ne ""} {
 	set isdirty yes
@@ -567,21 +1539,23 @@ namespace eval RolePlayingDB3 {
       if {[llength $selection] > 0} {
 	set level [$leveltree itemcget [lindex $selection 0] -fullpath]
       } else {
-	set level [tk_chooseDirectory \
-			-initialdir [file join /$path Levels] \
-			-parent $win -title "Level to delete" \
-			-mustexist yes]
+	set level [$type draw_chooseLevelDialog \
+					    -bannerimage $oldLevelDialogBanner \
+				 	    -root [file join /$path Levels] \
+					    -mustexist yes \
+					    -parent $win \
+					    -title "Level to delete"]
       }
       if {"$level" eq ""} {return}
       if {[file system [file dirname $level]] ne [file system /$path]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join /$path Levels]]/* $level]} {
+      if {![string match [file normalize [file join /$path Levels]]/* [file normalize $level]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the Levels folder!"
 	return
       }
-      if {"$level" eq [file normalize [file join /$path Levels]]} {
+      if {[file normalize "$level"] eq [file normalize [file join /$path Levels]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "You cannot delete the Levels folder itself!"
 	return
       }
@@ -606,21 +1580,26 @@ namespace eval RolePlayingDB3 {
       if {[llength $selection] > 0} {
 	set level [$leveltree itemcget [lindex $selection 0] -fullpath]
       } else {
-	set level [tk_chooseDirectory \
-			-initialdir [file join /$path Levels] \
-			-parent $parent -title "Level to edit" \
-			-mustexist yes]
+	set level [$type draw_chooseLevelDialog \
+					    -bannerimage $oldLevelDialogBanner \
+				 	    -root [file join /$path Levels] \
+					    -mustexist yes \
+					    -parent $win \
+					    -title "Level to edit"]
       }
       if {"$level" eq ""} {return}
+#      puts stderr "*** $self _editlevel: file system [file dirname $level] = '[file system [file dirname $level]]', file system /$path = '[file system /$path]'"
       if {[file system [file dirname $level]] ne [file system /$path]} {
 	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join /$path Levels]]/* $level]} {
+#      puts stderr "[list *** $self _editlevel:  [file normalize [file join /$path Levels]]/* [file normalize $level]]"
+      if {![string match [file normalize [file join /$path Levels]]/* [file normalize $level]]} {
 	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped out of the Levels folder!"
 	return
       }
-      if {"$level" eq [file normalize [file join /$path Levels]]} {
+#      puts stderr "[list *** $self _editlevel: [file normalize [file join /$path Levels]]]"
+      if {[file normalize "$level"] eq [file normalize [file join /$path Levels]]} {
 	tk_messageBox -parent $parent -type ok -icon info -message "You cannot edit the Levels folder itself!"
 	return
       }
@@ -650,15 +1629,18 @@ namespace eval RolePlayingDB3 {
       set sourcefile [tk_getOpenFile -parent $win -title "Source file" \
       				     -initialdir [file dirname $currentFilename]]
       if {"$sourcefile" eq ""} {return}
-      set destfile   [tk_getSaveFile -parent $win -title "Destination file" \
-				     -initialdir [file join /$path media] \
-				     -initialfile [file tail $sourcefile]]
+      set destfile   [$type draw_getMediaFileDialog \
+				     -parent $win -title "Destination file" \
+				     -root [file join /$path media] \
+				     -initialfile [file tail $sourcefile] \
+				     -saveoropen save]
+      puts stderr "*** $self _addmedia: destfile is $destfile"
       if {"$destfile" eq ""} {return}
       if {[file system [file dirname $destfile]] ne [file system /$path]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join /$path media]]/* $destfile]} {
+      if {![string match [file normalize [file join /$path media]]/* [file normalize $destfile]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
 	return
       }
@@ -667,15 +1649,18 @@ namespace eval RolePlayingDB3 {
       set isdirty yes
     }
     method _newmediafolder {} {
-      set folder [tk_chooseDirectory \
-			-initialdir [file join /$path media] \
-			-parent $win -title "New Folder"]
+      set folder [$type draw_chooseMediaFolderDialog \
+				-root [file join /$path media] \
+				-initialdir "New Folder" \
+				-mustexist no \
+				-bannerimage $newMediaFolderDialogBanner \
+				-parent $win -title "New Folder"]
       if {"$folder" eq ""} {return}
       if {[file system [file dirname $folder]] ne [file system /$path]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join /$path media]]/* $folder]} {
+      if {![string match [file normalize [file join /$path media]]/* [file normalize $folder]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
 	return
       }
@@ -697,12 +1682,16 @@ namespace eval RolePlayingDB3 {
       if {[llength $selection] > 0} {
 	set destfile [$mediatree itemcget [lindex $selection 0] -fullpath]
 	if {![file isfile $destfile]} {
-	  set destfile   [tk_getOpenFile -parent $win -title "File to delete" \
-				     -initialdir [file join /$path media]]
+	  set destfile   [$type draw_getMediaFileDialog \
+				-parent $win -title "File to delete" \
+				-root [file join /$path media] \
+				-saveoropen open]
 	}
       } else {
-	set destfile   [tk_getOpenFile -parent $win -title "File to delete" \
-				     -initialdir [file join /$path media]]
+	set destfile   [$type draw_getMediaFileDialog \
+				-parent $win -title "File to delete" \
+				-root [file join /$path media] \
+				-saveoropen open]
       }
       if {"$destfile" eq ""} {return}
       if {[file tail $destfile] eq "flag"} {
@@ -713,7 +1702,7 @@ namespace eval RolePlayingDB3 {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join /$path media]]/* $destfile]} {
+      if {![string match [file normalize [file join /$path media]]/* [file normalize $destfile]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
 	return
       }
@@ -736,8 +1725,9 @@ namespace eval RolePlayingDB3 {
 	set folder [$mediatree itemcget [lindex $selection 0] -fullpath]
 	if {![file isdirectory $folder]} {set folder [file dirname $folder]}
       } else {
-	set folder [tk_chooseDirectory \
-			-initialdir [file join /$path media] \
+	set folder [$type draw_chooseMediaFolderDialog \
+			-root [file join /$path media] \
+			-bannerimage $oldMediaFolderDialogBanner \
 			-parent $win -title "Folder to delete" \
 			-mustexist yes]
       }
@@ -746,11 +1736,11 @@ namespace eval RolePlayingDB3 {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join /$path media]]/* $folder]} {
+      if {![string match [file normalize [file join /$path media]]/* [file normalize $folder]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
 	return
       }
-      if {"$folder" eq [file normalize [file join /$path media]]} {
+      if {[file normalize "$folder"] eq [file normalize [file join /$path media]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "You cannot delete the media folder itself!"
 	return
       }
@@ -847,26 +1837,7 @@ namespace eval RolePlayingDB3 {
       set mapbundlemountpoint [from args -mapbundlemountpoint]
       set parent [from args -parent .]
       set mapeditor [from args -mapeditor]
-      set leveldir [tk_chooseDirectory \
-      			-initialdir [file join $mapbundlemountpoint Levels] \
-			-parent $parent -title "Level to create"]
-      if {"$leveldir" eq ""} {return ""}
-      if {[file system [file dirname $leveldir]] ne [file system $mapbundlemountpoint]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
-	return
-      }
-      if {![string match [file normalize [file join $mapbundlemountpoint Levels]]/* $leveldir]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the Levels folder!"
-	return
-      }
-      if {"$leveldir" eq [file normalize [file join $mapbundlemountpoint Levels]]} {
-	tk_messageBox -parent $win -type ok -icon info -message "You cannot use the Levels folder itself as a level!"
-	return
-      }
-      if {[file exists "$leveldir"]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Level [file tail $leveldir] already exists!"
-	return
-      }
+      set leveldir [from args -leveldir]
       set newTop [RolePlayingDB3::RPGToplevel \
 		.level%AUTO% \
 		-mainframeconstructor $type \
@@ -1214,10 +2185,32 @@ namespace eval RolePlayingDB3 {
     }
     method _newspace {args} {
       set parent [from args -parent $win]
+############################
+      set space [tk_getSaveFile \
+			-initialdir $leveldir \
+			-parent $parent -title "Space to create" \
+			-filetypes {{{Space Files} *.xml TEXT}}]
+      if {"$space" eq ""} {return}
+      if {[file system [file dirname $space]] ne [file system $leveldir]} {
+	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped off the internal file system!"
+	return
+      }
+      if {![string match [file normalize [file join $leveldir]]/* [file normalize $space]]} {
+	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped out of this level's folder!"
+	return
+      }
+      if {[file normalize "$space"] eq [file normalize [file join $leveldir levelinfo.xml]]} {
+	tk_messageBox -parent $parent -type ok -icon info -message "You cannot delete the levelinfo file!"
+	return
+      }
+      if {[file exists "$space"]} {
+	tk_messageBox -parent $parent -type ok -icon info -message "Space [file rootname [file tail $space]] already exists!"
+	return
+      }
       set newspaceeditor [::RolePlayingDB3::SpaceEditor new \
 				-mapbundlemountpoint $options(-mapbundlemountpoint) \
 				-leveldir $options(-leveldir) \
-				-parent $parent \
+				-parent $parent -newspace $space \
 				-leveleditor [winfo toplevel $win]]
       if {"$newspaceeditor" ne ""} {
 	set isdirty yes
@@ -1233,6 +2226,7 @@ namespace eval RolePlayingDB3 {
       if {[llength $selection] > 0} {
 	set space [$spacetree itemcget [lindex $selection 0] -fullpath]
       } else {
+##########################
 	set space [tk_getOpenFile \
 			-initialdir $options(-leveldir) \
 			-parent $win -title "Space to delete" \
@@ -1243,11 +2237,11 @@ namespace eval RolePlayingDB3 {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join $options(-leveldir)]]/* $space]} {
+      if {![string match [file normalize [file join $options(-leveldir)]]/* [file normalize $space]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of this level's folder!"
 	return
       }
-      if {"$space" eq [file normalize [file join $options(-leveldir) levelinfo.xml]]} {
+      if {[file normalize "$space"] eq [file normalize [file join $options(-leveldir) levelinfo.xml]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "You cannot delete the levelinfo file!"
 	return
       }
@@ -1273,6 +2267,7 @@ namespace eval RolePlayingDB3 {
       if {[llength $selection] > 0} {
 	set space [$spacetree itemcget [lindex $selection 0] -fullpath]
       } else {
+#########################
 	set space [tk_getOpenFile \
 			-initialdir $options(-leveldir) \
 			-parent $win -title "Space to edit" \
@@ -1283,11 +2278,11 @@ namespace eval RolePlayingDB3 {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join $options(-leveldir)]]/* $space]} {
+      if {![string match [file normalize [file join $options(-leveldir)]]/* [file normalize $space]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of this level's folder!"
 	return
       }
-      if {"$space" eq [file normalize [file join $options(-leveldir) levelinfo.xml]]} {
+      if {[file normalize "$space"] eq [file normalize [file join $options(-leveldir) levelinfo.xml]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "You cannot use the space editor on the levelinfo file!"
 	return
       }
@@ -1437,27 +2432,7 @@ namespace eval RolePlayingDB3 {
       set parent [from args -parent .]
       set leveleditor [from args -leveleditor]
       set leveldir [from args -leveldir]
-      set space [tk_getSaveFile \
-			-initialdir $leveldir \
-			-parent $parent -title "Space to create" \
-			-filetypes {{{Space Files} *.xml TEXT}}]
-      if {"$space" eq ""} {return}
-      if {[file system [file dirname $space]] ne [file system $leveldir]} {
-	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped off the internal file system!"
-	return
-      }
-      if {![string match [file normalize [file join $leveldir]]/* $space]} {
-	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped out of this level's folder!"
-	return
-      }
-      if {"$space" eq [file normalize [file join $leveldir levelinfo.xml]]} {
-	tk_messageBox -parent $parent -type ok -icon info -message "You cannot delete the levelinfo file!"
-	return
-      }
-      if {[file exists "$space"]} {
-	tk_messageBox -parent $parent -type ok -icon info -message "Space [file rootname [file tail $space]] already exists!"
-	return
-      }
+      set space [from args -newspace]
       set newTop [RolePlayingDB3::RPGToplevel \
 		.space%AUTO% \
 		-mainframeconstructor $type \

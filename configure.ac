@@ -312,14 +312,16 @@ case $target_os in
   macos | darwin) 
     AC_SUBST(IMG_ZIP, Img-1.3-Mac-Universal.zip)
     AC_SUBST(TCLKITRUN, tclkit-darwin-univ-aqua)
-    AC_MSG_ERROR([Unsupported target os for Tclxml: $target_os])
+    AC_MSG_NOTICE([Unsupported target os for Tclxml: $target_os, using Pure Tcl version])
+    AC_SUBST(TCLXML_ZIP, Tclxml3.1-GenericPureTcl.zip)
     ;;
   linux-gnu)
     case $target_cpu in
       x86_64)
 	AC_SUBST(IMG_ZIP, Img-1.3-Linux64.zip)
 	AC_SUBST(TCLKITRUN, tclkit-linux-x86_64)
-	AC_MSG_ERROR([Unsupported Linux arch for Tclxml: $target_cpu])
+	AC_MSG_NOTICE([Unsupported Linux arch for Tclxml: $target_cpu, using Pure Tcl version])
+	AC_SUBST(TCLXML_ZIP, Tclxml3.1-GenericPureTcl.zip)
 	;;
       i*86)
 	AC_SUBST(IMG_ZIP, Img-1.3-Linux32.zip)
