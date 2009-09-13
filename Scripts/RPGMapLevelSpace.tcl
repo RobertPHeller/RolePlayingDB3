@@ -548,8 +548,12 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       }
     }
     method UpdateWhenIdle {} {
+#      puts stderr "*** $self UpdateWhenIdle"
       if {![info exists updateId]} {
 	set updateId [after idle [mymethod Update]]
+#	puts stderr "*** $self UpdateWhenIdle: new updateId = $updateId"
+      } else {
+#	puts stderr "*** $self UpdateWhenIdle: old updateId = $updateId"
       }
     }
     method ListInvoke {filenames} {
@@ -558,8 +562,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       }
       set file [::tk::dialog::file::JoinFile $selectPath \
 		[lindex $filenames 0]]
-      puts stderr "*** $self ListInvoke: file = $file"
-      puts stderr "*** $self ListInvoke: file join $options(-root) $file = [file join $options(-root) $file]"
+#      puts stderr "*** $self ListInvoke: file = $file"
+#      puts stderr "*** $self ListInvoke: file join $options(-root) $file = [file join $options(-root) $file]"
       if {[file isdirectory [file join $options(-root) $file]]} {
       	set appPWD [pwd]
 	if {[catch {cd [file join $options(-root) $file]}]} {
@@ -568,9 +572,11 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	  	-icon warning
 	} else {
 	  cd $appPWD
+#	  puts stderr "*** $self ListInvoke: setting selectPath to $file"
 	  set selectPath $file
         }
       } else {
+#        puts stderr "*** $self ListInvoke: setting selectFile to $file"
         set selectFile $file
         $self Done
       }
@@ -653,7 +659,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     method VerifyFileName {filename} {
       set list [$self ResolveFile $selectPath $filename $options(-defaultextension)]
       foreach {flag path file} $list {break}
-      puts stderr "*** $self VerifyFileName: filename is $filename, flag is $flag, path is $path, file is $file"
+#      puts stderr "*** $self VerifyFileName: filename is $filename, flag is $flag, path is $path, file is $file"
       switch -- $flag {
 	OK {
 	  if {[string equal $file ""]} {
@@ -852,13 +858,11 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 
 #      puts stderr "*** $self Update: selectPath = $selectPath"
 
-      set selectDir [file dirname $selectPath]
-
       ::tk::IconList_DeleteAll $iconList
       set dirs [lsort -dictionary -unique \
 			[glob -tails \
 			      -directory [file join $options(-root) \
-						    $selectDir] -type d \
+						    $selectPath] -type d \
 				-nocomplain *]]
 
 #      puts stderr "[list *** $self Update: dirs = $dirs]"
@@ -869,7 +873,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       ::tk::IconList_Add $iconList $folderImage $dirList
 
       set cmd [list glob -tails -directory [file join $options(-root) \
-						    $selectDir] \
+						    $selectPath] \
 			 -type {f b c l p s} -nocomplain]
       if {[string equal $filter *]} {
 	lappend cmd .* *
@@ -884,7 +888,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       set list "."
       set dir ""
 #      puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
-      foreach subdir [file split $selectDir] {
+      foreach subdir [file split $selectPath] {
 	set dir [file join $dir $subdir]
 	lappend list $dir
       }
@@ -912,7 +916,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 		$selectPath $selectFile]
       }
       if {"$options(-saveoropen)" eq "save"} {
-	puts stderr "*** $self Done _selectFilePath = $_selectFilePath"
+#	puts stderr "*** $self Done _selectFilePath = $_selectFilePath"
 	if {[file exists [file join $options(-root) $_selectFilePath]]} {
 	  set reply [tk_messageBox -icon warning -type yesno\
 		-parent $win -message \
@@ -1399,14 +1403,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 				  -command [mymethod _deletelevel]
       $toolbar add -name editlevel -text {Edit Level} \
 				   -command [mymethod _editlevel]
-      $toolbar add -name addmedia -text {Add Media} \
-				  -command [mymethod _addmedia]
-      $toolbar add -name newmediafolder -text {New Media Folder} \
-				  -command [mymethod _newmediafolder]
-      $toolbar add -name delmedia -text {Delete Media} \
-				  -command [mymethod _delmedia]
-      $toolbar add -name delmediafolder -text {Delete Media Folder} \
-      				  -command [mymethod _delmediafolder]
+      $toolbar add -name extractmedia -text {Extract Media} \
+				  -command [mymethod _extractmedia]
       install panes using PanedWindow $win.panes -side top
       pack $panes -fill both -expand yes
       set sbpane [$panes add -weight 1]
@@ -1561,7 +1559,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       }
       set lelist $levelEditors
       foreach le $levelEditors {
-        if {"$level" eq "[$le getleveldir]"} {
+        if {[file normalize "$level"] eq [file normalize "[$le getleveldir]"]} {
 	  $le close -dontsave yes
 	  set leindex [lsearch -exact $lelist $le]
 	  if {$leindex >= 0} {set lelist [lreplace $lelist $leindex $leindex]}
@@ -1570,6 +1568,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       set levelEditors $lelist
       deletetree $level
       $self updateleveltree
+      deletetree [file join /$path media [file tail $level]]
+      $self updatemediatree
       set isdirty yes
     }
     method _editlevel {args} {
@@ -1625,90 +1625,42 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	set levelEditors [lreplace $levelEditors $leindex $leindex]
       }
     }
-    method _addmedia {} {
-      set sourcefile [tk_getOpenFile -parent $win -title "Source file" \
-      				     -initialdir [file dirname $currentFilename]]
-      if {"$sourcefile" eq ""} {return}
-      set destfile   [$type draw_getMediaFileDialog \
-				     -parent $win -title "Destination file" \
-				     -root [file join /$path media] \
-				     -initialfile [file tail $sourcefile] \
-				     -saveoropen save]
-      puts stderr "*** $self _addmedia: destfile is $destfile"
-      if {"$destfile" eq ""} {return}
-      if {[file system [file dirname $destfile]] ne [file system /$path]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
-	return
-      }
-      if {![string match [file normalize [file join /$path media]]/* [file normalize $destfile]]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
-	return
-      }
-      file copy $sourcefile $destfile
-      $self updatemediatree
-      set isdirty yes
-    }
-    method _newmediafolder {} {
-      set folder [$type draw_chooseMediaFolderDialog \
-				-root [file join /$path media] \
-				-initialdir "New Folder" \
-				-mustexist no \
-				-bannerimage $newMediaFolderDialogBanner \
-				-parent $win -title "New Folder"]
-      if {"$folder" eq ""} {return}
-      if {[file system [file dirname $folder]] ne [file system /$path]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
-	return
-      }
-      if {![string match [file normalize [file join /$path media]]/* [file normalize $folder]]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
-	return
-      }
-      if {[file exists "$folder"] && ![file isdirectory "$folder"]} {
-	tk_messageBox -parent $win -type ok -icon info -message "$folder exists and is not a folder!"
-	return
-      }
-      if {[file exists "$folder"]} {
-	tk_messageBox -parent $win -type ok -icon info -message "$folder already exists."
-	return
-      }
-      file mkdir $folder
-      close [open [file join $folder flag] w]
-      $self updatemediatree
-      set isdirty yes
-    }
-    method _delmedia {} {
+    method _extractmedia {} {
       set selection [$mediatree selection get]
       if {[llength $selection] > 0} {
-	set destfile [$mediatree itemcget [lindex $selection 0] -fullpath]
+	set sourcefile [$mediatree itemcget [lindex $selection 0] -fullpath]
 	if {![file isfile $destfile]} {
-	  set destfile   [$type draw_getMediaFileDialog \
-				-parent $win -title "File to delete" \
+	  set sourcefile   [$type draw_getMediaFileDialog \
+				-parent $win -title "File to extract" \
 				-root [file join /$path media] \
-				-saveoropen open]
+				-saveoropen open \
+				-bannerimage $openMediaFileDialogBanner]
 	}
       } else {
-	set destfile   [$type draw_getMediaFileDialog \
-				-parent $win -title "File to delete" \
+	set sourcefile   [$type draw_getMediaFileDialog \
+				-parent $win -title "File to extract" \
 				-root [file join /$path media] \
-				-saveoropen open]
+				-saveoropen open \
+				-bannerimage $openMediaFileDialogBanner]
       }
-      if {"$destfile" eq ""} {return}
-      if {[file tail $destfile] eq "flag"} {
-	tk_messageBox -parent $win -type ok -icon info -message "You cannot delete place holder (flag) files!"
+      if {"$sourcefile" eq ""} {return}
+      if {[file tail $sourcefile] eq "flag"} {
+	tk_messageBox -parent $win -type ok -icon info -message "You cannot extract place holder (flag) files!"
 	return
       }
-      if {[file system $destfile] ne [file system /$path]} {
+      if {[file system $sourcefile] ne [file system /$path]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join /$path media]]/* [file normalize $destfile]]} {
+      if {![string match [file normalize [file join /$path media]]/* [file normalize $sourcefile]]} {
 	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
 	return
       }
-      file delete $destfile
-      $self updatemediatree
-      set isdirty yes
+      set destfile [tk_getSaveFile -parent $win -title "File to save as" \
+				-initialfile [file tail $sourcefile]]
+      if {"$destfile" eq ""} {return}
+      file copy -force "$sourcefile" "$destfile"
+      tk_messageBox -parent $win -type ok -icon info -message "File [file tail $sourcefile] extracted to $destfile."
     }
     proc deletetree {dir} {
       foreach d [glob -nocomplain -type d [file join $dir *]] {
@@ -1718,41 +1670,6 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	file delete $f
       }
       file delete $dir
-    }
-    method _delmediafolder {} {
-      set selection [$mediatree selection get]
-      if {[llength $selection] > 0} {
-	set folder [$mediatree itemcget [lindex $selection 0] -fullpath]
-	if {![file isdirectory $folder]} {set folder [file dirname $folder]}
-      } else {
-	set folder [$type draw_chooseMediaFolderDialog \
-			-root [file join /$path media] \
-			-bannerimage $oldMediaFolderDialogBanner \
-			-parent $win -title "Folder to delete" \
-			-mustexist yes]
-      }
-      if {"$folder" eq ""} {return}
-      if {[file system [file dirname $folder]] ne [file system /$path]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
-	return
-      }
-      if {![string match [file normalize [file join /$path media]]/* [file normalize $folder]]} {
-	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
-	return
-      }
-      if {[file normalize "$folder"] eq [file normalize [file join /$path media]]} {
-	tk_messageBox -parent $win -type ok -icon info -message "You cannot delete the media folder itself!"
-	return
-      }
-      if {[llength [glob -nocomplain [file join $folder *]]] > 1} {
-	set ans [tk_messageBox -parent $win -type yesno -default no \
-			-icon question -message "$folder is not empty! Are sure you want to delete it?"]
-	if {"$ans" eq "no"} {return}
-      }
-#      puts stderr "*** $self _delmediafolder: folder = $folder"
-      deletetree $folder
-      $self updatemediatree
-      set isdirty yes
     }
   }
   snit::widget LevelEditor {
@@ -1769,6 +1686,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     variable zoommenu
     variable zoomfactor 1
     variable oldscalefactor 1
+    variable mymediadir
+    variable mymediadirRelative
     method setdirty {} {set isdirty yes}
     method getdirty {} {return $isdirty}
     variable isdirtyspace no
@@ -1796,7 +1715,10 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     component     levelframe
 
     typevariable bannerImage
+    typevariable newSpaceFileDialogBanner
+    typevariable oldSpaceFileDialogBanner
     typevariable bannerBackground #a2de86
+    typevariable _getSpaceFileDialog
     typevariable levelTemplateXML {<?xml version="1.0" ?>
 <rpgv3:Level xmlns:rpgv3="http://www.deepsoft.com/roleplayingdb/v3xmlns"
 	     name="Level" >Level Information
@@ -1828,7 +1750,25 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       set printerIcon [image create photo \
 				-file [file join $::RolePlayingDB3::ImageDir \
 						 largePrinter.gif]]
+      set newSpaceFileDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						CreateNewSpaceBanner.png]]
+      set oldSpaceFileDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						SelectSpaceBanner.png]]
       set _printdialog {}
+      set _getSpaceFileDialog {}
+    }
+    typemethod createGetSpaceFileDialog {} {
+      if {"$_getSpaceFileDialog" ne "" && [winfo exists "$_getSpaceFileDialog"]} {return}
+      set _getSpaceFileDialog [::RolePlayingDB3::chroot_getFile \
+				.getSpaceFileDialog \
+				-bannerimage $oldSpaceFileDialogBanner \
+				-bannerbackground $bannerBackground]
+    }
+    typemethod draw_getSpaceFileDialog {args} {
+      $type createGetSpaceFileDialog
+      return [eval [list $_getSpaceFileDialog draw] $args]
     }
     method new {} {
       $options(-mapeditor) _newlevel -parent $win
@@ -1977,10 +1917,15 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       $self configurelist $args
 
       set currentLevelDir [file tail $options(-leveldir)]
+      set mymediadir [file join $options(-mapbundlemountpoint) media \
+                                [file tail $options(-leveldir)]]
+      set mymediadirRelative [eval [list file join] [lrange [file split $mymediadir] 1 end]]
       [winfo toplevel $win] configure -title "Level Edit: $currentLevelDir"
       if {"$options(-template)" ne "" && ![file exists $options(-leveldir)]} {
 	file mkdir $options(-leveldir)
 	close [open [file join $options(-leveldir) flag] w]
+        file mkdir $mymediadir
+	close [open [file join $mymediadir flag] w]	
 	set XML $options(-template)
 	set xmlfile [file join $options(-leveldir) levelinfo.xml]
 	set firstsave yes
@@ -2172,9 +2117,9 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	  "media" eq [lindex [file split $curfile] 0]} {
 	return "$curfile"
       } else {
-	file copy -force "$curfile" [file join $mapbundlemountpoint media [file tail $curfile]]
+	file copy -force "$curfile" [file join $mymediadir [file tail $curfile]]
 	set needmediatreeupdated yes
-	return "[file join media [file tail $curfile]]"
+	return "[file join $mymediadirRelative [file tail $curfile]]"
       }
     }
     method removeeditor {se} {
@@ -2185,11 +2130,12 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     }
     method _newspace {args} {
       set parent [from args -parent $win]
-############################
-      set space [tk_getSaveFile \
-			-initialdir $leveldir \
+      set space [$type draw_getSpaceFileDialog \
 			-parent $parent -title "Space to create" \
-			-filetypes {{{Space Files} *.xml TEXT}}]
+			-bannerimage $newSpaceFileDialogBanner \
+			-root $leveldir -saveoropen save \
+			-filetypes {{{Space Files} *.xml TEXT}} \
+			-initialfile "New Space"]
       if {"$space" eq ""} {return}
       if {[file system [file dirname $space]] ne [file system $leveldir]} {
 	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped off the internal file system!"
@@ -2226,10 +2172,10 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       if {[llength $selection] > 0} {
 	set space [$spacetree itemcget [lindex $selection 0] -fullpath]
       } else {
-##########################
-	set space [tk_getOpenFile \
-			-initialdir $options(-leveldir) \
-			-parent $win -title "Space to delete" \
+	set space [$type draw_getSpaceFileDialog \
+			-parent $parent -title "Space to create" \
+			-bannerimage $oldSpaceFileDialogBanner \
+			-root $leveldir -saveoropen open \
 			-filetypes {{{Space Files} *.xml TEXT}}]
       }
       if {"$space" eq ""} {return}
@@ -2247,7 +2193,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       }
       set selist $spaceEditors
       foreach se $spaceEditors {
-	if {"$space" eq "[$se getspacefile]"} {
+	if {[file normalize "$space"] eq [file normalize "[$se getspacefile]"]} {
 	  $se close -dontsave yes
 	  set seindex [lsearch -exact $selist $se]
 	  if {$seindex >= 0} {set selist [lreplace $seindex $seindex $seindex]}
@@ -2267,10 +2213,10 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       if {[llength $selection] > 0} {
 	set space [$spacetree itemcget [lindex $selection 0] -fullpath]
       } else {
-#########################
-	set space [tk_getOpenFile \
-			-initialdir $options(-leveldir) \
-			-parent $win -title "Space to edit" \
+	set space [$type draw_getSpaceFileDialog \
+			-parent $parent -title "Space to create" \
+			-bannerimage $oldSpaceFileDialogBanner \
+			-root $leveldir -saveoropen open \
 			-filetypes {{{Space Files} *.xml TEXT}}]
       }
       if {"$space" eq ""} {return}
@@ -2287,7 +2233,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	return
       }
       foreach se $spaceEditors {
-	if {"$space" eq "[$se getspacefile]"} {
+	if {[file normalize "$space"] eq [file normalize "[$se getspacefile]"]} {
 	  wm deinconify $se
 	  raise $se
 	  return
@@ -2315,6 +2261,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     variable needmediatreeupdated no
     variable zoommenu
     variable zoomfactor 1
+    variable mymediadir
+    variable mymediadirRelative
     method setdirty {} {set isdirty yes}
     method checksave {} {
       if {$isdirty} {
@@ -2538,8 +2486,14 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       $self configurelist $args
 
       set currentSpaceFile [file rootname [file tail $options(-spacefile)]]
+      set mymediadir [file join $options(-mapbundlemountpoint) media \
+				[file tail $options(-leveldir)] \
+				$currentSpaceFile]
+      set mymediadirRelative [eval [list file join] [lrange [file split $mymediadir] 1 end]]
       [winfo toplevel $win] configure -title "Space Edit: $currentSpaceFile"
       if {"$options(-template)" ne "" && ![file exists $options(-spacefile)]} {
+	file mkdir $mymediadir
+	close [open [file join $mymediadir flag] w]
 	set XML $options(-template)
 	set firstsave yes
 	set isnew yes
@@ -2695,9 +2649,9 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	  "media" eq [lindex [file split $curfile] 0]} {
 	return "$curfile"
       } else {
-	file copy -force "$curfile" [file join $options(-mapbundlemountpoint) media [file tail $curfile]]
+	file copy -force "$curfile" [file join $mymediadir [file tail $curfile]]
 	set needmediatreeupdated yes
-	return "[file join media [file tail $curfile]]"
+	return "[file join $mymediadirRelative [file tail $curfile]]"
       }
     }
     method createdialogs {} {

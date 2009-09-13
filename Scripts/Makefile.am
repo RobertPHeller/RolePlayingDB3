@@ -17,7 +17,8 @@ Images  = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
 	  SheetEditDialogIcon.png LevelBanner.png CreateLevelBanner.png \
 	  MapDialogIcon.png largePrinter.gif SelectLevelBanner.png \
 	  CreateNewMediaFolderBanner.png SelectMediaFolderBanner.png \
-	  SaveMediaFileBanner.png OpenMediaFileBanner.png
+	  SaveMediaFileBanner.png OpenMediaFileBanner.png \
+	  CreateNewSpaceBanner.png SelectSpaceBanner.png
 	  
 BUILT_SOURCES = Version.tcl
 noinst_DATA = Version.tcl
