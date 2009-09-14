@@ -539,8 +539,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	trace vdelete [myvar selectPath] [lindex $trace 0] [lindex $trace 1]
       }
       $dirmenubtn configure -textvariable {}
-      puts stderr "*** method draw (after vwait): selectFilePath = $selectFilePath"
-      puts stderr "*** method draw (after vwait): file join $options(-root) $selectFilePath = [file join $options(-root) $selectFilePath]"
+#      puts stderr "*** method draw (after vwait): selectFilePath = $selectFilePath"
+#      puts stderr "*** method draw (after vwait): file join $options(-root) $selectFilePath = [file join $options(-root) $selectFilePath]"
       if {"$selectFilePath" eq ""} {
 	return $selectFilePath
       } else {
@@ -823,7 +823,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     method SetFilter {ftype} {
       set filter [lindex $ftype 1]
       $typeMenuBtn configure -text [lindex $ftype 0] -indicatoron 1
-      if {![info exists $extUsed]} {
+      if {![info exists extUsed]} {
 	if {[string length $options(-defaultextension)]} {
 	  set extUsed yes
 	} else {
@@ -1528,6 +1528,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       if {"$newleveleditor" ne ""} {
 	set isdirty yes
 	$self updateleveltree
+	$self updatemediatree
 	lappend levelEditors $newleveleditor
       }
     }
@@ -1664,7 +1665,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     }
     proc deletetree {dir} {
       foreach d [glob -nocomplain -type d [file join $dir *]] {
-	deltree $d
+	deletetree $d
       }
       foreach f [glob -nocomplain [file join $dir *]] {
 	file delete $f
@@ -1925,7 +1926,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	file mkdir $options(-leveldir)
 	close [open [file join $options(-leveldir) flag] w]
         file mkdir $mymediadir
-	close [open [file join $mymediadir flag] w]	
+	close [open [file join $mymediadir flag] w]
 	set XML $options(-template)
 	set xmlfile [file join $options(-leveldir) levelinfo.xml]
 	set firstsave yes
@@ -2133,19 +2134,19 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       set space [$type draw_getSpaceFileDialog \
 			-parent $parent -title "Space to create" \
 			-bannerimage $newSpaceFileDialogBanner \
-			-root $leveldir -saveoropen save \
+			-root $options(-leveldir) -saveoropen save \
 			-filetypes {{{Space Files} *.xml TEXT}} \
 			-initialfile "New Space"]
       if {"$space" eq ""} {return}
-      if {[file system [file dirname $space]] ne [file system $leveldir]} {
+      if {[file system [file dirname $space]] ne [file system $options(-leveldir)]} {
 	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped off the internal file system!"
 	return
       }
-      if {![string match [file normalize [file join $leveldir]]/* [file normalize $space]]} {
+      if {![string match [file normalize [file join $options(-leveldir)]]/* [file normalize $space]]} {
 	tk_messageBox -parent $parent -type ok -icon info -message "Opps, you stepped out of this level's folder!"
 	return
       }
-      if {[file normalize "$space"] eq [file normalize [file join $leveldir levelinfo.xml]]} {
+      if {[file normalize "$space"] eq [file normalize [file join $options(-leveldir) levelinfo.xml]]} {
 	tk_messageBox -parent $parent -type ok -icon info -message "You cannot delete the levelinfo file!"
 	return
       }
@@ -2175,7 +2176,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	set space [$type draw_getSpaceFileDialog \
 			-parent $parent -title "Space to create" \
 			-bannerimage $oldSpaceFileDialogBanner \
-			-root $leveldir -saveoropen open \
+			-root $options(-leveldir) -saveoropen open \
 			-filetypes {{{Space Files} *.xml TEXT}}]
       }
       if {"$space" eq ""} {return}
@@ -2216,7 +2217,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	set space [$type draw_getSpaceFileDialog \
 			-parent $parent -title "Space to create" \
 			-bannerimage $oldSpaceFileDialogBanner \
-			-root $leveldir -saveoropen open \
+			-root $options(-leveldir) -saveoropen open \
 			-filetypes {{{Space Files} *.xml TEXT}}]
       }
       if {"$space" eq ""} {return}
@@ -2487,7 +2488,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 
       set currentSpaceFile [file rootname [file tail $options(-spacefile)]]
       set mymediadir [file join $options(-mapbundlemountpoint) media \
-				[file tail $options(-leveldir)] \
+				[file tail [file dirname \
+						$options(-spacefile)]] \
 				$currentSpaceFile]
       set mymediadirRelative [eval [list file join] [lrange [file split $mymediadir] 1 end]]
       [winfo toplevel $win] configure -title "Space Edit: $currentSpaceFile"
@@ -2543,6 +2545,10 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       $cw bind <Return> [mymethod colorchanged]
       $self redrawspace
       $options(-leveleditor) updatelevelmap
+      if {$isnew} {
+	$options(-leveleditor) updateleveltree
+	$options(-leveleditor) updatemediatree
+      }
       $self createdialogs
       update
     }
