@@ -83,7 +83,7 @@ namespace eval RolePlayingDB3 {
 	Character #e52b2a
 	Dressing  #91938e
 	Monster   #85c152
-	Spell     #a2dd84
+	Spell     #bb4649
 	Treasure  #e1eb8f
 	TrickTrap #95d9d7
     }

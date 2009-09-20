@@ -18,7 +18,10 @@ Images  = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
 	  MapDialogIcon.png largePrinter.gif SelectLevelBanner.png \
 	  CreateNewMediaFolderBanner.png SelectMediaFolderBanner.png \
 	  SaveMediaFileBanner.png OpenMediaFileBanner.png \
-	  CreateNewSpaceBanner.png SelectSpaceBanner.png
+	  CreateNewSpaceBanner.png SelectSpaceBanner.png \
+	  CharacterOpenMediaFileBanner.png DressingOpenMediaFileBanner.png \
+	  MonsterOpenMediaFileBanner.png SpellOpenMediaFileBanner.png \
+	  TreasureOpenMediaFileBanner.png TrickTrapOpenMediaFileBanner.png
 	  
 BUILT_SOURCES = Version.tcl
 noinst_DATA = Version.tcl
@@ -46,4 +49,5 @@ $(top_builddir)/BuildData/tclkit${BEXEEXT}: FORCE
 	$(MAKE) -C $(top_builddir)/BuildData tclkit${BEXEEXT}
 
 FORCE:
+
 
