@@ -41,6 +41,7 @@ package require ZipArchive
 package require xml
 package require BWLabelComboBox
 package require RPGUtilities
+package require pdf4tcl
 
 namespace eval RolePlayingDB3 {
   snit::widget Template {
@@ -251,6 +252,7 @@ namespace eval RolePlayingDB3 {
 	set heading [file tail "$currentFilename"]
       }
       $self outputXMLToPDF $pdfobj $heading
+      ::RolePlayingDB3::PrintDialog printprogress end      
       $pdfobj destroy
     }
     variable pageno 0
@@ -271,6 +273,7 @@ namespace eval RolePlayingDB3 {
       $pdfobj text "$heading" -align center -x [expr {$width/2.0}] -y 0
       $pdfobj text "Page $pageno" -align right -x $width -y 0
       $pdfobj setTextPosition 0 [expr {$lineno * 14}]
+      ::RolePlayingDB3::PrintDialog printprogress setpageno $pageno
     }
     method _outputXMLToPDF_processNodesAt {heading subheading node pdfobj {indent 0}} {
       foreach n [$templatetree nodes "$node"] {

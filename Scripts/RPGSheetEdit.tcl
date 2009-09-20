@@ -76,6 +76,7 @@ namespace eval RolePlayingDB3 {
     typemethod myfiletypes {} {return $filetypes}
     typecomponent _editDialog
     typecomponent  sheetTemplateFE
+    typecomponent _getMediaFileDialog
     typevariable bannerImage -array {}
     typevariable dialogIcon  -array {}
     typevariable bannerBackgrounds -array {
@@ -86,6 +87,7 @@ namespace eval RolePlayingDB3 {
 	Treasure  #e1eb8f
 	TrickTrap #95d9d7
     }
+    typevariable openMediaFileDialogBanner -array {}
     typevariable editDialogIcon {}
     typeconstructor {
       foreach theclass {Character Dressing Monster Spell Treasure TrickTrap} {
@@ -97,12 +99,27 @@ namespace eval RolePlayingDB3 {
 					-file [file join \
 						$::RolePlayingDB3::ImageDir \
 						${theclass}DialogIcon.png]]
-	set editDialogIcon [image create photo \
+        set openMediaFileDialogBanner($theclass) [image create photo \
+					-file [file join \
+						$::RolePlayingDB3::ImageDir \
+						${theclass}OpenMediaFileBanner.png]]
+      }
+      set editDialogIcon [image create photo \
 					-file [file join \
 						$::RolePlayingDB3::ImageDir \
 						SheetEditDialogIcon.png]]
-      }
       set _editDialog {}
+    }
+    typemethod createGetMediaFileDialog {} {
+      if {"$_getMediaFileDialog" ne "" && [winfo exists "$_getMediaFileDialog"]} {return}
+      set _getMediaFileDialog [::RolePlayingDB3::chroot_getFile \
+				.getSheetMediaFileDialog \
+				-bannerimage $openMediaFileDialogBanner(Character) \
+				-bannerbackground $bannerBackgrounds(Character)]
+    }
+    typemethod draw_getMediaFileDialog {args} {
+      $type createGetMediaFileDialog
+      return [eval [list $_getMediaFileDialog draw] $args]
     }
     typemethod _createEditDialog {} {
       if {"$_editDialog" ne "" && [winfo exists "$_editDialog"]} {return}
@@ -299,6 +316,7 @@ namespace eval RolePlayingDB3 {
 	set heading "$currentFilename"
       }
       $sheetframe outputXMLToPDF $pdfobj $heading
+      ::RolePlayingDB3::PrintDialog printprogress end      
       $pdfobj destroy
     }
     method close {args} {
@@ -355,7 +373,8 @@ namespace eval RolePlayingDB3 {
       install toolbar using ButtonBox $win.toolbar -orient horizontal \
 						-homogeneous no
       pack $toolbar -fill x 
-      ## Tools??? ##
+      $toolbar add -name extractmedia -text {Extract Media} \
+				  -command [mymethod _extractmedia]
       install sheetframe using ::RolePlayingDB3::XMLContentEditor \
 			$win.sheetframe -xml $XML -isnewobject $isnew \
 					-templatevariable [myvar options(-template)] \
@@ -368,6 +387,32 @@ namespace eval RolePlayingDB3 {
 #      if {"$parseMode" eq "file"} {
 #	puts stderr "*** $type $self: options(-template) is:\n$options(-template)"
 #      }
+    }
+    method _extractmedia {} {
+      set sourcefile   [$type draw_getMediaFileDialog \
+				-parent $win -title "File to extract" \
+				-root [file join /$path media] \
+				-saveoropen open \
+				-bannerimage $openMediaFileDialogBanner($options(-sheetclass)) \
+				-bannerbackground $bannerBackgrounds($options(-sheetclass))]
+      if {"$sourcefile" eq ""} {return}
+      if {[file tail $sourcefile] eq "flag"} {
+	tk_messageBox -parent $win -type ok -icon info -message "You cannot extract place holder (flag) files!"
+	return
+      }
+      if {[file system $sourcefile] ne [file system /$path]} {
+	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped off the internal file system!"
+	return
+      }
+      if {![string match [file normalize [file join /$path media]]/* [file normalize $sourcefile]]} {
+	tk_messageBox -parent $win -type ok -icon info -message "Opps, you stepped out of the media folder!"
+	return
+      }
+      set destfile [tk_getSaveFile -parent $win -title "File to save as" \
+				-initialfile [file tail $sourcefile]]
+      if {"$destfile" eq ""} {return}
+      file copy -force "$sourcefile" "$destfile"
+      tk_messageBox -parent $win -type ok -icon info -message "File [file tail $sourcefile] extracted to $destfile."
     }
     method recreateXML {} {
       $sheetframe recreateXML [file join /$path xml sheet.xml]

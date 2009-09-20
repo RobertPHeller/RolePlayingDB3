@@ -96,6 +96,11 @@ proc RolePlayingDB3::GetTopLevelOfFocus {} {
   }
 }
 
+proc RolePlayingDB3::ShowMainWindow {} {
+  wm deiconify .
+  raise .
+}
+
 proc RolePlayingDB3::CreateMainWindow {} {
   variable ImageDir
   variable HelpDir
@@ -127,7 +132,9 @@ proc RolePlayingDB3::CreateMainWindow {} {
 		    {command "&Print..." {file:print} "Print the current item" {Ctrl p} -command {RolePlayingDB3::PrintItem [RolePlayingDB3::GetTopLevelOfFocus]}}
 		    {command "&Close"   {file:close} "Close the current window" {Ctrl w} -command {RolePlayingDB3::CloseWindow [RolePlayingDB3::GetTopLevelOfFocus]}}
 		    {command "E&xit"    {file:exit} "Exit the application" {Ctrl q} -command RolePlayingDB3::ExitApplication}
-		}} -windows {"&Windows" menu:windows windows 0 {}}] \
+		}} -windows {"&Windows" menu:windows windows 0 {
+		    {command "Main window" {} {} {} -command ::RolePlayingDB3::ShowMainWindow}
+		}}] \
 	-textvariable RolePlayingDB3::StatusBar \
 	-progressvar  RolePlayingDB3::Progress \
 	-progressmax  100]] -expand yes -fill both
