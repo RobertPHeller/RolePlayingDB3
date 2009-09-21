@@ -133,7 +133,6 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PDF4TCLLIB = @PDF4TCLLIB@
 PDFLATEX = @PDFLATEX@
 PS2PDF = @PS2PDF@
 RANLIB = @RANLIB@
@@ -688,12 +687,12 @@ RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages) $(AllHelpDep)
 		lib $(SNITLIB)
 	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitDir.kit RolePlayingDB3 \
 		lib $(URILIB)
-	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitDir.kit RolePlayingDB3 \
-		lib $(PDF4TCLLIB)
 	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \
 		$(top_srcdir)/BuildData/$(IMG_ZIP)
 	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \
 		$(top_srcdir)/BuildData/$(TCLXML_ZIP)
+	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \
+		$(top_srcdir)/BuildData/pdf4tcl05.zip
 	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitFile.kit -srcdir $(srcdir) \
 		RolePlayingDB3 lib/Common $(LibScripts)		
 	$(TCLKIT) $(top_srcdir)/BuildScripts/MakePkgIndex.kit RolePlayingDB3 \

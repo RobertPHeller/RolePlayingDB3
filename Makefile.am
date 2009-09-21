@@ -27,12 +27,12 @@ RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages) $(AllHelpDep)
 		lib $(SNITLIB)
 	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitDir.kit RolePlayingDB3 \
 		lib $(URILIB)
-	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitDir.kit RolePlayingDB3 \
-		lib $(PDF4TCLLIB)
 	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \
 		$(top_srcdir)/BuildData/$(IMG_ZIP)
 	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \
 		$(top_srcdir)/BuildData/$(TCLXML_ZIP)
+	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \
+		$(top_srcdir)/BuildData/pdf4tcl05.zip
 	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitFile.kit -srcdir $(srcdir) \
 		RolePlayingDB3 lib/Common $(LibScripts)		
 	$(TCLKIT) $(top_srcdir)/BuildScripts/MakePkgIndex.kit RolePlayingDB3 \
