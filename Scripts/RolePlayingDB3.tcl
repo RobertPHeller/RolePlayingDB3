@@ -84,7 +84,9 @@ namespace eval RolePlayingDB3 {
 
   snit::type Configuration {
     ReadConfiguration::ConfigurationType \
-      {{Template File} Template infile Template.rpgtmpl}
+      {{Template File} Template infile Template.rpgtmpl} \
+      {{Image Directory} Imagedir directory Images} \
+      {{Document Directory} Docdir directory Documents}
   }
 }
 

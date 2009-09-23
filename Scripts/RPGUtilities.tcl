@@ -212,6 +212,7 @@ namespace eval RolePlayingDB3 {
     option {-basedirectory baseDirectory BaseDirectory} -default {}
     delegate option -label to fileentry
     delegate option -labelwidth to fileentry
+    delegate option -initialdir to fileentry
     method gettext {option} {return [$fileentry cget $option]}
     method settext {option value} {
       $fileentry configure $option $value
@@ -612,12 +613,16 @@ namespace eval RolePlayingDB3 {
 	    Graphic {
 	      set widget ::RolePlayingDB3::Graphic
 	      lappend widgetopts -modifycmd [mymethod setdirty] \
-				 -basedirectory $options(-basedirectory)
+				 -basedirectory $options(-basedirectory) \
+				 -initialdir [::RolePlayingDB3::Configuration \
+							getoption Imagedir]
 	    }
 	    Document {
 	      set widget FileEntry
 	      set bindscript [list bind <KeyPress> [mymethod setdirty]]
 	      lappend widgetopts -modifycmd [mymethod setdirty]
+	      lappend widgetopts -initialdir [::RolePlayingDB3::Configuration \
+							getoption Docdir]
 	      lappend widgetopts -filetypes { 
 				{"All Files"        *                   } }
 	    }

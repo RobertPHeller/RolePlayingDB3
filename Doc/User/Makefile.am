@@ -2,7 +2,8 @@ USERMAN_TEXS = UserManual.tex Preface.tex Introduction.tex \
 	Help.tex Tutorial.tex Reference.tex
 USERMAN_FIGS = CharacterEditor.png   CreateOrOpenTemplate.png  \
 	       TemplateEditor1.png   CreateOrOpenChar.png  \
-	       MainWindow.png        TemplateEditor2.png
+	       MainWindow.png        TemplateEditor2.png \
+	       ConfigurationEditor.png
 USERMAN = UserManual
 USERMAN_PDF = $(USERMAN).pdf
 USERMANHBase = UserManual

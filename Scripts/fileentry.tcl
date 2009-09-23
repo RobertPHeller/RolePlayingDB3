@@ -75,6 +75,8 @@
 # <option> -labelfont From LabelFrame (-font).
 # <option> -labeltextvariable From LabelFrame (-textvariable).
 # <option> -label From LabelFrame (-text).
+# <option> -initialdir This option is passed to tk_getOpenFile or tk_getSaveFile.
+# <option> -initialfile This option is passed to tk_getOpenFile or tk_getSaveFile.
 # <option> -entryfg From Entry (-foreground).
 # <option> -entrybg From Entry (-background).
 # <option> -text From Entry.
@@ -109,6 +111,8 @@ namespace eval FileEntry {
 	{-filedialog Enum open 0 {open save directory}}
 	{-defaultextension String "" 0}
 	{-filetypes String {} 0}
+	{-initialdir String {} 0}
+	{-initialfile String {} 0}
 	{-title String "" 0}
 	{-modifycmd String "" 0}
     }
@@ -272,19 +276,31 @@ proc FileEntry::OpenFile { path } {
   set dialogType [Widget::getoption $path -filedialog]
   set defaultextension [Widget::getoption $path -defaultextension]
   set filetypes [Widget::getoption $path -filetypes]
+  set initialdir [Widget::getoption $path -initialdir]
+  set initialfile [Widget::getoption $path -initialfile]
   set title [Widget::getoption $path -title]
   set modifycmd [Widget::getoption $path -modifycmd]
 #  puts stderr "*** FileEntry::OpenFile: path = $path, dialogType = $dialogType, defaultextension = $defaultextension, filetypes = $filetypes, title = $title"
 
   set currentfile "[$path.e cget -text]"
+  if {"$initialdir" eq "" || "$currentfile" ne ""} {
+    if {"$dialogType" eq "directory"} {
+      set initialdir "$currentfile"
+    } else {
+      set initialdir [file dirname "$currentfile"]
+    }
+  }
+  if {"$initialfile" eq "" || "$currentfile" ne ""} {
+    set initialfile "$currentfile"
+  }
   switch $dialogType {
     open {
 	set newfile [tk_getOpenFile \
 			 -defaultextension "$defaultextension" \
 			 -filetypes "$filetypes" \
 			 -title "$title" \
-			 -initialdir [file dirname "$currentfile"] \
-			 -initialfile "$currentfile" \
+			 -initialdir $initialdir \
+			 -initialfile "$initialfile" \
 			 -parent $path]
 	if {![string equal "$newfile" {}]} {
 	  $path.e configure -text "$newfile"
@@ -296,8 +312,8 @@ proc FileEntry::OpenFile { path } {
 			 -defaultextension "$defaultextension" \
 			 -filetypes "$filetypes" \
 			 -title "$title" \
-			 -initialdir [file dirname "$currentfile"] \
-			 -initialfile "$currentfile" \
+			 -initialdir $initialdir \
+			 -initialfile "$initialfile" \
 			 -parent $path]
 	if {![string equal "$newfile" {}]} {
 	  $path.e configure -text "$newfile"
@@ -306,7 +322,7 @@ proc FileEntry::OpenFile { path } {
     }
     directory {
 	set newdirectory [tk_chooseDirectory \
-		-initialdir "$currentfile" \
+		-initialdir "$initialdir" \
 		-title "$title" \
 		-parent $path]
 	if {![string equal "$newdirectory" {}]} {

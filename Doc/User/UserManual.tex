@@ -10,7 +10,7 @@
 \makeindex
 \emergencystretch=50pt
 \begin{document}
-\newcommand{\thesystem}{{\em Role Playing DataBase System}}
+\newcommand{\thesystem}{{\em Role Playing Database System}}
 \newcommand{\bold}[1]{{\bf #1}}
 \newcommand{\italic}[1]{{\it #1}}
 \newcommand{\RPGSubTitle}{User Manual}
@@ -35,9 +35,11 @@
  \include{COPYING}
 }
 \cleardoublepage
+\addcontentsline{toc}{chapter}{\bibname}
 \bibliography{RPG}
 \bibliographystyle{plain}
 \cleardoublepage
+\addcontentsline{toc}{chapter}{\indexname}
 \printindex
 \end{document}
 
