@@ -211,6 +211,47 @@ namespace eval RolePlayingDB3 {
 			     .5  .288675 
 			    0.0  .57735 
 			    -.5 .288675}
+    typevariable hexXoffset .5
+    typevariable hexSideLength .57735
+    typevariable hexPeakHeight .288675
+    method scaleXY {X Y scale} {
+#      puts stderr "*** $self scaleXY $X $Y $scale"
+      switch [$self spaceshape] {
+	Square {
+	  set result [list [expr {$X * $scale}] [expr {$Y * $scale}]]
+	}
+	Hexigonal {
+	  if {(int($Y) % 2) == 1} {
+	    set X1 [expr {$X + $hexXoffset}]
+	  } else {
+	    set X1 $X
+	  }
+	  set Y1 [expr {$Y * ($hexSideLength + $hexPeakHeight)}]
+	  set result [list [expr {$X1 * $scale}] [expr {$Y1 * $scale}]]
+	}
+      }
+#      puts stderr "*** $self scaleXY: returning $result"
+      return $result
+    }
+    method unscaleXY {cX cY scale} {
+      set scale [expr {double($scale)}]
+      switch [$self spaceshape] {
+	Square {
+	  return [list [expr {int($cX / $scale})] [expr {int($cY / $scale})]]
+	}
+	Hexigonal {
+	  set Y1 [expr {$cY / $scale}]
+	  set X1 [expr {$cX / $scale}]
+	  set Y  [expr {int($Y1 / ($hexSideLength + $hexPeakHeight))}]
+	  if {(int($Y) % 2) == 1} {
+	    set X [expr {int($X1 - $hexXoffset)}]
+	  } else {
+	    set X [expr {int($X1)}]
+	  }
+	  return [list [expr {int($X)}] [expr {int($Y)}]]
+	}
+      }
+    }
     method drawspace {canvas X Y color size args} {
       switch [$self spaceshape] {
 	Square {
@@ -423,7 +464,7 @@ namespace eval RolePlayingDB3 {
       }
       if {"$_filename" eq {}} {return}
       foreach le $levelEditors {
-	$le checksave
+	if {[$le checksave] eq "error"} {return}
       }
       if {$isdirty} {$self recreateXML}
       ::ZipArchive createZipFromDirtree $_filename /$path \
@@ -811,7 +852,7 @@ namespace eval RolePlayingDB3 {
     method setdirtyspace {} {set isdirtyspace yes}
     method checksave {} {
       foreach se $spaceEditors {
-	$se checksave
+	if {[$se checksave] eq "error"} {return error}
       }
       if {$isdirty} {
 	$self recreateXML
@@ -821,6 +862,7 @@ namespace eval RolePlayingDB3 {
 	}
 	$options(-mapeditor) setdirtylevel
       }
+      set isdirty no
     }
 
     component banner
@@ -954,11 +996,14 @@ namespace eval RolePlayingDB3 {
       set curline [$temppath getlineno]
       foreach s [lsort -dictionary [glob -nocomplain [file join $leveldir *.xml]]] {
 	if {[file tail $s] eq "levelinfo.xml"} {continue}
+#	puts stderr "*** $type printLevel (before printSpace): curpage = $curpage, curline = $curline"
 	::RolePlayingDB3::SpaceEditor printSpace $pdfobj $s curpage curline \
 			"$heading: Space [file rootname [file tail $s]]" \
 			-mapbundlemountpoint $mapbundlemountpoint \
 			-leveldir $leveldir -parent $temppath \
 			-mapeditor $mapeditor
+	
+#	puts stderr "*** $type printLevel (after printSpace): curpage = $curpage, curline = $curline"
       }
       destroy $temppath
     }
@@ -1014,7 +1059,7 @@ namespace eval RolePlayingDB3 {
 				   -message "Save data before closing window?"]
 	    switch $ans {
 	      yes {
-		$self checksave
+		if {[$self checksave] eq "error"} {return}
 		set dontask yes
 	      }
 	      cancel {return}
@@ -1022,7 +1067,7 @@ namespace eval RolePlayingDB3 {
 	    }
           }
         } else {
-	  $self checksave
+	  if {[$self checksave] eq "error"} {return}
 	}
       }
       foreach se $spaceEditors {
@@ -1037,7 +1082,7 @@ namespace eval RolePlayingDB3 {
       set currentLevelDir [file tail $options(-leveldir)]
       set mymediadir [file join $options(-mapbundlemountpoint) media \
                                 [file tail $options(-leveldir)]]
-      set mymediadirRelative [eval [list file join] [lrange [file split $mymediadir] 1 end]]
+      set mymediadirRelative [eval [list file join] [lrange [file split $mymediadir] 2 end]]
       [winfo toplevel $win] configure -title "Level Edit: $currentLevelDir"
       if {"$options(-template)" ne "" && ![file exists $options(-leveldir)]} {
 	file mkdir $options(-leveldir)
@@ -1125,14 +1170,11 @@ namespace eval RolePlayingDB3 {
 	error "Illformed map bundle: $spacefile cannot be opened: $xmlfp"
       }
       set spacexml [read $xmlfp]
+      close $xmlfp
       set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "X Coord"] 0]
       set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "Y Coord"] 0]
       set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "Color"] white]
-      set yc [expr {$Y * 32}]
-      set xc [expr {$X * 32}]
-      if {"[$mapeditor spaceshape]" eq "Hexigonal"} {
-	set xc [expr {$xc + 16}]
-      }
+      foreach {xc yc} [$mapeditor scaleXY $X $Y 32] {break}
       $mapeditor drawspace $canvas $xc $yc $color 32 \
 			-tag "[file tail [file rootname $spacefile]]"
 	
@@ -1140,11 +1182,7 @@ namespace eval RolePlayingDB3 {
 
     method drawonespace {X Y color spacetag} {
       set map [$levelframe getElementWidgetById map]
-      set yc [expr {$Y * 32 * $zoomfactor}]
-      set xc [expr {$X * 32 * $zoomfactor}]
-      if {[$options(-mapeditor) spaceshape] eq "Hexigonal"} {
-        set xc [expr {$xc + ((32 * $zoomfactor) / 2.0)}]
-      }
+      foreach {xc yc} [$options(-mapeditor) scaleXY $X $Y [expr {32 * $zoomfactor}]] {break}
       $self drawspace $map $xc $yc $color [expr {32 * $zoomfactor}] \
 			-tag "$spacetag"
       $map configure -scrollregion [$map bbox all]
@@ -1165,11 +1203,7 @@ namespace eval RolePlayingDB3 {
 	set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "X Coord"] 0]
 	set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "Y Coord"] 0]
 	set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "Color"] white]
-	set yc [expr {$Y * 32 * $zoomfactor}]
-	set xc [expr {$X * 32 * $zoomfactor}]
-	if {[$options(-mapeditor) spaceshape] eq "Hexigonal"} {
-	  set xc [expr {$xc + ((32 * $zoomfactor) / 2.0)}]
-	}
+	foreach {xc yc} [$options(-mapeditor) scaleXY $X $Y [expr {32 * $zoomfactor}]] {break}
 	$self drawspace $map $xc $yc $color [expr {32 * $zoomfactor}] \
 			-tag "[file tail [file rootname $fullpath]]"
       }
@@ -1178,10 +1212,13 @@ namespace eval RolePlayingDB3 {
     proc _matchfield {matchname tag attrlist arglist} {
 #
 
-#      puts stderr "*** $self _matchfield: matchname = $matchname, tag = $tag, attrlist = $attrlist"
+      set matchname [string totitle "$matchname"]
+#      puts stderr "*** _matchfield: matchname = $matchname, tag = $tag, attrlist = $attrlist"
       if {[string totitle $tag] eq "Field"} {
         foreach {n v} $attrlist {
+#	  if {"$n" eq "name"} {puts stderr "*** _matchfield: name is $v"}
 	  if {"$n" eq "name" && [string totitle "$v"] eq "$matchname"} {
+#	    puts stderr "*** _matchfield: returning yes"
 	    return yes
 	  }
 	}
@@ -1320,6 +1357,9 @@ namespace eval RolePlayingDB3 {
       set spaceEditors $selist
       file delete $space
       $self updatespacetree
+      $self updatemediatree
+      $self updateleveltree
+      $self updatelevelmap
       set isdirty yes      
     }
     method _editspace {args} {
@@ -1366,6 +1406,87 @@ namespace eval RolePlayingDB3 {
 	lappend spaceEditors $newspaceeditor
       }
     }
+    method updateleveltree {} {$options(-mapeditor) updateleveltree}
+    method updatemediatree {} {$options(-mapeditor) updatemediatree}
+    variable _positionSelected
+    method setspaceposition {XLE YLE spacename} {
+      set map [$levelframe getElementWidgetById map]
+      set topY    [$map canvasy 0]
+      set bottomY [$map canvasy [winfo height $map]]
+      set leftX   [$map canvasx 0]
+      set rightX  [$map canvasx [winfo width $map]]
+      $map create line $leftX $topY $leftX $bottomY -fill black -tag vert
+      $map create line $leftX $topY $rightX $topY -fill black -tag horiz
+      $map bindcanvas <Motion> [mymethod _drawXHairs %W %x %y]
+      $map bindcanvas <1>      [mymethod _selectPosition %W %x %y $XLE $YLE $spacename]
+      $map bindcanvas <3>      [mymethod _cancelSelectPosition %W]
+      $map bindcanvas <Escape> [mymethod _cancelSelectPosition %W]
+      raise [winfo toplevel $win]
+      ::BWidget::grab set [winfo toplevel $win]
+      set _positionSelected 0
+#      puts stderr "*** $self setspaceposition (before vwait): _positionSelected = $_positionSelected"
+      vwait [myvar _positionSelected]
+#      puts stderr "*** $self setspaceposition (after vwait): _positionSelected = $_positionSelected"
+      ::BWidget::grab release [winfo toplevel $win]
+      $map bindcanvas <Motion> {}
+      $map bindcanvas <1>      {}
+      $map bindcanvas <3>      {}
+      $map bindcanvas <Escape> {}
+      raise [winfo toplevel $XLE]
+      focus $XLE
+    }
+    method _drawXHairs {canvas mx my} {
+
+#      puts stderr "*** $self _drawXHairs $canvas $mx $my"
+      set curX [$canvas canvasx $mx]
+      set curY [$canvas canvasy $my]
+      set topY    [$canvas canvasy 0]
+      set bottomY [$canvas canvasy [winfo height $canvas]]
+      set leftX   [$canvas canvasx 0]
+      set rightX  [$canvas canvasx [winfo width $canvas]]
+      $canvas coords vert $curX $topY $curX $bottomY
+      $canvas coords horiz $leftX $curY $rightX $curY
+    }
+    method checkoccupiedspace {X Y spacefile} {
+      foreach s [glob -nocomplain [file join $options(-leveldir) *.xml]] {
+	if {[file tail $s] eq "levelinfo.xml"} {continue}
+	if {[file tail $s] eq [file tail $spacefile]} {continue}
+	if {[catch {open $spacefile r} xmlfp]} {
+	  error "Illformed map bundle: $spacefile cannot be opened: $xmlfp"
+	}
+	set spacexml [read $xmlfp]
+	close $xmlfp
+	set Xother [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "X Coord"] 0]
+	set Yother [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "Y Coord"] 0]
+	if {$X == $Xother && $Y == $Yother} {
+	  return yes
+	}
+      }
+      return no
+    }
+    method _selectPosition {canvas mx my xLE yLE spacefile} {
+
+#      puts stderr "*** $self _selectPosition $canvas $mx $my $xLE $yLE"
+      set curX [$canvas canvasx $mx]
+      set curY [$canvas canvasy $my]
+      foreach {X Y} [$options(-mapeditor) unscaleXY $curX $curY [expr {$zoomfactor * 32}]] {break}
+      if {[$self checkoccupiedspace $X $Y $spacefile]} {
+	tk_messageBox -type ok -icon warning -message "Cannot have two spaces at the same location!"
+	return
+      }
+      $xLE configure -text $X
+      $yLE configure -text $Y
+      $canvas delete vert
+      $canvas delete horiz
+      incr _positionSelected
+    }
+    method _cancelSelectPosition {canvas} {
+
+#      puts stderr "*** $self _cancelSelectPosition $canvas"
+      $canvas delete vert
+      $canvas delete horiz
+      incr _positionSelected -1
+    }
   }
   snit::widget SpaceEditor {
     option -template -readonly yes -default {}
@@ -1384,6 +1505,16 @@ namespace eval RolePlayingDB3 {
     method setdirty {} {set isdirty yes}
     method checksave {} {
       if {$isdirty} {
+	if {$firstsave} {
+	  set XLE [$spaceframe getElementWidgetById X]
+	  set YLE [$spaceframe getElementWidgetById Y]
+	  set X [$XLE cget -text]
+	  set Y [$YLE cget -text]
+	  if {[$options(-leveleditor) checkoccupiedspace $X $Y $options(-spacefile)]} {
+	    tk_messageBox -type ok -icon warning -message "Cannot have two spaces at the same location!"
+	    return error
+	  }
+	}
 	$self recreateXML
 	if {$firstsave} {
 	  $options(-leveleditor) updatelevelmap
@@ -1392,6 +1523,7 @@ namespace eval RolePlayingDB3 {
 	set isdirty no
       }
       $options(-leveleditor) setdirtyspace
+      return ok
     }
     variable spacecanvas
 
@@ -1535,6 +1667,7 @@ namespace eval RolePlayingDB3 {
     typemethod printSpace {pdfobj spacefile curpageV curlineV heading args} {
       upvar $curpageV curpage
       upvar $curlineV curline
+#      puts stderr "*** $type printSpace (on entrance): curpage = $curpage, curline = $curline"
       set mapbundlemountpoint [from args -mapbundlemountpoint]
       set leveldir	      [from args -leveldir]
       set parent              [from args -parent]
@@ -1557,6 +1690,7 @@ namespace eval RolePlayingDB3 {
       $temppath outputXMLToPDF $pdfobj $heading $curpage $curline
       set curpage [$temppath getpageno]
       set curline [$temppath getlineno]
+#      puts stderr "*** $type printSpace (on exit): curpage = $curpage, curline = $curline"
       destroy $temppath
     }
     method print {} {
@@ -1609,7 +1743,7 @@ namespace eval RolePlayingDB3 {
 				[file tail [file dirname \
 						$options(-spacefile)]] \
 				$currentSpaceFile]
-      set mymediadirRelative [eval [list file join] [lrange [file split $mymediadir] 1 end]]
+      set mymediadirRelative [eval [list file join] [lrange [file split $mymediadir] 2 end]]
       [winfo toplevel $win] configure -title "Space Edit: $currentSpaceFile"
       if {"$options(-template)" ne "" && ![file exists $options(-spacefile)]} {
 	file mkdir $mymediadir
@@ -1638,7 +1772,10 @@ namespace eval RolePlayingDB3 {
       install toolbar using ButtonBox $win.toolbar -orient horizontal \
 						   -homogeneous no
       pack $toolbar -fill x
-      ## Tools ?? ##
+      $toolbar add -name positionspace -text {Set Space Position} \
+				       -command [mymethod _setspaceposition] \
+				       -state disabled
+      if {$isnew} {$toolbar itemconfigure 0 -state normal}
       install spaceframe using ::RolePlayingDB3::XMLContentEditor \
 			$win.spaceframe -xml $XML -isnewobject $isnew \
 					-dirtyvariable [myvar isdirty] \
@@ -1746,7 +1883,7 @@ namespace eval RolePlayingDB3 {
 	$spacecanvas create image $xc $yc -image [image create photo -file $imfile]
       }
       foreach e [$exitlist items] {
-	set eData [$itemlist itemcget $e -data]
+	set eData [$exitlist itemcget $e -data]
 	set xc [expr {$zoomfactor * [getFromAttrList X $eData 0]}]
 	set yc [expr {$zoomfactor * [getFromAttrList Y $eData 0]}]
 	set imfile [file join $mp [getFromAttrList imfile $eData]]
@@ -1883,7 +2020,7 @@ namespace eval RolePlayingDB3 {
       set needmediatreeupdated no
       insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$i_imfileFE cget -text]"] attrList
       insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$i_sheetFileFE cget -text]"] attrList
-      puts stderr "*** $self _addnewitem: attrList = $attrList"
+#      puts stderr "*** $self _addnewitem: attrList = $attrList"
       $itemlist insert end #auto -text "$descr" -data "$attrList"
       $self redrawspace
       set isdirty yes
@@ -1948,10 +2085,10 @@ namespace eval RolePlayingDB3 {
       set spacelevel [$self _checkIsLevel "[$e_otherSpaceLevelFE cget -text]"]
       if {"$spacelevel" eq ""} {return}
       insertOrReplaceInAttrList otherlevel "$spacelevel" attrList
-      set spacename [$self _checkIsSpaceOnLevel "[$e_otherSpaceSpaceFE cget -text]" "$spacelevel"]
+      set spacename [$self _checkIsSpaceOnLevel "[$e_otherSpaceNameFE cget -text]" "$spacelevel"]
       if {"$spacename" eq ""} {return}
       insertOrReplaceInAttrList otherspace "$spacename" attrList
-      puts stderr "*** $self _addnewexit: attrList = $attrList"
+#      puts stderr "*** $self _addnewexit: attrList = $attrList"
       $exitlist insert end #auto -text "$descr" -data "$attrList"
       $self redrawspace
       set isdirty yes
@@ -1979,7 +2116,7 @@ namespace eval RolePlayingDB3 {
     }
     method _editexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
-      set selection [$exitlistt selection get]
+      set selection [$exitlist selection get]
       if {[llength $selection] < 1} {return}
       set index [lindex $selection 0]
       set attrList [$exitlist itemcget $index -data]
@@ -2009,7 +2146,7 @@ namespace eval RolePlayingDB3 {
       set spacename [$self _checkIsSpaceOnLevel "[$e_otherSpaceSpaceFE cget -text]" "$spacelevel"]
       if {"$spacename" eq ""} {return}
       insertOrReplaceInAttrList otherspace "$spacename" attrList
-      puts stderr "*** $self _editexit: attrList = $attrList"
+#      puts stderr "*** $self _editexit: attrList = $attrList"
       $exitlist insert end #auto -text "$descr" -data "$attrList"
       $self redrawspace
       set isdirty yes
@@ -2017,7 +2154,7 @@ namespace eval RolePlayingDB3 {
     }
     method _deleteexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
-      set selection [$exitlistt selection get]
+      set selection [$exitlist selection get]
       if {[llength $selection] < 1} {return}
       set index [lindex $selection 0]
       set attrList [$exitlist itemcget $index -data]
@@ -2028,6 +2165,11 @@ namespace eval RolePlayingDB3 {
 	set isdirty yes
 	$self redrawspace
       }
+    }
+    method _setspaceposition {} {
+      set XLE [$spaceframe getElementWidgetById X]
+      set YLE [$spaceframe getElementWidgetById Y]
+      $options(-leveleditor) setspaceposition $XLE $YLE $options(-spacefile)
     }
   }
 }

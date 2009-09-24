@@ -451,9 +451,11 @@ uninstall-hook:
 	done
 
 $(TCL_INTERNALS_PDF) : $(TCL_INTERNALS_LATEX) $(TCL_INTERNALS_LATEXS) \
-	../$(BIBLIO) ../Cover1.png
+	../$(BIBLIO) ../Cover1.png ../MyBibIndex.sty ../MyTitlepage.sty \
+	../titlepage.tex
 	-ln -s $(srcdir)/../$(BIBLIO) ./$(BIBLIO)
 	-ln -s $(srcdir)/../MyTitlepage.sty ./MyTitlepage.sty
+	-ln -s $(srcdir)/../MyBibIndex.sty ./MyBibIndex.sty
 	-ln -s $(srcdir)/../titlepage.tex ./titlepage.tex
 	-ln -s $(srcdir)/$(TCL_INTERNALS_LATEX) ./$(TCL_INTERNALS_LATEX)
 	-ln -s $(srcdir)/$(TCL_INTERNALS_HERE) ./

@@ -429,7 +429,7 @@ $(USERMAN)_Version.tex : $(top_builddir)/config.status
 
 $(USERMAN_PDF) : $(USERMAN_TEXS) $(USERMAN_FIGS) $(BIBLIO) \
 	$(USERMAN)_Version.tex ../MyTitlepage.sty ../titlepage.tex \
-		 COPYING.tex  ../Cover1.png
+		 COPYING.tex  ../Cover1.png ../MyBibIndex.sty
 	for f in $(USERMAN_TEXS) $(USERMAN_FIGS); do \
 	    if test -f "./$$f"; then continue; else ln -s $(srcdir)/$$f ./; fi; \
 	done
@@ -437,6 +437,7 @@ $(USERMAN_PDF) : $(USERMAN_TEXS) $(USERMAN_FIGS) $(BIBLIO) \
 	-ln -s $(srcdir)/../Cover1.png ./
 	-ln -s $(srcdir)/$(BIBLIO) ./
 	-ln -s $(srcdir)/../MyTitlepage.sty ./
+	-ln -s $(srcdir)/../MyBibIndex.sty ./
 	-ln -s $(srcdir)/../titlepage.tex ./
 	$(PDFLATEX) $(USERMAN)
 	-$(BIBTEX) $(USERMAN)

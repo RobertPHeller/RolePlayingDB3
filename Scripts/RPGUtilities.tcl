@@ -181,6 +181,9 @@ namespace eval RolePlayingDB3 {
       $scroll setwidget $canvas
       $self configurelist  $args
     }
+    method bindcanvas {args} {
+      return [eval [list ::bind $canvas] $args]
+    }
   }
   snit::widget ScrolledList {
     component scroll
@@ -1061,7 +1064,7 @@ namespace eval RolePlayingDB3 {
 	    $pdfobj canvas $n -x $indent -y [expr {$lineno * 14}] \
 			      -height $height -bg yes
 	    set lines [expr {int(ceil(double($height) / 14.0))+2}]
-	    $pdfobj newLine $lines
+	    for {set i 0} {$i < $lines} {incr i} {$pdfobj newLine}
 	    incr lineno $lines
 	  }
 	  Button -
@@ -1169,7 +1172,7 @@ namespace eval RolePlayingDB3 {
       $_printProgressDialog add -name dismis -text {Dismis} -state disabled \
       			        -command [mytypemethod _DismisPrintProgress]
       set frame [$_printProgressDialog getframe]
-      set printprogressPageNoLE [LabelEntrry $frame.printprogressPageNoLE \
+      set printprogressPageNoLE [LabelEntry $frame.printprogressPageNoLE \
 				    -label {Printing Page:} \
 				    -text "" -editable no]
       pack $printprogressPageNoLE -fill x
