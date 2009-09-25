@@ -129,7 +129,7 @@ very different attributes.
 
 \begin{figure}[hbpt]
 \begin{centering}
-\includegraphics[width=5in]{CreateOrOpenChar.png}
+\includegraphics{CreateOrOpenChar.png}
 \caption{The Open or Create Character dialog box}
 \label{fig:opencreatechar}
 \end{centering}
@@ -163,7 +163,148 @@ The xml contains a file named sheet.xml, which is an XML file containing
 the sheet information.  The media directory contains any media files
 associated with the sheet--this could be pictures or other documents.
 
-\section{Map Editing Window}
+\section{Map Editing Windows}
 \label{Map}
 
+Map objects are three dimensional, consisting of one or more levels,
+above, below, or at ground level.  Each level consists of spaces
+(squares or hexagons) arranged on a two dimensional grid.  Each level
+is at a depth, where a depth of 0 is ground level, negative depths are
+below ground, and positive depths are above ground.  Spaces have an X
+and Y coordinate, which are whole numbers ranging between -1000 and
+1000, with 0 being the center of the level and -1000 being the extreme
+left or western edge (X) and extreme top or northern edge (Y) and 1000
+being the extreme right or eastern edge (X) and extreme bottom or
+southern edge (Y). Creating or editing a map is a hierarchical process. 
+You select the level to create or edit from the main map window
+(Figure~\ref{fig:MapEditor}) and you select the space to create or edit
+from the level editor window (Figure~\ref{fig:LevelEditor}) for the
+level the space is on.  The whole map, with all of its levels and
+spaces are stored in a single file, for easy transport and exchange.  It
+is possible to have a ``sparse'' map, with levels and/or spaces
+omitted.  These might be levels or spaces that have not been
+constructed (yet) or are otherwise inaccessible.  With suitable
+technology or magic (eg a teleport device or spell) it is possible to
+get to non-adjacent spaces or levels.  No attempt it made it enforce
+connectivity to adjacent spaces or levels!
 
+There are three map editing windows:
+\begin{enumerate}
+\item The main map editor, shown in Figure~\ref{fig:MapEditor}, contains
+information about the overall map, including the name of the map, the
+name of the campaign, and the name of the game master.  This window is
+described in Section~\ref{sect:mainmap}.
+\item The level editor, shown in Figure~\ref{fig:LevelEditor}, contains
+information about a selected level. This window is
+described in Section~\ref{sect:leveledit}.
+\item The space editor, shown in Figure~\ref{fig:SpaceEditor}, contains
+information about a space. This window is
+described in Section~\ref{sect:spaceedit}.
+\end{enumerate}
+
+\subsection{Main map editing window}
+\label{sect:mainmap}
+
+\begin{figure}[hbpt] 
+\begin{centering}
+\includegraphics[width=5in]{MapEditor.png}
+\caption{Main map editor window}
+\label{fig:MapEditor}
+\end{centering}
+\end{figure}
+The main map editor (Figure~\ref{fig:MapEditor}) contains information
+about the overall map.  This information includes name of the map, the
+name of the campaign, and the name of the game master.  There is space
+for a brief description of the map and it is possible to include a
+larger document providing a detailed writeup about the map or game
+campaign.  Also on this window is a list of levels and a directory tree
+of included media.  There is a tool bar with 4 buttons:
+
+\begin{enumerate}
+\item New Level--this button creates a new level.
+\item Delete Level--this button deletes a selected level.
+\item Edit Level--this button edits a selected level.
+\item Extract Media--this button extracts a selected media file, making
+it available for an external program to view or otherwise process.
+\end{enumerate}
+
+\subsection{Level editing window}
+\label{sect:leveledit}
+
+\begin{figure}[hbpt] 
+\begin{centering}
+\includegraphics[width=5in]{LevelEditor.png}
+\caption{Level editor window}
+\label{fig:LevelEditor}
+\end{centering}
+\end{figure}
+The level editor (Figure~\ref{fig:LevelEditor}) contains information
+about a selected level.  This information includes the title of the
+level and its depth (positive depths are above ground, negative depths are
+below ground and a depth of zero is at ground level).  Also included is
+a space for a brief description of the level and a map of the level as
+well as a list of spaces.
+
+There is a tool bar with three buttons:
+\begin{enumerate}
+\item New Space--This button creates a new space.
+\item Delete Space--This button deletes an existing space.
+\item Edit Space--This button edits an existing space.
+\end{enumerate}
+
+\subsection{Space editing window}
+\label{sect:spaceedit}
+
+\begin{figure}[hbpt] 
+\begin{centering}
+\includegraphics[width=5in]{SpaceEditor.png}
+\caption{Space editor window}
+\label{fig:SpaceEditor}
+\end{centering}
+\end{figure}
+The space editor (Figure~\ref{fig:SpaceEditor}) contains information
+about a selected space.  This information includes the title of the
+space, its X and Y coordinates, its color and a short description. 
+There is also a pair of lists, one of exits from this space to another
+space and a list of other items in the space (such as treasure,
+monsters, tricks, traps, and any other odds and ends).  There is also a
+map of the space, showing the location of every listed exit or item in
+the space.
+
+Below the item and exit lists are triplets of buttons: adding,
+deleting, and editing an item or exit.  The main difference between an
+item and an exit is that exits have a ``pointer'' to a space and level.
+Otherwise, both have a name, a short description, a location within
+the space, a graphic, and a sheet file.  The location is an X,Y value,
+where the  X and Y values range between -320 and 320, where 0,0 is the
+center of the space.  This location is just a relative location within
+the space and does not represent any particular distance, other than
+that -320 represents the top (Y) or left (X) sides and 320 represents
+the bottom (Y) or right (X) side.  The sheet file is optional (this
+would make sense if the item or exit was a trick, trap, treasure,
+monster, etc.).
+
+When a space is first created, there is available a tool bar button that
+can be used to position the space with the mouse.  Once the space has
+been saved, its location is fixed and it cannot be moved.  The ``color'' is
+arbitrary and is used to color the space on the level map and it is also
+used as the space's background color on the space map in the space
+editor.  This of course makes it easier to keep track of where spaces
+are on the level map.  A game master can use the colors to ``code''
+different spaces as having some particular property or feature, such as
+coloring wooded areas green and mountainous areas brown and towns with
+yellow and castles in blue for example.
+
+\section{Printing}
+
+All main windows have a \verb=Print...= menu item on the \verb=File=
+menu. Except for the main window, this menu item allows you to print the
+sheet, template, map, level, or space to a PDF file.  At present there
+is no support to print directly to your printer, but there are many
+programs to print a PDF file to a printer.  A PDF file can also be
+shared with someone who does not have the Role Playing Database system
+or a PDF file can be uploaded to a website or posted to a blog.  The
+\verb=Print...= menu item will ask for the name of the file to be
+created.  In the case of the Map and Level editors, you also have the
+option of printing the levels (in the case of a Map editor window) or
+the spaces (in the case of a Level editor window) or not.

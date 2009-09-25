@@ -216,7 +216,16 @@ USERMAN_TEXS = UserManual.tex Preface.tex Introduction.tex \
 USERMAN_FIGS = CharacterEditor.png   CreateOrOpenTemplate.png  \
 	       TemplateEditor1.png   CreateOrOpenChar.png  \
 	       MainWindow.png        TemplateEditor2.png \
-	       ConfigurationEditor.png
+	       ConfigurationEditor.png SpaceEditor.png LevelEditor.png \
+	       MapEditor.png OptionMenu.png CreateOrEditTemplateDialog.png \
+	       EmptyTemplateEditor.png AddNewTemplate.png \
+	       AddNewTemplatePlayer.png PlayerTemplateEditor.png \
+	       EmptyEditContainerText.png EditContainerTextWithText.png \
+	       PlayerTemplateEditorHeading.png AddNewFieldDialog.png \
+	       AddNewFieldDialogWithField.png \
+	       PlayerTemplateEditorWithField.png \
+	       AddNewFieldDialogWithContainer.png \
+	       PlayerTemplateEditorWithContainer.png
 
 USERMAN = UserManual
 USERMAN_PDF = $(USERMAN).pdf

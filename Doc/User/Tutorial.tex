@@ -2,3 +2,168 @@
 \label{Tutorial}
 \typeout{$Id$}
 
+\section{Creating a Template Bundle}
+
+To create information sheets for your game elements, you will need to
+create templates\footnote{A pre-built template bundle for
+\textit{Advanced Dungeond and Dragons}, dnd.rpgtmpl, is included, so if
+you play using the \textit{Advanced Dungeond and Dragons} system, you
+are all set to go.}.
+
+\begin{figure}[hbpt] 
+\begin{centering}
+\includegraphics[width=5in]{OptionMenu.png} 
+\caption{Selecting ``Create or edit a template file''} 
+\label{fig:createoredittemplatemenu} 
+\end{centering}
+\end{figure} 
+\begin{figure}[hbpt] 
+\begin{centering}
+\includegraphics{CreateOrEditTemplateDialog.png} 
+\caption{The Create Or Edit Template Dialog}
+\label{fig:createoredittemplate} 
+\end{centering}
+\end{figure} 
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{EmptyTemplateEditor.png}
+\caption{Empty Template Editor Window}
+\label{fig:emptytemplate}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{AddNewTemplate.png}
+\caption{Add New Template Dialog Box}
+\label{fig:addnewtemplate}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{AddNewTemplatePlayer.png}
+\caption{Add New Template Dialog Box, with ``Player'' filled in}
+\label{fig:addnewtemplateplayer}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{PlayerTemplateEditor.png}
+\caption{Template Editor, with empty ``Player'' template}
+\label{fig:emptyplayertemplateeditor}
+\end{centering}
+\end{figure}
+To create a template bundle, select ``Create or edit a template file''
+from the Options menu, as shown in
+Figure~\ref{fig:createoredittemplatemenu}.  This will display the dialog box
+shown in Figure~\ref{fig:createoredittemplate}.  Select ``Create''.  An
+empty template editor window, as shown in Figure~\ref{fig:emptytemplate}
+will be opened up.  You can now start to create templates for your game
+system.  We will create a simple Character class template.  First, click
+on ``Add Template''.  This will open up the ``Add New Template'' dialog
+box, as shown in Figure~\ref{fig:addnewtemplate}.  Type ``Player'' in
+the name field, as shown in Figure~\ref{fig:addnewtemplateplayer}, and
+click ``Add''.  This will create an entry under the ``Character'' folder
+named ``Player''.  Double click on this entry now.  The template editor
+will will now look like Figure~\ref{emptyplayertemplateeditor}.
+
+\subsection{Adding heading text to a container}
+
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{EmptyEditContainerText.png}
+\caption{Empty ``Edit Container Text'' dialog box}
+\label{fig:editcontainertext}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{EditContainerTextWithText.png}
+\caption{``Edit Container Text'' dialog box with text added}
+\label{fig:editcontainertextwithtext}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{PlayerTemplateEditorHeading.png}
+\caption{Template Editor, with ``Player'' template, with a heading added}
+\label{fig:playertemplateeditorwithheading}
+\end{centering}
+\end{figure}
+At first, all that is in a sheet template is an empty toplevel
+container, named for the class of sheet (Character) in this case.  The
+first thing you will want to do is add a heading for this container.
+Highlight the container name by clicking on it, then click the ``Edit
+Continer Text'' button on the tool bar.  This will display the ``Edit
+Container Text'' dialog box, as shown in
+Figure~\ref{fig:editcontainertext}. Fill in the text field with ``This
+is a player character''.  The dialog box will now look like
+Figure~\ref{fig:editcontainertextwithtext}. Click ``Update''. The
+template editor window will now look like
+Figure~\ref{fig:playertemplateeditorwithheading}.
+
+\subsection{Adding a field to a container}
+
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{AddNewFieldDialog.png}
+\caption{``Add New Field'' dialog box}
+\label{fig:addnewfield}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{AddNewFieldDialogWithField.png}
+\caption{``Add New Field'' dialog box with field values filled in}
+\label{fig:addnewfieldfilledin}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{PlayerTemplateEditorWithField.png}
+\caption{Template Editor, with ``Player'' template, with a field added}
+\label{fig:playertemplateeditorwithfield}
+\end{centering}
+\end{figure}
+To add a field to the toplevel container, make sure the container name
+is highlighter (double click on the name to be sure), and click on the ``Add
+Field or Container''.  This will display the ``Add New Field'' dialog
+box, shown in Figure~\ref{fig:addnewfield}.  Fill in the ``Name'' field
+with ``Character Name'', select ``Word / Short Phrase'' from the
+``Type'' menu, and set ``Updatable'' to ``no''.  The dialog box should
+now look like Figure~\ref{fig:addnewfieldfilledin}.  Click the ``Add''
+button on the dialog box.  The template editor window should now look
+like Figure~\ref{fig:playertemplateeditorwithfield}.
+
+\subsection{Adding a container to a container}
+
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{AddNewFieldDialogWithContainer.png}
+\caption{``Add New Field'' dialog box with container}
+\label{fig:addnewcontainer}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{PlayerTemplateEditorWithContainer.png}
+\caption{Template Editor, with ``Player'' template, with a container added}
+\label{fig:playertemplateeditorwithcontainer}
+\end{centering}
+\end{figure}
+To add a container to the toplevel container, make sure the container name
+is highlighter (double click on the name to be sure), and click on the ``Add
+Field or Container''.  This will display the ``Add New Field'' dialog
+box, shown in Figure~\ref{fig:addnewfield}.  Fill in the ``Name'' field
+with ``Attributes'', select ``Container'' from the
+``Type'' menu, and set ``Updatable'' to ``yes''.  The dialog box should
+now look like Figure~\ref{fig:addnewcontainer}.  Click the ``Add''
+button on the dialog box.  The template editor window should now look
+like Figure~\ref{fig:playertemplateeditorwithcontainer}.
+
+\section{Creating a character sheet}
+
+
+\section{Creating a map}
+
+
+
