@@ -47,6 +47,9 @@ namespace eval RolePlayingDB3 {
   snit::widget Template {
     option -template -readonly yes -default {}	  ;# Not used
     typevariable defaultfilename "template.rpgtmpl"
+    typevariable middlebuttonPress {}
+    typevariable middlebuttonRelease {}
+    typevariable rightbuttonRelease {}
     variable currentFilename
     variable currentBaseFilename
     variable isdirty no
@@ -99,6 +102,25 @@ namespace eval RolePlayingDB3 {
 					-file [file join $::RolePlayingDB3::ImageDir \
 						SmallTemplateMonster.png]]
       set _editDialog {}
+      switch $::tcl_platform(platform) {
+	unix {
+	  set middlebuttonPress <ButtonPress-2>
+	  set middlebuttonRelease <ButtonRelease-2>
+	}
+	default {
+	  set middlebuttonPress <Alt-ButtonPress-1>
+	  set middlebuttonRelease <Alt-ButtonRelease-1>
+	}
+      }
+      switch $::tcl_platform(platform) {
+	unix -
+	windows {
+	  set rightbuttonRelease <ButtonRelease-3>
+	}
+	macintosh {
+	  set rightbuttonRelease <Control-ButtonRelease-1>
+	}
+      }
     }
     typemethod _createEditDialog {} {
       if {"$_editDialog" ne "" && [winfo exists "$_editDialog"]} {return}
@@ -355,9 +377,9 @@ namespace eval RolePlayingDB3 {
       install templatetree using Tree [$templatesw getframe].templatetree
       pack $templatetree -fill both -expand yes
       $templatesw setwidget $templatetree
-      $templatetree bindText <ButtonRelease-3> [mymethod _postItemMenu]
-      $templatetree bindText <ButtonPress-2>   [mymethod _startMove %x %y]
-      $templatetree bindText <ButtonRelease-2> [mymethod _endMove %x %y]
+      $templatetree bindText $rightbuttonRelease  [mymethod _postItemMenu]
+      $templatetree bindText $middlebuttonPress   [mymethod _startMove %x %y]
+      $templatetree bindText $middlebuttonRelease [mymethod _endMove %x %y]
       $self configurelist $args
 
       update

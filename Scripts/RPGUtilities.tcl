@@ -569,11 +569,13 @@ namespace eval RolePlayingDB3 {
 			 "$attrlist_array(generator)" -> num sides] > 0} {
 		  lappend widgetopts -range [list $num [expr {$sides * $num}] 1]
 		} elseif {[regexp {^[dD]%$} "$attrlist_array(generator)"] > 0} {
-		  lappend widgetopts -range {1 100 1}
+		  lappend widgetopts -range {0 99 1}
 		} else {
 		  set range $attrlist_array(range)
 		  if {[llength $range] > 1 && [llength $range] < 4} {
-		    lappend widgetopts -range $range
+		    lappend widgetopts -range $range -text 0
+		  } else {
+		    lappend widgetopts -range {-9999999 9999999 1} -text 0
 		  }
 		}
 	      }
@@ -2036,12 +2038,15 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       set cmd [list glob -tails -directory [file join $options(-root) \
 						    $selectPath] \
 			 -type {f b c l p s} -nocomplain]
+#      puts stderr "$self Update: filter = $filter"
       if {[string equal $filter *]} {
 	lappend cmd .* *
       } else {
-	eval [list lappend cmd] $filter
+	eval [list lappend cmd] *$filter
       }
+#      puts stderr "$self Update: cmd = $cmd"
       set fileList [lsort -dictionary -unique [eval $cmd]]
+#      puts stderr "$self Update: fileList = $fileList"
       ::tk::IconList_Add $iconList $fileImage $fileList
 
       ::tk::IconList_Arrange $iconList

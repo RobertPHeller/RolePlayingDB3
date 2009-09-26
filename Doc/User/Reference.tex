@@ -83,18 +83,18 @@ field value can be updated.  There are five defined field types:
 
 \index{Field types|(}
 \begin{enumerate}
-\item \verb=Whole Number=--This is a numerically valued field. It is either
+\item \textbf{Whole Number:} This is a numerically valued field. It is either
 an arbitrary (usually fixed) value or the result of a dice throw.
-\item \verb=Word / Short Phrase=--This either a single word or a short
+\item \textbf{Word / Short Phrase:} This either a single word or a short
 (one line at most) phrase, generally describing a textual attribute,
 such as a name or some sort of descriptive condition or status.
-\item \verb=Long Text=--This is a multi-line, but short (1-2 paragraph)
+\item \textbf{Long Text:} This is a multi-line, but short (1-2 paragraph)
 text value.
-\item \verb=Graphic=--This is a picture file.  Most standard graphics
+\item \textbf{Graphic:} This is a picture file.  Most standard graphics
 formats are supported, including GIF, PNG, JPEG, BMP, TIFF, TGA,
 PostScript, and Sun Raster.  The graphic file will be displayed in the
 sheet editor window.
-\item \verb=Document=--This a document file.  Any sort of external file
+\item \textbf{Document:} This a document file.  Any sort of external file
 is supported.  The external file will be copied into the sheet file. 
 The sheet editor will not attempt to display or otherwise process the
 file, but since the file will be ``carried'' along with the sheet file,
@@ -114,6 +114,59 @@ that is used as a section heading for the group of fields contained in
 the container. The included template file, \verb=dnd.rpgtmpl=, defines
 informational sheets suitable for \textit{Advanced Dungeons and
 Dragons}, but template files for other game systems can be created.
+
+The template editor lists the defined templates in the open template
+bundle in its left side bar and the currently open template is
+displayed in its main display area.  It has a six button tool bar.
+Except for the \verb=Add Template= tool bar button, these buttons work
+with the current selected or hightlighted item.  An item (template,
+container, or field) is selected with a single click of the mouse
+button\footnote{Normally the left button.}.
+
+
+\begin{enumerate}
+\item \textbf{Add Template:} A new template is added with the 
+\verb=Add Template= tool bar button.  A dialog box prompts for the name
+and class of the new template.  The class of the template defines the
+outermost container name (same as the class name) and the folder in the
+template bundle where the template resides. 
+\item \textbf{Delete Template:} An existing template is deleted by
+highlighting the template name in the template list and then clicking
+the \verb=Delete Template= tool bar button.  A confirmation dialog box
+confirms the removal of the template. 
+\item \textbf{Add Field or Container:} A field or container is added to
+an existing container by highlighting the parent container and clicking
+the \verb=Add Field or Container= tool bar button.  A dialog box is
+displayed to define the new field or container's attributes. 
+\item \textbf{Edit Container Text:} Each container, including the
+outermost, can have one-line or text associated with it.  This text is
+used as a header.  Highlighting the container and clicking the
+\verb=Edit Container Text= tool bar button allows for editing this text
+field. 
+\item \textbf{Delete Field or Container:} A field or container is
+deleted by highlighting the field or container and then clicking the
+\verb=Delete Field or Container= tool bar button.  A confirmation
+dialog box confirms the removal of the field or container. Note that
+removing a container also removes the fields and containers it
+contains. 
+\item \textbf{Edit Field:} A field's attributes can be edited with the
+\verb=Edit Field= tool bar button.  The field to be edited needs to be
+highlighted first.  Field names cannot be changed.
+\end{enumerate}
+
+To edit a template double click on the template name.  The template
+will be opened up in the template editing window. The editing buttons
+can be used to create or edit fields and containers.  It is also
+possible to use the right mouse button\footnote{Control with the left
+or only button under MacOS.} to pop up edit menus to perform editing
+functions, including adding and deleting fields and containers from a
+container, editing the container's text, and editing a field's
+attributes.
+
+The ordering of fields and containers can be altered by draging fields
+or containers with the middle mouse button\footnote{Under MacOSX and
+MS-Windows, the left or only button with the Alt key is used.}.  Fields
+and containers cannot be moved outside of the main class container.
 
 A template file is a Zip archive file containing directories for each
 class of sheet: Character, Monster, Spell, Treasure, Trick / Trap, and

@@ -75,8 +75,12 @@ namespace eval RolePlayingDB3 {
     }
     typemethod myfiletypes {} {return $filetypes}
     typecomponent _editDialog
-    typecomponent  sheetTemplateFE
+    typecomponent  sheetTemplateLF
+    typecomponent    sheetTemplateE
+    typecomponent    sheetTemplateB
+    typecomponent    sheetTemplateDialog
     typecomponent _getMediaFileDialog
+    typecomponent _getTemplateFileDialog
     typevariable bannerImage -array {}
     typevariable dialogIcon  -array {}
     typevariable bannerBackgrounds -array {
@@ -88,6 +92,7 @@ namespace eval RolePlayingDB3 {
 	TrickTrap #95d9d7
     }
     typevariable openMediaFileDialogBanner -array {}
+    typevariable openTemplateFileDialogBanner {}
     typevariable editDialogIcon {}
     typeconstructor {
       foreach theclass {Character Dressing Monster Spell Treasure TrickTrap} {
@@ -108,6 +113,10 @@ namespace eval RolePlayingDB3 {
 					-file [file join \
 						$::RolePlayingDB3::ImageDir \
 						SheetEditDialogIcon.png]]
+      set openTemplateFileDialogBanner [image create photo \
+					-file [file join \
+						$::RolePlayingDB3::ImageDir \
+						OpenTemplateFileDialogBanner.png]]
       set _editDialog {}
     }
     typemethod createGetMediaFileDialog {} {
@@ -134,14 +143,38 @@ namespace eval RolePlayingDB3 {
       pack [message [$_editDialog getframe].message \
 			-text "Create a new Sheet file or\nopen an existing Sheet file?" \
 			-aspect 500] -fill both
-      set sheetTemplateFE [FileEntry \
-				[$_editDialog getframe].sheetTemplateFE \
-				-filedialog open \
+      set sheetTemplateLF [LabelFrame [$_editDialog getframe].sheetTemplateLF \
+				-text {Template File:}]
+      pack $sheetTemplateLF -fill x
+      set sheetTemplateLF_f [$sheetTemplateLF getframe]
+      set sheetTemplateE [Entry $sheetTemplateLF_f.sheetTemplateE]
+      pack $sheetTemplateE -side left -fill x
+      set sheetTemplateB [Button $sheetTemplateLF_f.sheetTemplateB \
+      				-image [image create photo \
+					-file [file join $::BWIDGET::LIBRARY \
+							 images openfold.gif]] \
+				-command [mytypemethod _openTemplateFile]]
+      pack $sheetTemplateB -side right
+      set sheetTemplateDialog [::RolePlayingDB3::chroot_getFile \
+				$sheetTemplateLF_f.sheetTemplateDialog \
+				-bannerimage $openTemplateFileDialogBanner \
+				-bannerbackground white \
+				-saveoropen open \
 				-filetypes { {{Template XML}   {.xml} TEXT}
 					     {{All Text Files}     *  TEXT} } \
 				-defaultextension .xml \
 				-title {Template XML file}]
-      pack $sheetTemplateFE -fill x
+    }
+    typevariable _templateRoot {}
+    typemethod _openTemplateFile {} {
+#      puts stderr "*** $type _openTemplateFile: _templateRoot = $_templateRoot"
+      set initfile [$sheetTemplateE cget -text]
+      set file [$sheetTemplateDialog draw -parent $sheetTemplateLF \
+					  -root   $_templateRoot \
+					  -initialfile $initfile]
+#      puts stderr "*** $type _openTemplateFile: file = $file"
+      if {"$file" eq ""} {return}
+      $sheetTemplateE configure -text [file tail "$file"]
     }
     typemethod edit {args} {
       set sheetclass [from args -sheetclass]
@@ -152,11 +185,12 @@ namespace eval RolePlayingDB3 {
       set t1 [lindex [lsort -dictionary [glob -nocomplain \
 						[file join $mp $sheetclass \
 							*.xml]]] 0]
-      $sheetTemplateFE configure -text "$t1"
+      set _templateRoot [file join $mp $sheetclass]
+      $sheetTemplateE configure -text [file tail "$t1"]
       set answer [$_editDialog draw]
       switch $answer {
 	0 {
-	    set templateFile [$sheetTemplateFE cget -text]
+	    set templateFile [file join $_templateRoot [$sheetTemplateE cget -text]]
 	    if {[catch {open $templateFile r} tfp]} {
 	      tk_messageBox -type ok -icon error -message "Could not open $templateFile: $tfp"
 	      vfs::unmount $mp

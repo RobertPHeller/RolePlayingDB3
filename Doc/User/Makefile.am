@@ -12,7 +12,9 @@ USERMAN_FIGS = CharacterEditor.png   CreateOrOpenTemplate.png  \
 	       AddNewFieldDialogWithField.png \
 	       PlayerTemplateEditorWithField.png \
 	       AddNewFieldDialogWithContainer.png \
-	       PlayerTemplateEditorWithContainer.png
+	       PlayerTemplateEditorWithContainer.png \
+	       OpenConfigurationEditor.png SelectTemplateFile.png \
+	       EmptyPlayerCharacterSheet.png
 USERMAN = UserManual
 USERMAN_PDF = $(USERMAN).pdf
 USERMANHBase = UserManual

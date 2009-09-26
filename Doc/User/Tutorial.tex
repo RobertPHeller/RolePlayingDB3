@@ -125,7 +125,7 @@ Figure~\ref{fig:playertemplateeditorwithheading}.
 \end{centering}
 \end{figure}
 To add a field to the toplevel container, make sure the container name
-is highlighter (double click on the name to be sure), and click on the ``Add
+is highlighter (click on the name to be sure), and click on the ``Add
 Field or Container''.  This will display the ``Add New Field'' dialog
 box, shown in Figure~\ref{fig:addnewfield}.  Fill in the ``Name'' field
 with ``Character Name'', select ``Word / Short Phrase'' from the
@@ -151,7 +151,7 @@ like Figure~\ref{fig:playertemplateeditorwithfield}.
 \end{centering}
 \end{figure}
 To add a container to the toplevel container, make sure the container name
-is highlighter (double click on the name to be sure), and click on the ``Add
+is highlighter (click on the name to be sure), and click on the ``Add
 Field or Container''.  This will display the ``Add New Field'' dialog
 box, shown in Figure~\ref{fig:addnewfield}.  Fill in the ``Name'' field
 with ``Attributes'', select ``Container'' from the
@@ -162,6 +162,71 @@ like Figure~\ref{fig:playertemplateeditorwithcontainer}.
 
 \section{Creating a character sheet}
 
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{OpenConfigurationEditor.png}
+\caption{Selecting ``Edit System Configuration'' from the ``Options'' menu}
+\label{fig:opensysconfedit}
+\end{centering}
+\end{figure}
+To create a character sheet, we first need to be sure that there is an
+available template bundle.  Go to the \verb=Options= menu and select
+\verb=Edit System Configuration=, as shown in
+Figure~\ref{fig:opensysconfedit}. Click on the file folder button to the
+right of the ``Template File'' field and navigate to the location of the
+\verb=dnd.rpgtmpl= file included with the \thesystem. Click ``Open'' on
+the file select dialog and then ``OK'' on the configuration editor
+window.  You might want then go to the \verb=Options= menu and select
+\verb=Save System Configuration= to write out this configuration.
+
+\begin{figure}[hbpt]  
+\begin{centering}
+\includegraphics{SelectTemplateFile.png} 
+\caption{The ``Select Template File'' dialog} 
+\label{fig:selecttemplatefile} 
+\end{centering}
+\end{figure} 
+\begin{figure}[hbpt] 
+\begin{centering}
+\includegraphics[width=5in]{EmptyPlayerCharacterSheet.png} 
+\caption{An empty player character sheet} 
+\label{fig:emptyplayercharacter}
+\end{centering} 
+\end{figure} 
+Next, click on the \verb=Edit Character= button.  This will open the
+``Open or Create Character'' dialog box, shown in
+Figure~\ref{fig:opencreatechar}.  Click on the file folder button. 
+This will open the ``Select Template File'' dialog, shown in
+Figure~\ref{fig:selecttemplatefile}. Double click on ``Player.xml''. 
+This will select the player template, rather than the default
+non-player character (NPC) template.  Now click on the ``Create''
+button on the ``Open or Create Character'' dialog box.  You should now
+have an empty character sheet much like that shown in
+Figure~\ref{fig:emptyplayercharacter}. You are now ready to create a
+player character sheet!  The process is much like filling in a form.
+Each piece of information is filled into a labeled space.  Numeric
+values have small up and down arrows at the right end of the field and
+you can either type in the numbers or use these arrows to increase or
+decrease the value in the field.  Fields which take file names have a
+folder button at the right end.  These buttons can be clicked on to
+open a file browser to select the file\footnote{External files are
+copied into the sheet bundle to allow for easy transport and sharing.}.
+ Text areas will display a scroll bar once the amount of text grows to
+be long enough to need it. The sheet is broken up into sections.  First
+there is the character's full name and his or her nickname(s).  The
+next section is the character's basic attributes: Strength,
+Intellegence, Wisdom, Dexterity, Constitution, and Charisma.  Then
+comes the character's demographics, which includes the characters race,
+class, gender, age, and alignment.  Then the character's wealth and
+health: gold pieces, hit points, experience points, and level.  Then
+comes the extra detail, which includes a picture, a short bio, and a
+full bio.  Finally there is information about the player, including the
+player's name, address, phone number and E-Mail address.  Some of these
+fields will be filled out with the help of your game master and some
+fields will be filled in from dice rolls\footnote{The \thesystem\  does
+not include a dice roll function, since it is expected that most
+players would prefer to use their own dice or other source of random
+numbers.}.
 
 \section{Creating a map}
 
