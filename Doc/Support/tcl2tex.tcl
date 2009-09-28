@@ -279,8 +279,8 @@ proc convert {filename o} {
 
       set iseval 0
 
-#      puts stderr "*** line = '$line'"
-#      puts stderr "*** \[string first eval $line\] = [string first eval $line]"
+      puts stderr "*** line = '$line'"
+      puts stderr "*** \[string first eval $line\] = [string first eval $line]"
 
       # Set apart the keywords without parameters.
       if {[string first \{ $line]==-1} {

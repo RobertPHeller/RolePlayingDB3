@@ -1,4 +1,4 @@
-SUBDIRS = BuildScripts BuildData Doc Scripts ManPages #Installer
+SUBDIRS = BuildScripts BuildData Doc Scripts ManPages SampleData
 
 EXTRA_DIST = $(PACKAGE).spec bootstrap
 

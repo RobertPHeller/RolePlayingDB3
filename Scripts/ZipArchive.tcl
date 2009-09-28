@@ -34,13 +34,20 @@
 #* 
 #*  
 #* 
+#* Lifted from http://wiki.tcl.tk/15158
+#* Converted from Artur Trzewik XOTcl code to a snit::type
+#*
 
-# Lifted from http://wiki.tcl.tk/15158
-# Converted from Artur Trzewik XOTcl code to a snit::type
+#@Chapter:ZipArchive.tcl -- Code to create a Zip archive
+#$Id$
+# This is a port of Artur Trzewik's code that creates a Zip archive
+# written in XOTcl to a snit::type.  It has been modified to handle
+# directories and includes code to recursively traverse a directory.
 #
 
 package require vfs::zip
 package require vfslib
+package require snit
 
 snit::type ZipArchive {
   variable files {}
@@ -196,8 +203,7 @@ snit::type ZipArchive {
 		     ($minute << 5) | ($secound >> 1)}]
     return $value
   }
-  method writeCentralFileHeader {ostream fin fout offset dosTime size csize 
-				 crc} {
+  method writeCentralFileHeader {ostream fin fout offset dosTime size csize crc} {
     # CFH 0X02014B50L
     binary scan \x02\x01\x4B\x50 I CFH_SIG
     $self writeLong $ostream $CFH_SIG
@@ -306,6 +312,13 @@ snit::type ZipArchive {
     }
   }
   typemethod createZipFromDirtree {zipfile directory args} {
+  # This type method creates a Zip archive from a directory tree.
+  #
+  # Args:
+  # <in> zipfile The name of the zip file to create.
+  # <in> directory The name of the directory to recursively traverse.
+  # <in> args Any remaining args to pass to the createFile method.
+
     set ziparchive [$type create %AUTO%]
     foreach f [find $directory] {
       $ziparchive addFile $f [stripdir $f $directory]

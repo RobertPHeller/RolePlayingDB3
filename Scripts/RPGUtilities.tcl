@@ -1387,14 +1387,9 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       }
     }
     method ListBrowse {} {
-      set text {}
-      foreach item [::tk::IconList_Curselection $iconList] {
-	lappend text [::tk::IconList_Get $iconList $item]
-      }
-      if {[llength $text] == 0} {
-	return
-      }
-      set text [lindex $text 0]
+      set items [::tk::IconList_Curselection $iconList]
+      if {[llength $items] < 1} {return}
+      set text [::tk::IconList_Get $iconList [lindex $items 0]]
       set file [::tk::dialog::file::JoinFile $selectPath $text]
       $entry delete 0 end
       $entry insert 0 $file
@@ -1745,14 +1740,9 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       }
     }
     method ListBrowse {} {
-      set text {}
-      foreach item [::tk::IconList_Curselection $iconList] {
-	lappend text [::tk::IconList_Get $iconList $item]
-      }
-      if {[llength $text] == 0} {
-	return
-      }
-      set text [lindex $text 0]
+      set items [::tk::IconList_Curselection $iconList]
+      if {[llength $items] < 1} {return}
+      set text [::tk::IconList_Get $iconList [lindex $items 0]]
       set file [::tk::dialog::file::JoinFile $selectPath $text]
       set isDir [file isdirectory [file join $options(-root) $file]]
       if {!$isDir} {
@@ -1781,14 +1771,16 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       }
     }
     method OkCmd {} {
+#      puts stderr "*** $self OkCmd"
       set filenames {}
       foreach item [::tk::IconList_Curselection $iconList] {
-	append filenames [::tk::IconList_Get $iconList $item]
+	lappend filenames [::tk::IconList_Get $iconList $item]
       }
-
+#      puts stderr "[list *** $self OkCmd: filenames = $filenames]"
       if {[llength $filenames] == 1} {
 	set filename [lindex $filenames 0]
 	set file [::tk::dialog::file::JoinFile $selectPath $filename]
+#        puts stderr "*** $self OkCmd: file = $file, filename = $filename"
 	if {[file isdirectory [file join $options(-root) $file]]} {
 	  $self ListInvoke [list $filename]
 	  return

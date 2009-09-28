@@ -210,10 +210,10 @@ namespace eval RolePlayingDB3 {
 			     .5 -.288675 
 			     .5  .288675 
 			    0.0  .57735 
-			    -.5 .288675}
-    typevariable hexXoffset .5
-    typevariable hexSideLength .57735
-    typevariable hexPeakHeight .288675
+			    -.5  .288675}
+    typevariable hexXoffset  .5
+    typevariable hexSideLength   .57735
+    typevariable hexPeakHeight   .288675
     method scaleXY {X Y scale} {
 #      puts stderr "*** $self scaleXY $X $Y $scale"
       switch [$self spaceshape] {
@@ -1545,9 +1545,12 @@ namespace eval RolePlayingDB3 {
     component   e_xLE
     component   e_yLE
     component   e_imfileFE
-    component   e_otherSpaceLevelFE
-    component   e_otherSpaceNameFE
+    component   e_otherSpaceNameLF
+    component     e_otherSpaceNameE
+    component     e_otherSpaceNameB
+    component     e_otherSpaceName_nameDialog
     component   e_sheetFileFE
+    typevariable otherSpaceNameDialogBanner
 
     proc isodd {n} {
       return [expr {($n % 1) == 1}]
@@ -1621,6 +1624,9 @@ namespace eval RolePlayingDB3 {
       set bannerImage [image create photo \
 				-file [file join $::RolePlayingDB3::ImageDir \
 						 SpaceBanner.png]]
+      set otherSpaceNameDialogBanner [image create photo \
+				-file [file join $::RolePlayingDB3::ImageDir \
+						OtherSpaceNameBanner.png]]
     }
     method new {} {
       $options(-leveleditor) _newspace -parent $win
@@ -1989,23 +1995,45 @@ namespace eval RolePlayingDB3 {
 				{"Postscript Files" {.ps .eps}	  } 
 				{"All Files"	*		   } }
       pack $e_imfileFE -fill x
-      install e_otherSpaceLevelFE using FileEntry $frame.otherSpaceLevelFE \
-			-filedialog directory \
-			-text [file dirname $options(-spacefile)] \
-			-label "Exit to level:" -labelwidth 14
-      pack $e_otherSpaceLevelFE -fill x
-      install e_otherSpaceNameFE  using FileEntry $frame.otherSpaceNameFE \
-			-text $options(-spacefile) \
-			-filetypes  {
-				{"Space Files"     {*.xml}	     } } \
-			-label "Exit to space:" -labelwidth 14
-      pack $e_otherSpaceNameFE -fill x
+      install e_otherSpaceNameLF using LabelFrame $frame.otherSpaceNameLF \
+					-text "Exit to space:" -width 14
+      pack $e_otherSpaceNameLF -fill x
+      set e_otherSpaceNameLF_f [$e_otherSpaceNameLF getframe]
+      install e_otherSpaceNameE using Entry $e_otherSpaceNameLF_f.entry \
+				-text $options(-spacefile)
+      pack $e_otherSpaceNameE -side left -fill x -expand yes
+      install e_otherSpaceNameB using Button $e_otherSpaceNameLF_f.browse \
+				-command [mymethod _browseOtherSpace] \
+				-image [image create photo \
+						-file [file join \
+							$::BWIDGET::LIBRARY \
+							images openfold.gif]]
+      pack $e_otherSpaceNameB -side right
+      install e_otherSpaceName_nameDialog \
+		using ::RolePlayingDB3::chroot_getFile \
+				$e_otherSpaceNameLF_f._nameDialog \
+				-bannerimage $otherSpaceNameDialogBanner \
+				-bannerbackground $bannerBackground \
+				-saveoropen open \
+				-filetypes { {{Space XML Files} {.xml} TEXT} } \
+				-defaultextension .xml \
+				-parent [winfo toplevel $win] \
+				-root [file dirname [file dirname $options(-spacefile)]] \
+				-initialfile $options(-spacefile) \
+				-initialdir [file dirname $options(-spacefile)] \
+				-title {Other space XML file}
       install e_sheetFileFE using FileEntry $frame.sheetFileFE -label "Sheet File:" \
 							  -labelwidth 14 \
 			-filetypes  {
 				{"Sheet Files"      {*.rpg}	     }
 				{"All Files"	*		   } }
       pack $e_sheetFileFE -fill x
+    }
+    method _browseOtherSpace {} {
+      set curfile [$e_otherSpaceNameE cget -text]
+      set newfile [$e_otherSpaceName_nameDialog draw -initialfile "$curfile"]
+      if {"$newfile" eq ""} {return}
+      $e_otherSpaceNameE configure -text "$newfile"
     }
     method _addnewitem {} {
       set itemlist [$spaceframe getElementWidgetById itemlist]
@@ -2082,10 +2110,7 @@ namespace eval RolePlayingDB3 {
       set needmediatreeupdated no
       insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$e_imfileFE cget -text]"] attrList
       insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$e_sheetFileFE cget -text]"] attrList
-      set spacelevel [$self _checkIsLevel "[$e_otherSpaceLevelFE cget -text]"]
-      if {"$spacelevel" eq ""} {return}
-      insertOrReplaceInAttrList otherlevel "$spacelevel" attrList
-      set spacename [$self _checkIsSpaceOnLevel "[$e_otherSpaceNameFE cget -text]" "$spacelevel"]
+      set spacename "[$e_otherSpaceNameE cget -text]"
       if {"$spacename" eq ""} {return}
       insertOrReplaceInAttrList otherspace "$spacename" attrList
 #      puts stderr "*** $self _addnewexit: attrList = $attrList"
@@ -2094,26 +2119,26 @@ namespace eval RolePlayingDB3 {
       set isdirty yes
       if {$needmediatreeupdated} {$options(-leveleditor) updatemediatree}
     }
-    method _checkIsLevel {leveldir} {
-      if {[catch {$options(-leveleditor) validateleveldir -leveldir "$leveldir"}
-		 ]} {
-	tk_messageBox  -parent $win -type ok -icon error \
-			-message "[file tail $leveldir] is not a valid level!"
-	return {}
-      } else {
-	return "$leveldir"
-      }
-    }
-    method _checkIsSpaceOnLevel {spacefile leveldir} {
-      if {[file dirname "$spacefile"] eq "$leveldir"} {
-	return "$spacefile"
-      } else {
-        tk_messageBox -type ok -icon error -parent $win \
-			-message "[file rootname [file tail $spacefile]] is not on [file tail $leveldir]!"
-
-	return {}
-      }
-    }
+#    method _checkIsLevel {leveldir} {
+#      if {[catch {$options(-leveleditor) validateleveldir -leveldir "$leveldir"}
+#		 ]} {
+#	tk_messageBox  -parent $win -type ok -icon error \
+#			-message "[file tail $leveldir] is not a valid level!"
+#	return {}
+#      } else {
+#	return "$leveldir"
+#      }
+#    }
+#    method _checkIsSpaceOnLevel {spacefile leveldir} {
+#      if {[file dirname "$spacefile"] eq "$leveldir"} {
+#	return "$spacefile"
+#      } else {
+#        tk_messageBox -type ok -icon error -parent $win \
+#			-message "[file rootname [file tail $spacefile]] is not on [file tail $leveldir]!"
+#
+#	return {}
+#      }
+#    }
     method _editexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
       set selection [$exitlist selection get]
@@ -2128,8 +2153,7 @@ namespace eval RolePlayingDB3 {
       $e_yLE configure -text "[getFromAttrList Y $attrList]"
       $e_imfileFE configure -text "[getFromAttrList imfile $attrList]"
       $e_sheetFileFE configure -text "[getFromAttrList sheet $attrList]"
-      $e_otherSpaceLevelFE configure -text "[getFromAttrList otherlevel  $attrList]"
-      $e_otherSpaceSpaceFE configure -text "[getFromAttrList otherspace $attrList]"
+      $e_otherSpaceSpaceE configure -text "[getFromAttrList otherspace $attrList]"
       set ans [$_exitDialog draw]
       if {$ans == 1} {return}
       set attrList [list]
@@ -2140,10 +2164,7 @@ namespace eval RolePlayingDB3 {
       set needmediatreeupdated no
       insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$e_imfileFE cget -text]"] attrList
       insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$e_sheetFileFE cget -text]"] attrList
-      set spacelevel [$self _checkIsLevel "[$e_otherSpaceLevelFE cget -text]"]
-      if {"$spacelevel" eq ""} {return}
-      insertOrReplaceInAttrList otherlevel "$spacelevel" attrList
-      set spacename [$self _checkIsSpaceOnLevel "[$e_otherSpaceSpaceFE cget -text]" "$spacelevel"]
+      set spacename "[$e_otherSpaceSpaceE cget -text]"
       if {"$spacename" eq ""} {return}
       insertOrReplaceInAttrList otherspace "$spacename" attrList
 #      puts stderr "*** $self _editexit: attrList = $attrList"

@@ -14,7 +14,16 @@ USERMAN_FIGS = CharacterEditor.png   CreateOrOpenTemplate.png  \
 	       AddNewFieldDialogWithContainer.png \
 	       PlayerTemplateEditorWithContainer.png \
 	       OpenConfigurationEditor.png SelectTemplateFile.png \
-	       EmptyPlayerCharacterSheet.png
+	       EmptyPlayerCharacterSheet.png CreateOrOpenMap.png \
+	       EmptyMapEditorWindow.png TestMapEditorWindow1.png \
+	       CreateNewLevel.png EmptyLevelEditorWindow.png \
+	       ExampleLevelEditorWindow.png CreateNewSpace.png \
+	       CreateEntryMeadowSpace.png NewEntryMeadowSpace.png \
+	       EntryMeadowSpaceBasicInformation.png StrongholdLevel1.png \
+	       EntryRoom.png CreatingHillock.png CreatingStairsDown.png \
+	       UpdatedSpaceWithStairsHillockBushesTrees.png
+
+
 USERMAN = UserManual
 USERMAN_PDF = $(USERMAN).pdf
 USERMANHBase = UserManual

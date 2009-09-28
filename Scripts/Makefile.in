@@ -227,7 +227,7 @@ Images = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
 	  CharacterOpenMediaFileBanner.png DressingOpenMediaFileBanner.png \
 	  MonsterOpenMediaFileBanner.png SpellOpenMediaFileBanner.png \
 	  TreasureOpenMediaFileBanner.png TrickTrapOpenMediaFileBanner.png \
-	  OpenTemplateFileDialogBanner.png
+	  OpenTemplateFileDialogBanner.png OtherSpaceNameBanner.png
 
 BUILT_SOURCES = Version.tcl $(TCLKIT)
 noinst_DATA = Version.tcl

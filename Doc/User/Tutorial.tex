@@ -164,7 +164,7 @@ like Figure~\ref{fig:playertemplateeditorwithcontainer}.
 
 \begin{figure}[hbpt]
 \begin{centering}
-\includegraphics{OpenConfigurationEditor.png}
+\includegraphics[width=5in]{OpenConfigurationEditor.png}
 \caption{Selecting ``Edit System Configuration'' from the ``Options'' menu}
 \label{fig:opensysconfedit}
 \end{centering}
@@ -229,6 +229,178 @@ players would prefer to use their own dice or other source of random
 numbers.}.
 
 \section{Creating a map}
+
+
+\begin{figure}[hbpt] 
+\begin{centering}
+\includegraphics{CreateOrOpenMap.png} 
+\caption{``Create or open a Map file'' dialog box} 
+\label{fig:createoropenmap} 
+\end{centering}
+\end{figure} 
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{EmptyMapEditorWindow.png}
+\caption{Empty ``Edit Map'' window}
+\label{fig:emptymapeditor}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{TestMapEditorWindow1.png}
+\caption{Test ``Edit Map'' window, after entering the basic map information}
+\label{fig:testmapeditor1}
+\end{centering}
+\end{figure}
+To create a map you need to click on the ``Edit Map'' button.  A dialog
+box, shown in Figure~\ref{fig:createoropenmap}, will be displayed. 
+Click the ``Create'' button.  You should now have an empty ``Edit Map''
+window, as shown in Figure~\ref{fig:emptymapeditor}.  You can now fill
+in the basic map information, which includes the Name (enter ``Test
+Map''), the Campaign (enter ``None''), the Game Master (enter your
+name), and the Space Shape (select ``Hexigonal'').  You can leave the
+Short and Long Descriptions blank for now, but for a real map it is
+probably a good idea to write a paragraph or two for the Short
+Description, if only to remind you of what this map is for. The map
+editor should now look something like Figure~\ref{fig:testmapeditor1}.
+
+\subsection{Creating a new level}
+
+\begin{figure}[hbpt] 
+\begin{centering}
+\includegraphics{CreateNewLevel.png} 
+\caption{``Create New Level'' dialog box} 
+\label{fig:createnewlevel} 
+\end{centering}
+\end{figure} 
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{EmptyLevelEditorWindow.png}
+\caption{Empty ``Edit Level'' window}
+\label{fig:emptyleveleditor}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{ExampleLevelEditorWindow.png}
+\caption{Example ``Edit Level'' window}
+\label{fig:exampleleveleditor}
+\end{centering}
+\end{figure}
+To create a new level, click the ``New Level'' button on the map editor
+tool bar.  This will display the ``Create New Level'' dialog box, shown
+in Figure~\ref{fig:createnewlevel}. Enter ``Ground Level'' in the
+Selection entry and click ``Open'' twice.  You should now have an empty
+``Edit Level'' window, as shown in Figure~\ref{fig:emptyleveleditor}. 
+The level's basic information can be filled in.  The depth is the depth
+below ground (when negative) or height above ground (when positive).  A
+depth of zero is at ground level.  The title can be a short name for the
+level and the description can be a longer description.  An filled in
+example is shown in Figure~\ref{fig:exampleleveleditor}.
+
+\subsection{Creating a space}
+
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{CreateNewSpace.png}
+\caption{``Create New Space'' dialog box}
+\label{fig:createnewspace}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics{CreateEntryMeadowSpace.png}
+\caption{``Create New Space'' dialog box with ``Entry Meadow'' filled
+in}
+\label{fig:createentrymeadownewspace}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{NewEntryMeadowSpace.png}
+\caption{Empty ``Space Editor'' window}
+\label{fig:emptyspaceeditor}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{EntryMeadowSpaceBasicInformation.png}
+\caption{``Space Editor'' window with ``Entry Meadow'' information
+filled in}
+\label{fig:entrymeadowspaceeditor1}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{StrongholdLevel1.png}
+\caption{``Level Editor'' window ``Stronghold Level 1''}
+\label{fig:strongholdl1}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{EntryRoom.png}
+\caption{``Space Editor'' window with ``Entry Room'' information
+filled in}
+\label{fig:entryroom}
+\end{centering}
+\end{figure}
+To create a new space, click on the ``New Space'' button on the level
+editor window.  This will display a ``Create New Space'' dialog box,
+shown in Figure~\ref{fig:createnewspace}.  Fill in ``Entry Meadow'' as
+the filename, as shown in Figure~\ref{fig:createentrymeadownewspace},
+and click ``Create''.  This will open a new space editor window, as
+shown in Figure~\ref{fig:emptyspaceeditor}.  You can now enter the
+space's basic information as show in
+Figure~\ref{fig:entrymeadowspaceeditor1}.  You should now save things,
+by selecting the ``Save'' menu item on the ``File'' menu.  We will come
+back to this space later.  For now, we need to create a space on a
+different level in order to add the hidden stairs down to the
+underground stronghold.  We will do this by creating a new level named
+``Stronghold first level'', which will be at a depth of -1, then create
+a space at location 0,0 on this level named ``Entry Room''. We now have
+two additional windows, as shown in Figures~\ref{fig:strongholdl1} and
+\ref{fig:entryroom}.
+
+\subsubsection{Adding items and exits to a space}
+
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{CreatingStairsDown.png}
+\caption{``Add New Edit'' dialog box, adding the entrance stairs}
+\label{fig:addnewexit}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{CreatingHillock.png}
+\caption{``Add New Item'' dialog box, adding the hillock hiding the entrance}
+\label{fig:addnewitem}
+\end{centering}
+\end{figure}
+\begin{figure}[hbpt]
+\begin{centering}
+\includegraphics[width=5in]{UpdatedSpaceWithStairsHillockBushesTrees.png}
+\caption{``Space Editor'' window for the ``Entrance Meadow'', after
+adding the stairs, hollock, along with some bushes and trees}
+\label{fig:entrymeadowspaceeditor2}
+\end{centering}
+\end{figure}
+First we will add a set of spiral stairs leading down to the
+strongholds first level.  We do this by clicking the ``Add New Exit''
+button under the exit list.  A ``Add New Exit'' dialog box is
+displayed.  After filling in the values we want, it looks like
+Figure~\ref{fig:addnewexit}. Clicking ``Add'' adds this exit.  Next we
+will add the hillock by clicking the ``Add New Item'' button under the
+item list.  A ``Add New Item'' dialog box is displayed.  After filling
+in the values we want, it looks like Figure~\ref{fig:addnewitem}. 
+Clicking ``Add'' adds this item.  After adding some bushes and some
+trees, the space map looks like
+Figure~\ref{fig:entrymeadowspaceeditor2}\footnote{Since we added the
+stairs and hillock at the same place, they are draw one over the
+other.}\footnote{I used some elements from a collection of 24x24 X11
+bitmaps I downloaded from Anthony Thyssen's icon collection at
+\url{http://www.cit.gu.edu.au/~anthony/icons/}.}.
 
 
 

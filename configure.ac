@@ -421,7 +421,7 @@ AC_OUTPUT(Makefile \
 	  ManPages/Makefile \
 		ManPages/TclAPI/Makefile \
 		ManPages/Programs/Makefile \
-	  Installer/Makefile \
+	  SampleData/Makefile \
 	  RolePlayingDB3.spec
 	  )
 

@@ -13,7 +13,6 @@
 # PARTICULAR PURPOSE.
 
 @SET_MAKE@
-
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 VPATH = @srcdir@
@@ -45,9 +44,6 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
-am__installdirs = "$(DESTDIR)$(pkglibdir)"
-pkglibSCRIPT_INSTALL = $(INSTALL_SCRIPT)
-SCRIPTS = $(pkglib_SCRIPTS)
 SOURCES =
 DIST_SOURCES =
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -257,7 +253,6 @@ EXTRA_DIST = generateLib_pkgIndex.sh generateLib_pkgIndex.tcl \
 	MakePkgIndex.kit MakePkgIndex.tcl MakeVersion.tcl MakeVersion.kit \
 	MakeVersionHelp.tcl MakeVersionHelp.kit sdx.kit
 
-pkglib_SCRIPTS = AddKitDir.kit AddKitFile.kit MakePkgIndex.kit sdx.kit
 all: all-am
 
 .SUFFIXES:
@@ -290,25 +285,6 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-install-pkglibSCRIPTS: $(pkglib_SCRIPTS)
-	@$(NORMAL_INSTALL)
-	test -z "$(pkglibdir)" || $(mkdir_p) "$(DESTDIR)$(pkglibdir)"
-	@list='$(pkglib_SCRIPTS)'; for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  if test -f $$d$$p; then \
-	    f=`echo "$$p" | sed 's|^.*/||;$(transform)'`; \
-	    echo " $(pkglibSCRIPT_INSTALL) '$$d$$p' '$(DESTDIR)$(pkglibdir)/$$f'"; \
-	    $(pkglibSCRIPT_INSTALL) "$$d$$p" "$(DESTDIR)$(pkglibdir)/$$f"; \
-	  else :; fi; \
-	done
-
-uninstall-pkglibSCRIPTS:
-	@$(NORMAL_UNINSTALL)
-	@list='$(pkglib_SCRIPTS)'; for p in $$list; do \
-	  f=`echo "$$p" | sed 's|^.*/||;$(transform)'`; \
-	  echo " rm -f '$(DESTDIR)$(pkglibdir)/$$f'"; \
-	  rm -f "$(DESTDIR)$(pkglibdir)/$$f"; \
-	done
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -355,11 +331,8 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(SCRIPTS)
+all-am: Makefile
 installdirs:
-	for dir in "$(DESTDIR)$(pkglibdir)"; do \
-	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
-	done
 install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
@@ -404,7 +377,7 @@ info-am:
 
 install-data-am:
 
-install-exec-am: install-pkglibSCRIPTS
+install-exec-am:
 
 install-info: install-info-am
 
@@ -428,19 +401,20 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-info-am uninstall-pkglibSCRIPTS
+uninstall-am: uninstall-info-am
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
 	distclean distclean-generic distclean-libtool distdir dvi \
 	dvi-am html html-am info info-am install install-am \
 	install-data install-data-am install-exec install-exec-am \
-	install-info install-info-am install-man install-pkglibSCRIPTS \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	uninstall uninstall-am uninstall-info-am \
-	uninstall-pkglibSCRIPTS
+	install-info install-info-am install-man install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am \
+	uninstall-info-am
 
+
+#pkglib_SCRIPTS = AddKitDir.kit AddKitFile.kit MakePkgIndex.kit sdx.kit
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

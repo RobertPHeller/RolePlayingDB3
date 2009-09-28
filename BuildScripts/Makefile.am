@@ -50,4 +50,4 @@ EXTRA_DIST = generateLib_pkgIndex.sh generateLib_pkgIndex.tcl \
 	MakePkgIndex.kit MakePkgIndex.tcl MakeVersion.tcl MakeVersion.kit \
 	MakeVersionHelp.tcl MakeVersionHelp.kit sdx.kit
 
-pkglib_SCRIPTS = AddKitDir.kit AddKitFile.kit MakePkgIndex.kit sdx.kit
+#pkglib_SCRIPTS = AddKitDir.kit AddKitFile.kit MakePkgIndex.kit sdx.kit

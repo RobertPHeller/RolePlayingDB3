@@ -9,7 +9,7 @@ noinst_SCRIPTS = tclkit${BEXEEXT}
 
 EXTRA_SCRIPTS = tclkit-darwin-univ-aqua tclkit-linux-x86 tclkit-linux-x86_64 \
 		 tclkit-win32.exe
-bin_SCRIPTS = $(TCLKITRUN)
+#bin_SCRIPTS = $(TCLKITRUN)
 
 tclkit${BEXEEXT}: $(TCLKITBSRC) $(top_builddir)/config.status
 	cp $(srcdir)/$(TCLKITBSRC) ./tclkit${BEXEEXT}

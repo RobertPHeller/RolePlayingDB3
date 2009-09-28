@@ -35,6 +35,10 @@
 #*  
 #* 
 
+#@Chapter:RolePlayingDB3.tcl -- Main program code.
+#$Id$
+# This is the main program file for the Role Playing Database V3.0.
+
 set argv0 [file join [file dirname [info nameofexecutable]] RolePlayingDB3]
 
 package require Version
