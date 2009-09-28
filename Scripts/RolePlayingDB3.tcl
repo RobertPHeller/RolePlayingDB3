@@ -50,7 +50,7 @@ package require Img
 package require HTMLHelp
 package require ReadConfiguration
 
-catch {console show}
+#catch {console show}
 
 namespace eval RolePlayingDB3 {
   variable ImageDir [file join [file dirname \

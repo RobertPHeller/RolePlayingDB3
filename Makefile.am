@@ -1,6 +1,6 @@
 SUBDIRS = BuildScripts BuildData Doc Scripts ManPages SampleData
 
-EXTRA_DIST = $(PACKAGE).spec bootstrap
+EXTRA_DIST = RolePlayingDB3.spec RolePlayingDB3.spec.in bootstrap
 
 TCLKIT = $(top_builddir)/BuildData/tclkit${BEXEEXT}
 

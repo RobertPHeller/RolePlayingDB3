@@ -57,10 +57,7 @@ CTAGS = ctags
 DIST_SUBDIRS = $(SUBDIRS)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
-AMDEP_FALSE = @AMDEP_FALSE@
-AMDEP_TRUE = @AMDEP_TRUE@
 AMTAR = @AMTAR@
-AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -69,27 +66,13 @@ BEXEEXT = @BEXEEXT@
 BIBTEX = @BIBTEX@
 BUILD_DIR = @BUILD_DIR@
 BWLIB = @BWLIB@
-CC = @CC@
-CCDEPMODE = @CCDEPMODE@
-CFLAGS = @CFLAGS@
-CPP = @CPP@
-CPPFLAGS = @CPPFLAGS@
-CXX = @CXX@
-CXXCPP = @CXXCPP@
-CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
-DEPDIR = @DEPDIR@
 DVIPS = @DVIPS@
-ECHO = @ECHO@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
-EGREP = @EGREP@
 EXEEXT = @EXEEXT@
-F77 = @F77@
-FFLAGS = @FFLAGS@
 HOSTTCLSH = @HOSTTCLSH@
 HTLATEX = @HTLATEX@
 IMG_ZIP = @IMG_ZIP@
@@ -98,15 +81,11 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LATEX = @LATEX@
-LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
-LIBTOOL = @LIBTOOL@
-LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINDEX = @MAKEINDEX@
 MAKEINFO = @MAKEINFO@
-OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
@@ -116,65 +95,21 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PDFLATEX = @PDFLATEX@
 PS2PDF = @PS2PDF@
-RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
-SHLIB_CFLAGS = @SHLIB_CFLAGS@
-SHLIB_CXXFLAGS = @SHLIB_CXXFLAGS@
-SHLIB_LD = @SHLIB_LD@
-SHLIB_LD_LIBS = @SHLIB_LD_LIBS@
-SHLIB_SUFFIX = @SHLIB_SUFFIX@
 SNITLIB = @SNITLIB@
 STRIP = @STRIP@
-SWIG = @SWIG@
-SWIGVERSION = @SWIGVERSION@
-SWIGVERSIONFLAGS = @SWIGVERSIONFLAGS@
-SWIGVERSIONMAJOR = @SWIGVERSIONMAJOR@
-SWIGVERSIONMINOR = @SWIGVERSIONMINOR@
 SYSTEMVERSION = @SYSTEMVERSION@
 TCLKITBSRC = @TCLKITBSRC@
 TCLKITRUN = @TCLKITRUN@
-TCLSH = @TCLSH@
 TCLXML_ZIP = @TCLXML_ZIP@
-TCL_BIN_DIR = @TCL_BIN_DIR@
-TCL_CFLAGS = @TCL_CFLAGS@
-TCL_DBGX = @TCL_DBGX@
-TCL_DEFS = @TCL_DEFS@
-TCL_EXEC_PREFIX = @TCL_EXEC_PREFIX@
-TCL_INC_DIR = @TCL_INC_DIR@
-TCL_LIBRARY = @TCL_LIBRARY@
-TCL_LIBS = @TCL_LIBS@
-TCL_LIB_DIR = @TCL_LIB_DIR@
-TCL_LIB_SPEC = @TCL_LIB_SPEC@
-TCL_PREFIX = @TCL_PREFIX@
-TCL_SHARED_LIBS = @TCL_SHARED_LIBS@
-TCL_SHARED_LIB_FILE = @TCL_SHARED_LIB_FILE@
-TCL_SHLIB_CFLAGS = @TCL_SHLIB_CFLAGS@
-TCL_SHLIB_LD = @TCL_SHLIB_LD@
-TCL_SHLIB_SUFFIX = @TCL_SHLIB_SUFFIX@
-TCL_STUB_LIB_PATH = @TCL_STUB_LIB_PATH@
-TCL_STUB_LIB_SPEC = @TCL_STUB_LIB_SPEC@
-TCL_UNSHARED_LIB_FILE = @TCL_UNSHARED_LIB_FILE@
-TCL_VERSION = @TCL_VERSION@
 TOP_DIR = @TOP_DIR@
 UNZIP = @UNZIP@
 URILIB = @URILIB@
 VERSION = @VERSION@
-WISH = @WISH@
-ac_ct_AR = @ac_ct_AR@
-ac_ct_CC = @ac_ct_CC@
-ac_ct_CXX = @ac_ct_CXX@
-ac_ct_F77 = @ac_ct_F77@
-ac_ct_RANLIB = @ac_ct_RANLIB@
 ac_ct_STRIP = @ac_ct_STRIP@
-am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
-am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
-am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
-am__fastdepCXX_TRUE = @am__fastdepCXX_TRUE@
-am__include = @am__include@
 am__leading_dot = @am__leading_dot@
-am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
 bindir = @bindir@
@@ -243,15 +178,6 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-
-mostlyclean-libtool:
-	-rm -f *.lo
-
-clean-libtool:
-	-rm -rf .libs _libs
-
-distclean-libtool:
-	-rm -f libtool
 uninstall-info-am:
 
 # This directory's subdirectories are mostly independent; you can cd
@@ -447,12 +373,11 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-recursive
 
-clean-am: clean-generic clean-libtool mostlyclean-am
+clean-am: clean-generic mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f Makefile
-distclean-am: clean-am distclean-generic distclean-libtool \
-	distclean-tags
+distclean-am: clean-am distclean-generic distclean-tags
 
 dvi: dvi-recursive
 
@@ -480,7 +405,7 @@ maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-recursive
 
-mostlyclean-am: mostlyclean-generic mostlyclean-libtool
+mostlyclean-am: mostlyclean-generic
 
 pdf: pdf-recursive
 
@@ -495,15 +420,14 @@ uninstall-am: uninstall-info-am
 uninstall-info: uninstall-info-recursive
 
 .PHONY: $(RECURSIVE_TARGETS) CTAGS GTAGS all all-am check check-am \
-	clean clean-generic clean-libtool clean-recursive ctags \
-	ctags-recursive distclean distclean-generic distclean-libtool \
-	distclean-recursive distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-data \
-	install-data-am install-exec install-exec-am install-info \
-	install-info-am install-man install-strip installcheck \
-	installcheck-am installdirs installdirs-am maintainer-clean \
-	maintainer-clean-generic maintainer-clean-recursive \
-	mostlyclean mostlyclean-generic mostlyclean-libtool \
+	clean clean-generic clean-recursive ctags ctags-recursive \
+	distclean distclean-generic distclean-recursive distclean-tags \
+	distdir dvi dvi-am html html-am info info-am install \
+	install-am install-data install-data-am install-exec \
+	install-exec-am install-info install-info-am install-man \
+	install-strip installcheck installcheck-am installdirs \
+	installdirs-am maintainer-clean maintainer-clean-generic \
+	maintainer-clean-recursive mostlyclean mostlyclean-generic \
 	mostlyclean-recursive pdf pdf-am ps ps-am tags tags-recursive \
 	uninstall uninstall-am uninstall-info-am
 
