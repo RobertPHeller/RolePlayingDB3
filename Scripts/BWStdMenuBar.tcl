@@ -41,7 +41,7 @@
 
 #@Chapter:BWStdMenuBar.tcl -- Create standard menubars
 #@Label:BWStdMenuBar.tcl
-#$Id: BWStdMenuBar.tcl 723 2009-08-08 17:29:41Z heller $
+#$Id$
 # This file contains code to create a standard Motif style menubar.
 # A standard menubar contains ``File'', ``Edit'', ``View'', ``Options'',
 # and ``Help'' pulldown menus.  The ``File'', ``Edit'', and ``Help'' menus

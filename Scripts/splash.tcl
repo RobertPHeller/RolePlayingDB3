@@ -49,7 +49,7 @@ package require snit
 package require BWidget
 
 #@Chapter:splash.tcl -- Snit splash window widget.
-#$Id: splash.tcl 528 2007-10-22 17:17:28Z heller $
+#$Id$
 
 snit::widget splash {
 # Widget that implements a spash window.  A splash window is a toplevel that

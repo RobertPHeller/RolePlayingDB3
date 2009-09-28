@@ -46,7 +46,7 @@
 #* 
 
 #@Chapter:labelcombobox.tcl -- Labeled ComboBox megawidget.
-#$Id: labelcombobox.tcl 483 2007-04-19 17:23:25Z heller $
+#$Id$
 # This is a specialized form of the LabelFrame widget containing a ComboBox
 # Widget.  Most of the resources from the LabelFrame and ComboBox widgets
 # are included in this widget.
