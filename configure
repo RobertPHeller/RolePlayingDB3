@@ -1367,13 +1367,13 @@ cat >>confdefs.h <<_ACEOF
 #define RPGDB_MINOR_VERSION $RPGDB_MINOR_VERSION
 _ACEOF
 
-RPGDB_PATCH_LEVEL="3.0.0"
+RPGDB_PATCH_LEVEL="3.0.1"
 
 cat >>confdefs.h <<_ACEOF
 #define RPGDB_PATCH_LEVEL $RPGDB_PATCH_LEVEL
 _ACEOF
 
-RPGDB_PATCH_LEVELLIB=3.0.0
+RPGDB_PATCH_LEVELLIB=3.0.1
 
 am__api_version="1.9"
 # Find a good install program.  We prefer a C program (faster),

@@ -266,7 +266,7 @@ namespace eval RolePlayingDB3 {
       $canvas scale $index 0 0 $size $size
       $canvas move $index $X $Y
     }
-    ::RolePlayingDB3::GeneratePrintDialog {printLevelsLCB} {
+    ::RolePlayingDB3::GeneratePrintDialog map {printLevelsLCB} {
       set printLevelsLCB [LabelComboBox $frame.printLevelsLCB \
 				-label "Print Levels?" -labelwidth 12 \
 				-editable no \
@@ -894,7 +894,7 @@ namespace eval RolePlayingDB3 {
   </rpgv3:LevelMap >  
 </rpgv3:Level>
     }
-    ::RolePlayingDB3::GeneratePrintDialog {printSpacesLCB} {
+    ::RolePlayingDB3::GeneratePrintDialog level {printSpacesLCB} {
       set printSpacesLCB [LabelComboBox $frame.printSpacesLCB \
 				-label "Print Spaces?" -labelwidth 12 \
 				-editable no \

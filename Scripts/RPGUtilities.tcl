@@ -1091,7 +1091,7 @@ namespace eval RolePlayingDB3 {
       }
     }
   }
-  snit::macro ::RolePlayingDB3::GeneratePrintDialog {additionalcomps createbody} {
+  snit::macro ::RolePlayingDB3::GeneratePrintDialog {nameprefix additionalcomps createbody} {
     typecomponent _printdialog
     typecomponent   printfileFE
     typecomponent   papersizeLCB
@@ -1101,9 +1101,9 @@ namespace eval RolePlayingDB3 {
     typevariable printerIcon
     typevariable printerfiletypes { {{PDF Files} {.pdf}       }
 				    {{All Files} *            } }
-    set createPrintDialogBody {
+    regsub {%%nameprefix%%} {
       if {"$_printdialog" ne "" && [winfo exists $_printdialog]} {return}
-      set _printdialog [Dialog .printdialog -image $printerIcon \
+      set _printdialog [Dialog .%%nameprefix%%printdialog -image $printerIcon \
 				-cancel 1 -default 0 -modal local \
 				-parent . -side bottom \
 				-title "Print" -transient yes]
@@ -1121,7 +1121,8 @@ namespace eval RolePlayingDB3 {
 					  -values [::pdf4tcl::getPaperSizeList]]
       pack $papersizeLCB -fill x
       $papersizeLCB setvalue first
-    }
+    } "$nameprefix" createPrintDialogBody 
+    
     append createPrintDialogBody $createbody
     typemethod createPrintDialog {} $createPrintDialogBody
     typemethod drawPrintDialog {args} {
@@ -1163,7 +1164,7 @@ namespace eval RolePlayingDB3 {
       set _printdialog {}
       set _printProgressDialog {}
     }
-    ::RolePlayingDB3::GeneratePrintDialog {} {}
+    ::RolePlayingDB3::GeneratePrintDialog {} {} {}
     typemethod create_printProgressDialog {} {
       if {"$_printProgressDialog" ne "" &&
 	  [winfo exists "$_printProgressDialog"]} {return}
