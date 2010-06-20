@@ -57,3 +57,15 @@ FORCE:
 
 Doc/User/UserManual/UserManual.html: FORCE
 	$(MAKE) -C $(top_builddir)/Doc/User UserManual/UserManual.html
+
+dist-binary-tarbz2: all
+	$(MAKE) $(AM_MAKEFLAGS) DESTDIR=/tmp/$(PACKAGE)-$(VERSION)-$(target) install
+	tar cjf $(PACKAGE)-$(VERSION)-$(target).tar.bz2 -C /tmp/$(PACKAGE)-$(VERSION)-$(target)${prefix} .
+	rm -rf /tmp/$(PACKAGE)-$(VERSION)-$(target)
+
+dist-binary-zip: all
+	$(MAKE) $(AM_MAKEFLAGS) DESTDIR=/tmp/$(PACKAGE)-$(VERSION)-$(target) install
+	rm -f $(PACKAGE)-$(VERSION)-$(target).zip
+	(cd  /tmp/$(PACKAGE)-$(VERSION)-$(target)${prefix}; zip -rq $(BUILD_DIR)/$(PACKAGE)-$(VERSION)-$(target).zip .)
+
+	

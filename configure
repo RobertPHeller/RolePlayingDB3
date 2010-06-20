@@ -1367,13 +1367,13 @@ cat >>confdefs.h <<_ACEOF
 #define RPGDB_MINOR_VERSION $RPGDB_MINOR_VERSION
 _ACEOF
 
-RPGDB_PATCH_LEVEL="3.0.1"
+RPGDB_PATCH_LEVEL="3.0.2"
 
 cat >>confdefs.h <<_ACEOF
 #define RPGDB_PATCH_LEVEL $RPGDB_PATCH_LEVEL
 _ACEOF
 
-RPGDB_PATCH_LEVELLIB=3.0.1
+RPGDB_PATCH_LEVELLIB=3.0.2
 
 am__api_version="1.9"
 # Find a good install program.  We prefer a C program (faster),
@@ -2280,9 +2280,7 @@ echo "$as_me: Unsupported target os for Tclxml: $target_os, using Pure Tcl versi
 
 	TCLKITRUN=tclkit-linux-x86_64
 
-	{ echo "$as_me:$LINENO: Unsupported Linux arch for Tclxml: $target_cpu, using Pure Tcl version" >&5
-echo "$as_me: Unsupported Linux arch for Tclxml: $target_cpu, using Pure Tcl version" >&6;}
-	TCLXML_ZIP=Tclxml3.1-GenericPureTcl.zip
+	TCLXML_ZIP=Tclxml3.1-Linux64.zip
 
 	;;
       i*86)

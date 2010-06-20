@@ -237,7 +237,7 @@ namespace eval RolePlayingDB3 {
       set scale [expr {double($scale)}]
       switch [$self spaceshape] {
 	Square {
-	  return [list [expr {int($cX / $scale})] [expr {int($cY / $scale})]]
+	  return [list [expr {int($cX / $scale)}] [expr {int($cY / $scale)}]]
 	}
 	Hexigonal {
 	  set Y1 [expr {$cY / $scale}]
