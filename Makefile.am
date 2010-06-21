@@ -1,4 +1,4 @@
-SUBDIRS = BuildScripts BuildData Doc Scripts ManPages SampleData
+SUBDIRS = BuildScripts BuildData Doc Scripts SampleData
 
 EXTRA_DIST = RolePlayingDB3.spec RolePlayingDB3.spec.in bootstrap Doxyfile.in Doxyfile
 

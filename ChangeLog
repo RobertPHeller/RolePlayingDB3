@@ -1,3 +1,14 @@
+Mon Jun 21 12:56:27 2010
+    3.0.2 (Beta) Released.
+
+	Added Man 1 page, using Doxegen.
+	Added command line file options.
+	Removed TclInternals documentation.
+	Moved print dialog creation to create on demand (MS-Windows / 
+		BWidget dialog weirdness).
+	Fixed expr syntax in map editor code.
+
+	
 Tue Jan  5 09:54:10 2010
 
     3.0.1 (Beta) Released.

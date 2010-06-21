@@ -1,0 +1,45 @@
+Mon Jun 21 13:01:42 2010
+
+The RolePlayingDB3 program manages the information used in table-top role 
+playing games.  Almost any type of game or game system can be supported.
+These games normally use sheets of paper containing game information,
+typically things like player or object characteristics or attributes, such
+as name, size, strengths, weaknesses, powers, and so forth. Since this
+information is structured, in that all objects of a given type all have the
+same sets of information generally listed in the same order and format, 
+this information is effectively structured information.  This means that for
+given game or game system, a template can be created that defines this
+structure.  The RolePlayingDB3 program allows creation of such templates
+and in turn uses these templates to implement ``sheet'' editors, where
+players and/or game masters fill in the game playing information.  The sheets
+can then be printed out, displayed on the computer screen or saved on
+the computer's storage devices (hard drives, thumb drives, CD/DVD-Rs, etc.), 
+or sent to other computers via E-Mail or other file transfer methods.
+
+In addition to generic object informational sheets, of which there are six
+classes: Character Dressing Monster Spell Treasure TrickTrap, the 
+RolePlayingDB3 program also includes a Map editor, which implements a 
+specialized editor for making maps of the playing environment. The 
+RolePlayingDB3 program also includes a template editor for creating and
+editing game system sheet templates.
+
+This is mostly a pure Tcl application, using a couple of standard libraries
+(some coded in C). The program is built using starkits and the binary
+program can be installed merely by copying it to any convientent
+location and can even be run from a removable device or a CD/DVD ROM. 
+It does not need to be installed in any partitular location and uses no
+system installed support files, other than the ones normally installed
+by the base operating system.  The binary program is completely self
+contained. It does look in the current user's home directory for a
+configuration file (named .roleplayingdb3 under UNIX/Linux and MacOSX and
+roleplayingdb3.rc under MS-Windows), which defines values for
+directories containing documents and images, as well as the default
+template file to use.
+
+Robert Heller
+Deepwoods Software
+51 Locke Hill Road
+Wendell, MA 01379
+978-544-6933
+heller@deepsoft.com
+http://www.deepsoft.com/RolePlayingDB
