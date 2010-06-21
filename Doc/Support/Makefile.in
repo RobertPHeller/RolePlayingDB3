@@ -103,6 +103,7 @@ BUILD_DIR = @BUILD_DIR@
 BWLIB = @BWLIB@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
+DOXYGEN = @DOXYGEN@
 DVIPS = @DVIPS@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -179,7 +180,7 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-EXTRA_DIST = tcl2tex.kit tcl2tex.tcl
+EXTRA_DIST = tcl2dox.kit tcl2dox.tcl
 all: all-am
 
 .SUFFIXES:

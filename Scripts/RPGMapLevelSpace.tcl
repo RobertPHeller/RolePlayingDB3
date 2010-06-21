@@ -423,6 +423,16 @@ namespace eval RolePlayingDB3 {
 			-openfilename $currentFilename \
 			-class MapEditor]
     }
+    typemethod openfile {filename} {
+      set currentFilename "$filename"
+      if {"$currentFilename" eq ""} {return}
+      set newTop [RolePlayingDB3::RPGToplevel \
+			.map%AUTO% \
+			-mainframeconstructor $type \
+			-mainframetemplate {} \
+			-openfilename $currentFilename \
+			-class MapEditor]
+    }
     method openold {_filename} {
       set path [$type genname]
       set tempfile [file join $::RolePlayingDB3::TmpDir $path]

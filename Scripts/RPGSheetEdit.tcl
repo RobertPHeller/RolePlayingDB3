@@ -291,6 +291,34 @@ namespace eval RolePlayingDB3 {
 			-openfilename $currentFilename \
 			-class ${sheetclass}Editor]
     }
+    typemethod openfile {filename} {
+      set inpath [$type genname xmlpeek]
+      if {[catch {vfs::zip::Mount $filename $inpath} message]} {
+	error "$::argv0: $type: openfile $filename: $filename"
+	return
+      }
+      if {[catch {open [file join $inpath xml sheet.xml] r} shfp]} {
+	error "$::argv0: $type: openfile $filename: Illformed sheet bundle: sheet.xml cannot be opened: $shfp"
+	return
+      }
+      set XML [read $shfp]
+      close $shfp
+      vfs::unmount $inpath
+      set tree [::RolePlayingDB3::XMLContentEditor ContainerTree $XML]
+      set fileSheet [lindex $tree 0]
+      if {[catch {::RolePlayingDB3::SheetClasses validate $fileSheet}]} {
+	error "$::argv0: $type: openfile $filename: Not a valid sheet file"
+        return
+      }
+      set sheetclass $fileSheet
+      set newTop [RolePlayingDB3::RPGToplevel \
+			.[string tolower $sheetclass]%AUTO% \
+			-mainframeconstructor $type \
+			-mainframetemplate {} \
+			-sheetclass $sheetclass \
+			-openfilename $filename \
+			-class ${sheetclass}Editor]
+    }      
     method openold {_filename} {
       set path [$type genname $options(-sheetclass)]
       set tempfile [file join $::RolePlayingDB3::TmpDir $path]
@@ -394,7 +422,7 @@ namespace eval RolePlayingDB3 {
 	  if {[catch {::RolePlayingDB3::SheetClasses validate $fileSheet}]} {
 	    error "Not a valid sheet file: $options(-openfilename)"	    
 	  }
-	  tk_messageBox -type ok -icon warning -message "Expected a $options(-sheetclass) file, but got a $fileSheet file."
+	  if {"$options(-sheetclass)" ne ""} {tk_messageBox -type ok -icon warning -message "Expected a $options(-sheetclass) file, but got a $fileSheet file."}
 	  set options(-sheetclass) $fileSheet
 	}
       } else {

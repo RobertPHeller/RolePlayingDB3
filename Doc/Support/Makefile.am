@@ -42,6 +42,6 @@
 #*  
 #* 
 
-EXTRA_DIST = tcl2tex.kit tcl2tex.tcl
+EXTRA_DIST = tcl2dox.kit tcl2dox.tcl
 
 

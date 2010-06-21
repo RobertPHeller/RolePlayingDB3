@@ -46,6 +46,7 @@ AC_SUBST(target)
 
 dnl Checks for programs.
 
+AC_PATH_PROG(DOXYGEN,doxygen,/bin/true)
 AC_PATH_PROG(PDFLATEX,pdflatex,/bin/true)
 AC_PATH_PROGS(HTLATEX,[htlatex htlatex.sh],/bin/true)
 AC_PATH_PROG(LATEX,latex,/bin/true)
@@ -206,13 +207,10 @@ AC_OUTPUT(Makefile \
 	  BuildData/Makefile \
 	  Scripts/Makefile \
 	  Doc/Makefile \
-		Doc/Support/Makefile \
 		Doc/User/Makefile \
-		Doc/Internals/Makefile \
-	  ManPages/Makefile \
-		ManPages/TclAPI/Makefile \
-		ManPages/Programs/Makefile \
+		Doc/Support/Makefile \
 	  SampleData/Makefile \
+	  Doxyfile \
 	  RolePlayingDB3.spec
 	  )
 

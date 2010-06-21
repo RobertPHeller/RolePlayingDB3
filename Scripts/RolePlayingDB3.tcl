@@ -35,6 +35,49 @@
 #*  
 #* 
 
+
+## @defgroup RolePlayingDB3 RolePlayingDB3
+# @brief Manage table-top role playing game information.
+#
+# @section SYNOPSIS
+#
+# RolePlayingDB3 [X11 Resource Options] [-map mapfile] [-template templatefile] [otherrpgfile] ...
+#
+# @section DESCRIPTION
+#
+# The RolePlayingDB3 program manages the information used in table-top role 
+# playing games.  Almost any type of game or game system can be supported.
+# These games normally use sheets of paper containing game information,
+# typically things like player or object characteristics or attributes, such
+# as name, size, strengths, weaknesses, powers, and so forth. Since this
+# information is structured, in that all objects of a given type all have the
+# same sets of information generally listed in the same order and format, 
+# this information is effectively structured information.  This means that for
+# given game or game system, a template can be created that defines this
+# structure.  The RolePlayingDB3 program allows creation of such templates
+# and in turn uses these templates to implement ``sheet'' editors, where
+# players and/or game masters fill in the game playing information.  The sheets
+# can then be printed out, displayed on the computer screen or saved on
+# the computer's storage devices (hard drives, thumb drives, CD/DVD-Rs, etc.), 
+# or sent to other computers via E-Mail or other file transfer methods.
+#
+# In addition to generic object informational sheets, of which there are six
+# classes: Character Dressing Monster Spell Treasure TrickTrap, the 
+# RolePlayingDB3 program also includes a Map editor, which implements a 
+# specialized editor for making maps of the playing environment. The 
+# RolePlayingDB3 program also includes a template editor for creating and
+# editing game system sheet templates.
+#
+# @section PARAMETERS
+#
+# Zero or more sheet files, map files, or template files.
+#
+# @section AUTHOR
+# Robert Heller \<heller\@deepsoft.com\>
+
+
+
+
 #@Chapter:RolePlayingDB3.tcl -- Main program code.
 #$Id$
 # This is the main program file for the Role Playing Database V3.0.
@@ -498,3 +541,20 @@ RolePlayingDB3::Configuration load
 RolePlayingDB3::CreateMainWindow
 	
 
+for {set ia 0} {$ia < $argc} {incr ia} {
+  switch -glob -- "[lindex $argv $ia]" {
+    -map {
+	set ia1 [expr {$ia + 1}]
+	RolePlayingDB3::MapEditor openfile "[lindex $argv $ia1]"
+	incr ia
+    }
+    -template {
+	set ia1 [expr {$ia + 1}]
+	RolePlayingDB3::Template openfile "[lindex $argv $ia1]"
+	incr ia
+    }
+    default {
+	RolePlayingDB3::SheetEdit openfile "[lindex $argv $ia]"
+    }
+  }
+}

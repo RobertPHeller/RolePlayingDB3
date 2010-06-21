@@ -271,7 +271,7 @@ PACKAGE_VERSION=
 PACKAGE_STRING=
 PACKAGE_BUGREPORT=
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar TOP_DIR BUILD_DIR PDFLATEX HTLATEX LATEX MAKEINDEX BIBTEX DVIPS PS2PDF HOSTTCLSH BWLIB SNITLIB URILIB UNZIP IMG_ZIP TCLKITRUN TCLXML_ZIP EXEEXT TCLKITBSRC BEXEEXT SED SYSTEMVERSION LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar TOP_DIR BUILD_DIR DOXYGEN PDFLATEX HTLATEX LATEX MAKEINDEX BIBTEX DVIPS PS2PDF HOSTTCLSH BWLIB SNITLIB URILIB UNZIP IMG_ZIP TCLKITRUN TCLXML_ZIP EXEEXT TCLKITBSRC BEXEEXT SED SYSTEMVERSION LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1806,6 +1806,46 @@ TOP_DIR=${BUILD_DIR}
 
 
 
+# Extract the first word of "doxygen", so it can be a program name with args.
+set dummy doxygen; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_path_DOXYGEN+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $DOXYGEN in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_DOXYGEN="$DOXYGEN" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_DOXYGEN="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+  test -z "$ac_cv_path_DOXYGEN" && ac_cv_path_DOXYGEN="/bin/true"
+  ;;
+esac
+fi
+DOXYGEN=$ac_cv_path_DOXYGEN
+
+if test -n "$DOXYGEN"; then
+  echo "$as_me:$LINENO: result: $DOXYGEN" >&5
+echo "${ECHO_T}$DOXYGEN" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
 # Extract the first word of "pdflatex", so it can be a program name with args.
 set dummy pdflatex; ac_word=$2
 echo "$as_me:$LINENO: checking for $ac_word" >&5
@@ -2405,7 +2445,7 @@ fi
 SYSTEMVERSION="$RPGDB_PATCH_LEVEL"
 
 
-                                                                                                                                  ac_config_files="$ac_config_files Makefile BuildScripts/Makefile BuildData/Makefile Scripts/Makefile Doc/Makefile Doc/Support/Makefile Doc/User/Makefile Doc/Internals/Makefile ManPages/Makefile ManPages/TclAPI/Makefile ManPages/Programs/Makefile SampleData/Makefile RolePlayingDB3.spec"
+                                                                                                    ac_config_files="$ac_config_files Makefile BuildScripts/Makefile BuildData/Makefile Scripts/Makefile Doc/Makefile Doc/User/Makefile Doc/Support/Makefile SampleData/Makefile Doxyfile RolePlayingDB3.spec"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -2962,13 +3002,10 @@ do
   "BuildData/Makefile" ) CONFIG_FILES="$CONFIG_FILES BuildData/Makefile" ;;
   "Scripts/Makefile" ) CONFIG_FILES="$CONFIG_FILES Scripts/Makefile" ;;
   "Doc/Makefile" ) CONFIG_FILES="$CONFIG_FILES Doc/Makefile" ;;
-  "Doc/Support/Makefile" ) CONFIG_FILES="$CONFIG_FILES Doc/Support/Makefile" ;;
   "Doc/User/Makefile" ) CONFIG_FILES="$CONFIG_FILES Doc/User/Makefile" ;;
-  "Doc/Internals/Makefile" ) CONFIG_FILES="$CONFIG_FILES Doc/Internals/Makefile" ;;
-  "ManPages/Makefile" ) CONFIG_FILES="$CONFIG_FILES ManPages/Makefile" ;;
-  "ManPages/TclAPI/Makefile" ) CONFIG_FILES="$CONFIG_FILES ManPages/TclAPI/Makefile" ;;
-  "ManPages/Programs/Makefile" ) CONFIG_FILES="$CONFIG_FILES ManPages/Programs/Makefile" ;;
+  "Doc/Support/Makefile" ) CONFIG_FILES="$CONFIG_FILES Doc/Support/Makefile" ;;
   "SampleData/Makefile" ) CONFIG_FILES="$CONFIG_FILES SampleData/Makefile" ;;
+  "Doxyfile" ) CONFIG_FILES="$CONFIG_FILES Doxyfile" ;;
   "RolePlayingDB3.spec" ) CONFIG_FILES="$CONFIG_FILES RolePlayingDB3.spec" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
@@ -3089,6 +3126,7 @@ s,@am__tar@,$am__tar,;t t
 s,@am__untar@,$am__untar,;t t
 s,@TOP_DIR@,$TOP_DIR,;t t
 s,@BUILD_DIR@,$BUILD_DIR,;t t
+s,@DOXYGEN@,$DOXYGEN,;t t
 s,@PDFLATEX@,$PDFLATEX,;t t
 s,@HTLATEX@,$HTLATEX,;t t
 s,@LATEX@,$LATEX,;t t

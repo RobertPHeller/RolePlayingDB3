@@ -206,6 +206,13 @@ namespace eval RolePlayingDB3 {
 			-class TemplateEditor]
       $newTop openold "$currentFilename"
     }
+    typemethod openfile {filename} {
+      set currentFilename "$filename"
+      set newTop [RolePlayingDB3::RPGToplevel .template%AUTO% \
+			-mainframeconstructor $type -mainframetemplate {} \
+			-class TemplateEditor]
+      $newTop openold "$currentFilename"
+    }
     method openold {_filename} {
       set path [$type genname]
       set tempfile [file join $::RolePlayingDB3::TmpDir $path]

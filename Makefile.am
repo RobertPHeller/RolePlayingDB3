@@ -1,12 +1,14 @@
 SUBDIRS = BuildScripts BuildData Doc Scripts ManPages SampleData
 
-EXTRA_DIST = RolePlayingDB3.spec RolePlayingDB3.spec.in bootstrap
+EXTRA_DIST = RolePlayingDB3.spec RolePlayingDB3.spec.in bootstrap Doxyfile.in Doxyfile
 
 TCLKIT = $(top_builddir)/BuildData/tclkit${BEXEEXT}
 
 BUILT_SOURCES = $(TCLKIT)
 
 bin_SCRIPTS = RolePlayingDB3$(EXEEXT)
+
+man_MANS = man1/RolePlayingDB3.1
 
 AllScripts = $(wildcard $(top_srcdir)/Scripts/*.tcl) $(wildcard Scripts/*.tcl)
 LibScripts = $(filter-out %RolePlayingDB3.tcl,$(AllScripts))
@@ -69,3 +71,11 @@ dist-binary-zip: all
 	(cd  /tmp/$(PACKAGE)-$(VERSION)-$(target)${prefix}; zip -rq $(BUILD_DIR)/$(PACKAGE)-$(VERSION)-$(target).zip .)
 
 	
+man1/RolePlayingDB3.1 : Doxyfile Scripts/RolePlayingDB3.tcl
+	-rm -rf man1
+	$(DOXYGEN)
+
+clean-local:
+	-rm -rf man1
+
+
