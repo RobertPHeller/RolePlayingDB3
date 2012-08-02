@@ -1,0 +1,50 @@
+Summary: Manage Table-top Role Playing game data
+Name: @PACKAGE@
+Version: @VERSION@
+Release: 1%{?dist}
+Group: Amusements/Games
+License: GPL
+Packager: Robert Heller <heller@deepsoft.com>
+Vendor: Deepwoods Software
+URL: http://www.deepsoft.com/RolePlayingDB
+Source: ftp://ftp.deepsoft.com/pub/deepwoods/Products/RolePlayingDB/V3.0/@PACKAGE@-@VERSION@.tar.gz
+BuildRoot: /var/tmp/%{name}-root
+BuildRequires: bwidget, tcllib, doxygen, tcl-devel >= 8.4, automake, autoconf
+BuildRequires: tetex-latex, tetex-tex4ht, unzip
+# Suppress striping executables -- preserve my starkits!
+%define __strip /bin/true
+%description
+RolePlayingDB3 is a program that manages data files for use with
+table-top role playing games.  The files are in face Zip archives
+containing XML files plus associated media and document files.
+
+%prep
+%setup -q
+
+%build
+aclocal
+automake --gnu --add-missing --copy --force
+autoconf
+sh configure --prefix=/usr --program-prefix= --program-suffix= \
+			--target %{_arch}-unknown-linux-gnu
+make
+
+%install
+rm -rf $RPM_BUILD_ROOT/usr
+make DESTDIR=$RPM_BUILD_ROOT install
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-, root, root)
+
+%doc AUTHORS COPYING INSTALL NEWS README ChangeLog
+%doc /usr/share/@PACKAGE@
+/usr/bin/RolePlayingDB3
+/usr/man/man1
+#/usr/share/applications
+#/usr/share/pixmaps
+
+
+
