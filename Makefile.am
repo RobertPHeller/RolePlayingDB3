@@ -1,12 +1,19 @@
 SUBDIRS = BuildScripts BuildData Doc Scripts SampleData
 
-EXTRA_DIST = RolePlayingDB3.spec RolePlayingDB3.spec.in bootstrap Doxyfile.in Doxyfile
+EXTRA_DIST = RolePlayingDB3.spec RolePlayingDB3.spec.in bootstrap Doxyfile.in \
+	Doxyfile RolePlayingDB3.desktop RolePlayingDB3.png
 
 TCLKIT = $(top_builddir)/BuildData/tclkit${BEXEEXT}
 
 BUILT_SOURCES = $(TCLKIT)
 
 bin_SCRIPTS = RolePlayingDB3$(EXEEXT)
+
+desktopdir = $(datadir)/applications
+desktop_DATA = RolePlayingDB3.desktop
+
+pixmapdir = $(datadir)/pixmaps
+pixmap_DATA = RolePlayingDB3.png
 
 man_MANS = man1/RolePlayingDB3.1
 
@@ -47,7 +54,40 @@ RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages) $(AllHelpDep)
 		RolePlayingDB3$(EXEEXT) \
 		-runtime $(top_srcdir)/BuildData/$(TCLKITRUN)
 	-rm -rf RolePlayingDB3.vfs RolePlayingDB3.kit
+if MACOSX
+# create application for Mac OSX
+	-rm -rf RolePlayingDB3.app
+	mkdir -p RolePlayingDB3.app/Contents/MacOS/
+	cp RolePlayingDB3$(EXEEXT) RolePlayingDB3.app/Contents/MacOS/
+	-rm -rf RolePlayingDB3.iconset
+	mkdir RolePlayingDB3.iconset
+	sips -z 16 16     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_16x16.png
+	sips -z 32 32     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_16x16@2x.png
+	sips -z 32 32     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_32x32.png
+	sips -z 64 64     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_32x32@2x.png
+	sips -z 128 128   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_128x128.png
+	sips -z 256 256   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_128x128@2x.png
+	sips -z 256 256   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_256x256.png
+	sips -z 512 512   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_256x256@2x.png
+	sips -z 512 512   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_512x512.png
+	sips -z 1024 1024 $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_512x512@2x.png
+	iconutil -c icns RolePlayingDB3.iconset
+	-rm -rf RolePlayingDB3.iconset
+	mkdir -p RolePlayingDB3.app/Contents/Resources/
+	cp RolePlayingDB3.icns RolePlayingDB3.app/Contents/Resources/
+	$(TCLKIT) $(top_srcdir)/BuildScripts/MacOSXPlist.kit RolePlayingDB3 1.0 "1994,1995,2002-2005  Robert Heller D/B/A Deepwoods Software"
+	plutil -convert binary1 -o RolePlayingDB3.app/Contents/Info.plist \
+		RolePlayingDB3.plist
+	-rm -f RolePlayingDB3.plist RolePlayingDB3.icns
 
+install-exec-local: RolePlayingDB3.app
+	$(INSTALL) -d $(DESTDIR)$(bindir)
+	$(top_srcdir)/BuildScripts/macappInstall.sh RolePlayingDB3.app $(DESTDIR)$(bindir)
+
+RolePlayingDB3.app: RolePlayingDB3${BEXEEXT}
+
+endif
+	
 $(top_builddir)/BuildData/tclkit${BEXEEXT}: FORCE
 	$(MAKE) -C $(top_builddir)/BuildData tclkit${BEXEEXT}
 

@@ -21,9 +21,9 @@ RPGDB_MAJOR_VERSION=3
 AC_DEFINE_UNQUOTED([RPGDB_MAJOR_VERSION],$RPGDB_MAJOR_VERSION,[RPGDB Major])
 RPGDB_MINOR_VERSION=0
 AC_DEFINE_UNQUOTED([RPGDB_MINOR_VERSION],$RPGDB_MINOR_VERSION,[RPGDB Minor])
-RPGDB_PATCH_LEVEL="3.0.2"
+RPGDB_PATCH_LEVEL="3.0.3"
 AC_DEFINE_UNQUOTED([RPGDB_PATCH_LEVEL],$RPGDB_PATCH_LEVEL,[RPGDB Patch Level])
-RPGDB_PATCH_LEVELLIB=3.0.2
+RPGDB_PATCH_LEVELLIB=3.0.3
 
 AM_INIT_AUTOMAKE( RolePlayingDB, $RPGDB_PATCH_LEVELLIB )
 
@@ -48,7 +48,6 @@ dnl Checks for programs.
 
 AC_PATH_PROG(DOXYGEN,doxygen,/bin/true)
 AC_PATH_PROG(PDFLATEX,pdflatex,/bin/true)
-AC_PATH_PROGS(HTLATEX,[htlatex htlatex.sh],/bin/true)
 AC_PATH_PROG(LATEX,latex,/bin/true)
 AC_PATH_PROG(MAKEINDEX,makeindex,/bin/true)
 AC_PATH_PROG(BIBTEX,bibtex,/bin/true)
@@ -127,34 +126,42 @@ AC_PATH_PROGS(UNZIP,unzip)
 
 AC_MSG_CHECKING([Checking target Img, Tclxml,  and tclkit])
 case $target_os in 
-  macos | darwin) 
-    AC_SUBST(IMG_ZIP, Img-1.3-Mac-Universal.zip)
+  macos | darwin*) 
+    AC_SUBST(IMG_ZIP, Img-1.4-Mac-Universalx86.zip)
     AC_SUBST(TCLKITRUN, tclkit-darwin-univ-aqua)
     AC_MSG_NOTICE([Unsupported target os for Tclxml: $target_os, using Pure Tcl version])
     AC_SUBST(TCLXML_ZIP, Tclxml3.1-GenericPureTcl.zip)
+    AC_SUBST(NEED_APP_BUNDLE,[true])
     ;;
-  linux-gnu)
+  linux-gnu*)
     case $target_cpu in
       x86_64)
-	AC_SUBST(IMG_ZIP, Img-1.3-Linux64.zip)
+	AC_SUBST(IMG_ZIP, Img-1.4-Linux64.zip)
 	AC_SUBST(TCLKITRUN, tclkit-linux-x86_64)
-	AC_SUBST(TCLXML_ZIP, Tclxml3.1-Linux64.zip)
+	AC_SUBST(TCLXML_ZIP, Tclxml3.1-GenericPureTcl.zip)
 	;;
       i*86)
-	AC_SUBST(IMG_ZIP, Img-1.3-Linux32.zip)
+	AC_SUBST(IMG_ZIP, Img-1.4-Linux32.zip)
 	AC_SUBST(TCLKITRUN, tclkit-linux-x86)
-	AC_SUBST(TCLXML_ZIP, Tclxml3.1-Linux32.zip)
+	AC_SUBST(TCLXML_ZIP, Tclxml3.1-GenericPureTcl.zip)
 	;;
+      arm*)
+        AC_SUBST(IMG_ZIP, Img-1.3-Linuxarmv7l.zip)
+        AC_SUBST(TCLKITRUN, tclkit-linux-armv7l)
+        AC_SUBST(TCLXML_ZIP, Tclxml3.1-GenericPureTcl.zip)
+        ;;
       *)
 	AC_MSG_ERROR([Unsupported Linux arch: $target_cpu])
 	;;
      esac
+     AC_SUBST(NEED_APP_BUNDLE,[false])
      ;;
 
-   mingw32 | winnt | windows* | cygwin)
-     AC_SUBST(IMG_ZIP, Img-1.3-win32.zip)
+   mingw32* | winnt | windows* | cygwin)
+     AC_SUBST(IMG_ZIP, Img-1.4-win32.zip)
      AC_SUBST(TCLKITRUN, tclkit-win32.exe)
-     AC_SUBST(TCLXML_ZIP, Tclxml2.6-win32.zip)
+     AC_SUBST(TCLXML_ZIP, Tclxml3.1-GenericPureTcl.zip)
+     AC_SUBST(NEED_APP_BUNDLE,[false])
      AC_SUBST(EXEEXT, .exe)
      ;;
    *) 
@@ -163,10 +170,12 @@ case $target_os in
 esac
 AC_MSG_RESULT([IMG_ZIP is $IMG_ZIP, TCLXML_ZIP is $TCLXML_ZIP, and TCLKITRUN is $TCLKITRUN])
 
+AM_CONDITIONAL(MACOSX, test x${NEED_APP_BUNDLE} = xtrue)
+
 
 AC_MSG_CHECKING([Checking build tclkit])
 case $build_os in 
-  macos | darwin) 
+  macos | darwin*) 
     AC_SUBST(TCLKITBSRC, tclkit-darwin-univ-aqua)
     AC_SUBST(BEXEEXT, )
     ;;
@@ -208,6 +217,7 @@ AC_OUTPUT(Makefile \
 	  Scripts/Makefile \
 	  Doc/Makefile \
 		Doc/User/Makefile \
+		Doc/User/Doxyfile \
 		Doc/Support/Makefile \
 	  SampleData/Makefile \
 	  Doxyfile \

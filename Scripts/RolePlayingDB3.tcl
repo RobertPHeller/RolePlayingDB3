@@ -319,7 +319,7 @@ proc RolePlayingDB3::CreateMainWindow {} {
   $helpmenu entryconfigure "Tutorial..." \
 	-command "::HTMLHelp::HTMLHelp help Tutorial"
 
-  ::HTMLHelp::HTMLHelp setDefaults "$HelpDir" UserManualli1.html
+  ::HTMLHelp::HTMLHelp setDefaults "$HelpDir" index.html
 
   wm deiconify .
 

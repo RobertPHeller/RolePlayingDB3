@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=RolePlayingDB3
+Comment=Manage Roleplaying Game Data.
+Exec=RolePlayingDB3 %F
+Icon=RolePlayingDB3.png
+Encoding=UTF-8
+Categories=Application;Games
