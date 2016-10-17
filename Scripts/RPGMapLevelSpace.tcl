@@ -2163,7 +2163,7 @@ namespace eval RolePlayingDB3 {
       $e_yLE configure -text "[getFromAttrList Y $attrList]"
       $e_imfileFE configure -text "[getFromAttrList imfile $attrList]"
       $e_sheetFileFE configure -text "[getFromAttrList sheet $attrList]"
-      $e_otherSpaceSpaceE configure -text "[getFromAttrList otherspace $attrList]"
+      $e_otherSpaceNameE configure -text "[getFromAttrList otherspace $attrList]"
       set ans [$_exitDialog draw]
       if {$ans == 1} {return}
       set attrList [list]
@@ -2174,7 +2174,7 @@ namespace eval RolePlayingDB3 {
       set needmediatreeupdated no
       insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$e_imfileFE cget -text]"] attrList
       insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$e_sheetFileFE cget -text]"] attrList
-      set spacename "[$e_otherSpaceSpaceE cget -text]"
+      set spacename "[$e_otherSpaceNameE cget -text]"
       if {"$spacename" eq ""} {return}
       insertOrReplaceInAttrList otherspace "$spacename" attrList
 #      puts stderr "*** $self _editexit: attrList = $attrList"
