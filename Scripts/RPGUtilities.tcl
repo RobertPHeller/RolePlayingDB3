@@ -1363,7 +1363,7 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       }
     }
     method DblClick {} {
-      set selection  [tk::IconList_Curselection $iconList]
+      set selection  [tk::IconList_CurSelection $iconList]
       if { [llength $selection] != 0 } {
 	set filenameFragment \
 	    [tk::IconList_Get $iconList [lindex $selection 0]]
@@ -1388,7 +1388,7 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       }
     }
     method ListBrowse {} {
-      set items [::tk::IconList_Curselection $iconList]
+      set items [::tk::IconList_CurSelection $iconList]
       if {[llength $items] < 1} {return}
       set text [::tk::IconList_Get $iconList [lindex $items 0]]
       set file [::tk::dialog::file::JoinFile $selectPath $text]
@@ -1406,7 +1406,7 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       }
     }
     method OkCmd {} {
-      set selection [tk::IconList_Curselection $iconList]
+      set selection [tk::IconList_CurSelection $iconList]
       if { [llength $selection] != 0 } {
 	set iconText [tk::IconList_Get $iconList [lindex $selection 0]]
 	set iconText [file join $selectPath $iconText]
@@ -1741,7 +1741,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       }
     }
     method ListBrowse {} {
-      set items [::tk::IconList_Curselection $iconList]
+      set items [::tk::IconList_CurSelection $iconList]
       if {[llength $items] < 1} {return}
       set text [::tk::IconList_Get $iconList [lindex $items 0]]
       set file [::tk::dialog::file::JoinFile $selectPath $text]
@@ -1774,7 +1774,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     method OkCmd {} {
 #      puts stderr "*** $self OkCmd"
       set filenames {}
-      foreach item [::tk::IconList_Curselection $iconList] {
+      foreach item [::tk::IconList_CurSelection $iconList] {
 	lappend filenames [::tk::IconList_Get $iconList $item]
       }
 #      puts stderr "[list *** $self OkCmd: filenames = $filenames]"
