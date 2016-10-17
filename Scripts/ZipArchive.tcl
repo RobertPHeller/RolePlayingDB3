@@ -62,7 +62,7 @@ snit::type ZipArchive {
     set offset $written
     if {[file isdirectory $fin]} {
       set data ""
-      append fout
+      append fout "/"
       set datacompresed [string range [::vfs::zip -mode compress $data] 2 end-4]
     } else {
       set fdata [open $fin r]
