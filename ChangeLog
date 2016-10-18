@@ -4,9 +4,11 @@ Tue Oct 18 09:48:00 2016
         Properly handle VFS handler matching, when more than one handler is in 
                  play
         Handle changed name: tk::IconList_CurSelection
+        Update sample data zips
         Fix directory handling in ZipArchive.tcl
         Fix error in widget name
         Update build, redo documentation
+        
 
 Mon Jun 21 12:56:27 2010
     3.0.2 (Beta) Released.
