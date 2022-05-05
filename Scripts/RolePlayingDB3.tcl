@@ -86,13 +86,15 @@ set argv0 [file join [file dirname [info nameofexecutable]] RolePlayingDB3]
 
 package require Version
 package require Tk
-package require BWidget
-package require BWStdMenuBar
+package require tile
+#package require BWidget
+#package require BWStdMenuBar
 package require snit
+package require snitStdMenuBar
+package require MainFrame
 package require Img
 package require HTMLHelp
 package require ReadConfiguration
-
 #catch {console show}
 
 namespace eval RolePlayingDB3 {
@@ -164,7 +166,7 @@ proc RolePlayingDB3::CreateMainWindow {} {
   set FocusNowhere [canvas .focusNowhere]
 
   pack [set Main [MainFrame .main \
-	-menu [StdMenuBar::MakeMenu \
+	-menu [StdMenuBar MakeMenu \
 		-file {"&File" menu:file file 0 {
 		    {cascade "&New"     {file:new} file:new  0 {
 					{command "&Character"  file:new:character "Create new character"  {Alt c} -command {RolePlayingDB3::SheetEdit new -sheetclass Character}}
@@ -307,19 +309,19 @@ proc RolePlayingDB3::CreateMainWindow {} {
   $helpmenu delete "On Keys..."
   $helpmenu delete "Index..."
   $helpmenu add command -label "Reference Manual" \
-		-command "::HTMLHelp::HTMLHelp help Reference"
+		-command "HTMLHelp help Reference"
   $helpmenu entryconfigure "On Help..." \
-		-command "::HTMLHelp::HTMLHelp help Help"
+		-command "HTMLHelp help Help"
   $helpmenu entryconfigure "On Version" \
-		-command "::HTMLHelp::HTMLHelp help Version"
+		-command "HTMLHelp help Version"
   $helpmenu entryconfigure "Copying" \
-        -command "::HTMLHelp::HTMLHelp help Copying"
+        -command "HTMLHelp help Copying"
   $helpmenu entryconfigure "Warranty" \
-        -command "::HTMLHelp::HTMLHelp help Warranty"
+        -command "HTMLHelp help Warranty"
   $helpmenu entryconfigure "Tutorial..." \
-	-command "::HTMLHelp::HTMLHelp help Tutorial"
+	-command "HTMLHelp help Tutorial"
 
-  ::HTMLHelp::HTMLHelp setDefaults "$HelpDir" index.html
+  HTMLHelp setDefaults "$HelpDir" "index.html"
 
   wm deiconify .
 

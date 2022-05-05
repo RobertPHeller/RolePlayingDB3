@@ -35,12 +35,20 @@
 #*  
 #* 
 
+package require vlerq
+package require vfs::m2m 1.8
 package require vfs::zip
 package require vfs::mk4
 package require ZipArchive
+package require ParseXML
 package require RPGUtilities
-package require BWLabelComboBox
+#package require BWLabelComboBox
+package require IconImage
+package require Dialog
+package require ButtonBox
+package require LabelFrames
 package require pdf4tcl
+package require ScrollableFrame
 
 namespace eval RolePlayingDB3 {
   snit::enum SheetClasses -values {Character Dressing Monster Spell Treasure 
@@ -55,7 +63,10 @@ namespace eval RolePlayingDB3 {
     variable currentFilename
     variable currentBaseFilename
     variable isdirty no
-    method setdirty {} {set isdirty yes}
+    method setdirty {} {
+        puts stderr "*** $self setdirty"
+        set isdirty yes
+    }
     variable path
     variable tempfile
     variable sheetClass
@@ -137,9 +148,9 @@ namespace eval RolePlayingDB3 {
 					-parent . -side bottom \
 					-title "Edit Sheet" \
 					-transient yes]
-      $_editDialog add -name new    -text {Create}
-      $_editDialog add -name open   -text {Open}  
-      $_editDialog add -name cancel -text {Cancel}
+      $_editDialog add new    -text {Create}
+      $_editDialog add open   -text {Open}  
+      $_editDialog add cancel -text {Cancel}
       pack [message [$_editDialog getframe].message \
 			-text "Create a new Sheet file or\nopen an existing Sheet file?" \
 			-aspect 500] -fill both
@@ -147,12 +158,10 @@ namespace eval RolePlayingDB3 {
 				-text {Template File:}]
       pack $sheetTemplateLF -fill x
       set sheetTemplateLF_f [$sheetTemplateLF getframe]
-      set sheetTemplateE [Entry $sheetTemplateLF_f.sheetTemplateE]
+      set sheetTemplateE [tk::entry $sheetTemplateLF_f.sheetTemplateE]
       pack $sheetTemplateE -side left -fill x
-      set sheetTemplateB [Button $sheetTemplateLF_f.sheetTemplateB \
-      				-image [image create photo \
-					-file [file join $::BWIDGET::LIBRARY \
-							 images openfold.gif]] \
+      set sheetTemplateB [tk::button $sheetTemplateLF_f.sheetTemplateB \
+      				-image [IconImage image openfold] \
 				-command [mytypemethod _openTemplateFile]]
       pack $sheetTemplateB -side right
       set sheetTemplateDialog [::RolePlayingDB3::chroot_getFile \
@@ -168,13 +177,14 @@ namespace eval RolePlayingDB3 {
     typevariable _templateRoot {}
     typemethod _openTemplateFile {} {
 #      puts stderr "*** $type _openTemplateFile: _templateRoot = $_templateRoot"
-      set initfile [$sheetTemplateE cget -text]
+      set initfile [$sheetTemplateE get]
       set file [$sheetTemplateDialog draw -parent $sheetTemplateLF \
 					  -root   $_templateRoot \
 					  -initialfile $initfile]
 #      puts stderr "*** $type _openTemplateFile: file = $file"
       if {"$file" eq ""} {return}
-      $sheetTemplateE configure -text [file tail "$file"]
+      $sheetTemplateE delete 0 end
+      $sheetTemplateE insert end [file tail "$file"]
     }
     typemethod edit {args} {
       set sheetclass [from args -sheetclass]
@@ -186,11 +196,12 @@ namespace eval RolePlayingDB3 {
 						[file join $mp $sheetclass \
 							*.xml]]] 0]
       set _templateRoot [file join $mp $sheetclass]
-      $sheetTemplateE configure -text [file tail "$t1"]
+      $sheetTemplateE delete 0 end
+      $sheetTemplateE insert end [file tail "$t1"]
       set answer [$_editDialog draw]
       switch $answer {
 	0 {
-	    set templateFile [file join $_templateRoot [$sheetTemplateE cget -text]]
+	    set templateFile [file join $_templateRoot [$sheetTemplateE get]]
 	    if {[catch {open $templateFile r} tfp]} {
 	      tk_messageBox -type ok -icon error -message "Could not open $templateFile: $tfp"
 	      vfs::unmount $mp
@@ -250,7 +261,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname $options(-sheetclass)]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::mk4::Mount $tempfile /$path
+      vfs::m2m::Mount $tempfile /$path
       file mkdir [file join /$path media]
       close [open [file join /$path media flag] w]
       file mkdir [file join /$path xml]
@@ -304,8 +315,7 @@ namespace eval RolePlayingDB3 {
       set XML [read $shfp]
       close $shfp
       vfs::unmount $inpath
-      set tree [::RolePlayingDB3::XMLContentEditor ContainerTree $XML]
-      set fileSheet [lindex $tree 0]
+      set fileSheet [ParseXML TopContainer $XML]
       if {[catch {::RolePlayingDB3::SheetClasses validate $fileSheet}]} {
 	error "$::argv0: $type: openfile $filename: Not a valid sheet file"
         return
@@ -313,7 +323,7 @@ namespace eval RolePlayingDB3 {
       set sheetclass $fileSheet
       set newTop [RolePlayingDB3::RPGToplevel \
 			.[string tolower $sheetclass]%AUTO% \
-			-mainframeconstructor $type \
+                        -mainframeconstructor $type \
 			-mainframetemplate {} \
 			-sheetclass $sheetclass \
 			-openfilename $filename \
@@ -326,7 +336,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname $options(-sheetclass)]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::mk4::Mount $tempfile /$path
+      vfs::m2m::Mount $tempfile /$path
       set currentFilename $_filename 
       set currentBaseFilename [file tail $currentFilename]
       set inpath [$type genname $options(-sheetclass)]
@@ -354,7 +364,9 @@ namespace eval RolePlayingDB3 {
 				      -title "Save As File"]
       }
       if {"$_filename" eq {}} {return}
+      puts stderr "*** $self saveas: isdirty = $isdirty"  
       if {$isdirty} {$self recreateXML}
+      #$self recreateXML
       ::ZipArchive createZipFromDirtree $_filename /$path \
 				-comment "RPGV3 $options(-sheetclass) Bundle"
       set isdirty no
@@ -415,9 +427,7 @@ namespace eval RolePlayingDB3 {
 	set XML [read $shfp]
 	close $shfp
 	set isnew no
-	set tree [::RolePlayingDB3::XMLContentEditor ContainerTree $XML]
-	#puts stderr "[list *** $type create $self: tree = $tree]"
-	set fileSheet [lindex $tree 0]
+	set fileSheet [ParseXML TopContainer $XML]
 	if {"$fileSheet" ne "$options(-sheetclass)"} {
 	  if {[catch {::RolePlayingDB3::SheetClasses validate $fileSheet}]} {
 	    error "Not a valid sheet file: $options(-openfilename)"	    
@@ -428,14 +438,13 @@ namespace eval RolePlayingDB3 {
       } else {
 	error "Neither -template nor -openfilename was passed!"
       }
-      install banner using Label $win.banner \
+      install banner using tk::label $win.banner \
 			-image $bannerImage($options(-sheetclass)) -anchor w \
 			-background $bannerBackgrounds($options(-sheetclass))
       pack $banner -fill x
-      install toolbar using ButtonBox $win.toolbar -orient horizontal \
-						-homogeneous no
+      install toolbar using ButtonBox $win.toolbar -orient horizontal
       pack $toolbar -fill x 
-      $toolbar add -name extractmedia -text {Extract Media} \
+      $toolbar add tk::button extractmedia -text {Extract Media} \
 				  -command [mymethod _extractmedia]
       install sheetframe using ::RolePlayingDB3::XMLContentEditor \
 			$win.sheetframe -xml $XML -isnewobject $isnew \

@@ -4,6 +4,7 @@ EXTRA_DIST = RolePlayingDB3.spec RolePlayingDB3.spec.in bootstrap Doxyfile.in \
 	Doxyfile RolePlayingDB3.desktop RolePlayingDB3.png
 
 TCLKIT = $(top_builddir)/BuildData/tclkit${BEXEEXT}
+TCLXML_ZIP = Tclxml3.1-GenericPureTcl.zip
 
 BUILT_SOURCES = $(TCLKIT)
 
@@ -20,7 +21,9 @@ man_MANS = man1/RolePlayingDB3.1
 AllScripts = $(wildcard $(top_srcdir)/Scripts/*.tcl) $(wildcard Scripts/*.tcl)
 LibScripts = $(filter-out %RolePlayingDB3.tcl,$(AllScripts))
 AllImages  = $(wildcard $(top_srcdir)/Scripts/*.gif) \
-		$(wildcard $(top_srcdir)/Scripts/*.png)
+		$(wildcard $(top_srcdir)/Scripts/*.png) \
+		$(wildcard $(top_srcdir)/Scripts/*.xbm) \
+		$(wildcard $(top_srcdir)/Scripts/*.xpm)
 AllHelpDep = Doc/User/UserManual/UserManual.html
 AllHelpFiles = $(wildcard Doc/User/UserManual/*)
 
@@ -31,13 +34,9 @@ RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages) $(AllHelpDep)
 	$(TCLKIT) $(top_srcdir)/BuildScripts/sdx.kit unwrap RolePlayingDB3.kit
 	-rm -rf RolePlayingDB3.kit
 	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitDir.kit RolePlayingDB3 \
-		lib $(BWLIB)
-	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitDir.kit RolePlayingDB3 \
 		lib $(SNITLIB)
 	$(TCLKIT) $(top_srcdir)/BuildScripts/AddKitDir.kit RolePlayingDB3 \
 		lib $(URILIB)
-	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \
-		$(top_srcdir)/BuildData/$(IMG_ZIP)
 	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \
 		$(top_srcdir)/BuildData/$(TCLXML_ZIP)
 	$(UNZIP) -qq -d RolePlayingDB3.vfs/lib \

@@ -35,14 +35,19 @@
 #*  
 #* 
 
-package require BWidget
+#package require BWidget
+package require Tk
+package require tile
+package require IconImage
 package require snit
-package require xml
-package require BWLabelComboBox
-package require BWLabelSpinBox
-package require BWFileEntry
-package require LabelSelectColor
+package require ParseXML
+#package require BWLabelComboBox
+#package require BWLabelSpinBox
+#package require BWFileEntry
+#package require LabelSelectColor
+package require LabelFrames
 package require pdf4tcl
+package require ScrollableFrame
 
 namespace eval RolePlayingDB3 {
   snit::widgetadaptor LabeledDirTree {
@@ -78,8 +83,7 @@ namespace eval RolePlayingDB3 {
 					-configuremethod newdirectory
     typevariable openfold
     typeconstructor {
-      set openfold [image create photo -file [file join $::BWIDGET::LIBRARY \
-							images openfold.gif]]
+      set openfold [IconImage image openfold]
     }
     component scroll
     component tree
@@ -150,7 +154,7 @@ namespace eval RolePlayingDB3 {
       set options(-isnewobject) [from args -isnewobject]
       set options(-auto) [from args -auto]
       set options(-scrollbar) [from args -scrollbar]
-      installhull using TitleFrame
+      installhull using labelframe
       install scroll using ScrolledWindow [$hull getframe].scroll \
 					-auto $options(-auto) \
 					-scrollbar $options(-scrollbar)
@@ -223,7 +227,7 @@ namespace eval RolePlayingDB3 {
     }
     method getimage {} {return [$label cget -image]}
     constructor {args} {
-      install label using Label $win.label
+      install label using tk::label $win.label
       pack $label -fill both
       install fileentry using FileEntry $win.fileentry -filetypes { 
 				{"BMP Files"        {.bmp}              }
@@ -241,7 +245,7 @@ namespace eval RolePlayingDB3 {
       $self configurelist  $args
     }
     method updatepicture {} {
-      set fullpath [$fileentry cget -text]
+      set fullpath [$fileentry get]
 #      puts stderr "*** $self updatepicture: fullpath (from FE) is $fullpath"
 #      puts stderr "*** $self updatepicture: options(-basedirectory) is $options(-basedirectory)"
 #      puts stderr "*** $self updatepicture: pathtype of $fullpath is [file pathtype $fullpath]"
@@ -292,12 +296,11 @@ namespace eval RolePlayingDB3 {
     constructor {args} {
       set auto [from args -auto]
       set scrollbar [from args -scrollbar]
-      installhull using TitleFrame
-      install scroll using ScrolledWindow [$hull getframe].scroll \
+      installhull using labelframe
+      install scroll using ScrolledWindow $win.scroll \
 					-auto $auto -scrollbar $scrollbar
       pack $scroll -fill both -expand yes
       install text using text [$scroll getframe].text
-      pack $text -fill both -expand yes
       $scroll setwidget $text
       $self configurelist  $args
     }
@@ -333,111 +336,16 @@ namespace eval RolePlayingDB3 {
     }
   }
   snit::widgetadaptor XMLContentEditor {
-    typevariable _typenodeStack
-    typevariable _typenodeTree -array {}
-    typevariable _typenodeInfo -array {}
-    typevariable _typesearchmatch
-    typevariable _founddata
-    typevariable _elementIndex
-    typemethod _typeelementstart {tag attrlist args} {
-#      puts stderr "*** $type _typeelementstart $tag $attrlist $args"
-      set parent [lindex $_typenodeStack end]
-      lappend _typenodeStack $_elementIndex
-#      puts stderr "*** $type _typeelementstart: _typenodeStack = $_typenodeStack"
-      set _typenodeInfo($_elementIndex) [list $tag $attrlist $args]
-      lappend _typenodeTree($parent) $_elementIndex
-      set _typenodeTree($_elementIndex) {}
-#      puts stderr "*** $type _typeelementstart: _typenodeTree($_elementIndex) = $_typenodeTree($_elementIndex)"
-      incr _elementIndex
-    }
-    typemethod _typeelementend {tag args} {
-#      puts stderr "*** $type _typeelementend $tag $args"
-      set _typenodeStack [lrange $_typenodeStack 0 [expr {[llength $_typenodeStack] -2}]]
-#      puts stderr "*** $type _typeelementend: _typenodeStack = $_typenodeStack"
-    }
-    typemethod _typecharacterdata {data} {
-#      puts stderr "*** $type _typecharacterdata: _typenodeStack = $_typenodeStack"
-      set curindex [lindex $_typenodeStack end]
-#      puts stderr "*** $type _typeelementstart: _typenodeTree($curindex) = $_typenodeTree($curindex)"
-      foreach {tag attrlist args} $_typenodeInfo($curindex) {break}
-      set cmd $_typesearchmatch
-      lappend cmd "$tag" "$attrlist" "$args"
-      if {[uplevel \#0 "$cmd"]} {
-	set _founddata [string trim $data]
-      }
-    }
-    typemethod ExtractTagValue {XML matchscript default} {
-      set _typesearchmatch $matchscript
-      set _founddata $default
-      set p [xml::parser -elementstartcommand [mytypemethod _typeelementstart] \
-			 -elementendcommand   [mytypemethod _typeelementend] \
-			 -characterdatacommand [mytypemethod _typecharacterdata]]
-      set _typenodeStack {root}
-      array unset _typenodeTree
-      array unset _typenodeInfo
-      set _typenodeInfo(root) {root {x} {x}}
-      set _typenodeTree(root) {}
-      set _elementIndex 0
-      $p parse $XML
-      $p free
-      return $_founddata
-    }
-    typemethod ContainerTree {XML} {
-      set p [xml::parser -elementstartcommand [mytypemethod _typeelementstart] \
-			 -elementendcommand   [mytypemethod _typeelementend]]
-      set _typenodeStack {root}
-      array unset _typenodeTree
-      array unset _typenodeInfo
-      set _typenodeInfo(root) {root {x} {x}}
-      set _typenodeTree(root) {}
-      set _elementIndex 0
-      $p parse $XML
-      $p free
-      return [makeContainerTree root]
-    }
-    proc makeContainerTree {node} {
-      if {[catch {set _typenodeInfo($node)} data]} {return [list]}
-      if {[catch {set _typenodeTree($node)} children]} {return [list]}
-      foreach {tag attrlist args} $data {break}
-      if {"$node" eq "root"} {
-	if {[llength $children] == 1} {
-	  return [makeContainerTree [lindex $children 0]]
-	} elseif {[llength $children] == 0} {
-	  return [list]
-	} else {
-	  set result [list]
-	}	    
-      } else {
-        if {"$tag" eq "Field"} {
-	  set nameIndx [lsearch $attrlist name]
-	  if {$nameIndx < 0} {
-	    set name {unknown}
-	  } else {
-	    incr nameIndx
-	    set name [lindex $attrlist $nameIndx]
-	  }
-	  set result "$tag:$name"
-	} else {
-	  set result $tag
-	}
-      }
-      if {[llength $children] == 0} {return $result}
-      set result [list $result]
-      foreach n $children {
-        set subTree [makeContainerTree $n]
-	if {[llength $subTree] > 0} {lappend result $subTree}
-      }
-      return $result
-    }
     option -xml -readonly yes -default {}
     option {-templatevariable templateVariable TemplateVariable} -default {} \
 								 -readonly yes
     option {-dirtyvariable dirtyVariable DirtyVariable} -default {}
     method setdirty {} {
-      if {"$options(-dirtyvariable)" ne ""} {
-	upvar #0 "$options(-dirtyvariable)" isdirty
-	set isdirty yes
-      }
+        puts stderr "*** $self setdirty"
+        if {"$options(-dirtyvariable)" ne ""} {
+            upvar #0 "$options(-dirtyvariable)" isdirty
+            set isdirty yes
+        }
     }
     option {-basedirectory baseDirectory BaseDirectory} -default {}
     option {-filewidgethandler fileWidgetHandler FileWidgetHandler} -default {}
@@ -468,6 +376,9 @@ namespace eval RolePlayingDB3 {
       }
     }
     component editframe
+    component parsedXML
+    variable _widgets -array {}
+    variable _xmlnodes -array {}
     constructor {args} {
       set options(-xml) [from args -xml]
       if {"$options(-xml)" eq ""} {
@@ -476,370 +387,295 @@ namespace eval RolePlayingDB3 {
       installhull using ScrolledWindow -scrollbar vertical -auto vertical
       install editframe using ScrollableFrame [$hull getframe].editframe \
 			-constrainedwidth yes
-      pack $editframe -fill both -expand yes
       $hull setwidget $editframe
       $self configurelist $args
-      
-      set p [xml::parser -elementstartcommand [mymethod _elementstart] \
-			 -elementendcommand   [mymethod _elementend] \
-			 -characterdatacommand [mymethod _characterdata]]
-      set nodeStack [list $editframe]
-      array unset nodeTree
-      if {"$options(-templatevariable)" ne ""} {
-	set generatedTemplate {<?xml version="1.0" ?>}
-	append generatedTemplate "\n"
-      }
-      $p parse $options(-xml)
-      $p free
+      install parsedXML using ParseXML %AUTO% $options(-xml)
+      set xmlcontainer [$parsedXML getElementsByTagName $options(-sheetclass) \
+                        -depth 1]
+      set _widgets($xmlcontainer) $editframe
+      set _xmlnodes($editframe) $xmlcontainer
+      $self buildGUI $xmlcontainer $editframe
       if {"$options(-templatevariable)" ne ""} {
 	upvar #0 "$options(-templatevariable)" template
 	set template $generatedTemplate
       }
       if {"$options(-xmlfile)" ne ""} {$self recreateXML "$options(-xmlfile)"}
     }
-    proc quoteXML {text} {
-      regsub -all {&} $text   {\&amp;} quoted
-      regsub -all {<} $quoted {\&lt;} quoted
-      regsub -all {>} $quoted {\&gt;} quoted
-      regsub -all {'} $quoted {\&apos;} quoted
-      regsub -all {"} $quoted {\&quot;} quoted
-      return "$quoted"
-    }
-    proc makeattrlist {attrlist} {
-      set result {}
-      foreach {n v} $attrlist {
-	append result "$n=\"[quoteXML $v]\" "
-      }
-      return $result
-    }    
-    method makewidget {tag attrlist arglist} {
-#      puts stderr "*** [list $self makewidget $tag $attrlist $arglist]"
-      set nodename $tag
-      set widget none
-      set bindscript {}
-      set label  {}
-      set widgetopts [list]
-      set packopts [list]
-      array unset attrlist_array
-      array set attrlist_array $attrlist
-      if {![catch {set attrlist_array(side)} side]} {
-	lappend packopts -side $side
-      }
-      switch -exact [string totitle $tag] {
-	Li {
-	  set curnode [lindex $nodeStack end]
-	  set index [$curnode insert end #auto -data $attrlist]
-#	  puts stderr "*** $self makewidget: curnode = $curnode, inserted $attrlist at $index, $curnode index end is [$curnode index end]"
-	  return {}
-	}
-	Field {
-	  if {[catch {set attrlist_array(fill)} fill]} {
-	    lappend packopts -fill x
-	  } else {
-	    lappend packopts -fill $fill
-	  }
-	  if {![catch {set attrlist_array(expand)} expand]} {
-	    lappend packopts -expand $expand
-	  }
-	  if {[catch {set attrlist_array(name)}]} {
-	    set attrlist_array(name) "Unamed Field"
-	  }
-	  if {[catch {set attrlist_array(generator)}]} {
-	    set attrlist_array(generator) {}
-	  }
-	  if {[catch {set attrlist_array(range)}]} {
-	    set attrlist_array(range) {}
-	  }
-	  if {[catch {set attrlist_array(updatable)}]} {
-	    set attrlist_array(updatable) yes
-	  }
-	  set nodename "Field:$attrlist_array(name)"
-	  set label $attrlist_array(name)
-	  lappend widgetopts -label "$label:"
-	  switch -exact -- "$attrlist_array(type)" {
-	    {Whole Number} {
-	      if {!$attrlist_array(updatable) && !$options(-isnewobject)} {
-		set widget LabelEntry
-		lappend widgetopts -editable no
-	      } else {
-		set widget LabelSpinBox
-		lappend widgetopts -modifycmd [mymethod setdirty]
-		set bindscript [list bind <KeyPress> [mymethod setdirty]]
-		if {[regexp {^([[:digit:]]*)[dD]([[:digit:]]*)$} \
-			 "$attrlist_array(generator)" -> num sides] > 0} {
-		  lappend widgetopts -range [list $num [expr {$sides * $num}] 1]
-		} elseif {[regexp {^[dD]%$} "$attrlist_array(generator)"] > 0} {
-		  lappend widgetopts -range {0 99 1}
-		} else {
-		  set range $attrlist_array(range)
-		  if {[llength $range] > 1 && [llength $range] < 4} {
-		    lappend widgetopts -range $range -text 0
-		  } else {
-		    lappend widgetopts -range {-9999999 9999999 1} -text 0
-		  }
-		}
-	      }
-       	    }
-	    {Word / Short Phrase} {
-	      set widget LabelEntry
-	      if {!$attrlist_array(updatable) && !$options(-isnewobject)} {
-		lappend widgetopts -editable no
-	      } else {
-		set bindscript [list bind <KeyPress> [mymethod setdirty]]
-	      }
-	    }
-	    Color {
-	      set widget LabelSelectColor
-	      if {!$attrlist_array(updatable) && !$options(-isnewobject)} {
-		set widget LabelEntry
-		lappend widgetopts -editable no
-	      } else {
-		set bindscript [list bind <KeyPress> [mymethod setdirty]]
-		lappend widgetopts -modifycmd [mymethod setdirty]
-	      }
-	    }
-	    {Enumerated Type} {
-	      set widget LabelComboBox
-	      lappend widgetopts -editable no
-	      if {!$attrlist_array(updatable) && !$options(-isnewobject)} {
-		set widget LabelEntry
-	      } else {
-		set bindscript [list bind <KeyPress> [mymethod setdirty]]
-		lappend widgetopts -values $attrlist_array(values)
-		lappend widgetopts -modifycmd [mymethod setdirty]
-	      }
-	    }	     
-	    {Long Text} {
-	      set widget ::RolePlayingDB3::LabeledScrolledText
-	      lappend widgetopts -auto vertical -scrollbar vertical \
-				 -wrap word -width 70 -height 10 -relief sunken
-	      set bindscript [list bind <KeyPress> [mymethod setdirty]]
-	    }
-	    Graphic {
-	      set widget ::RolePlayingDB3::Graphic
-	      lappend widgetopts -modifycmd [mymethod setdirty] \
-				 -basedirectory $options(-basedirectory) \
-				 -initialdir [::RolePlayingDB3::Configuration \
-							getoption Imagedir]
-	    }
-	    Document {
-	      set widget FileEntry
-	      set bindscript [list bind <KeyPress> [mymethod setdirty]]
-	      lappend widgetopts -modifycmd [mymethod setdirty]
-	      lappend widgetopts -initialdir [::RolePlayingDB3::Configuration \
-							getoption Docdir]
-	      lappend widgetopts -filetypes { 
-				{"All Files"        *                   } }
-	    }
-	  }
-	}
-	Canvas {
-	  if {[catch {set attrlist_array(fill)} fill]} {
-	    lappend packopts -fill both
-	  } else {
-	    lappend packopts -fill $fill
-	  }
-	  if {[catch {set attrlist_array(expand)} expand]} {
-	    lappend packopts -expand yes
-	  } else {
-	    lappend packopts -expand $expand
-	  }
-	  set widget ::RolePlayingDB3::ScrolledCanvas
-	  if {[catch {set attrlist_array(background)} background]} {
-	    lappend widgetopts -background white
-	  } else {
-	    lappend widgetopts -background $background
-	  }
-#	  puts stderr "*** $self makewidget: tag = $tag, widget = $widget, packopts = $packopts, widgetopts = $widgetopts"
-	}
-	List {
-	  if {[catch {set attrlist_array(fill)} fill]} {
-	    lappend packopts -fill both
-	  } else {
-	    lappend packopts -fill $fill
-	  }
-	  if {[catch {set attrlist_array(expand)} expand]} {
-	    lappend packopts -expand yes
-	  } else {
-	    lappend packopts -expand $expand
-	  }
-	  if {[catch {set attrlist_array(selectmode)} selectmode]} {
-	    lappend widgetopts -selectmode single
-	  } else {
-	    lappend widgetopts -selectmode $selectmode
-	  }
-	  set widget ::RolePlayingDB3::ScrolledList
-#	  puts stderr "*** $self makewidget: widget = $widget, widgetopts = $widgetopts"
-	}
-	Button {
-	  set widget Button
-	  if {[catch {set attrlist_array(label)} label] ||
-	      [catch {set attrlist_array(name)}  label]} {
-	    set label $nodename
-	  }
-	  lappend widgetopts -text "$label"
-	  if {[catch {set attrlist_array(id)} id]} {set id "$label"}
-	  lappend widgetopts -command [mymethod bcmdmethod $id]
-	}
-	Buttonbox {
-	  set widget ButtonBox
-	  if {![catch {set attrlist_array(orient)} orient]} {
-	    lappend widgetopts -orient $orient
-	  }
-	  if {![catch {set attrlist_array(homogeneous)} homogeneous]} {
-	    lappend widgetopts -homogeneous $homogeneous
-	  }
-	  if {[catch {set attrlist_array(fill)} fill]} {
-	    lappend packopts -fill both
-	  } else {
-	    lappend packopts -fill $fill
-	  }
-	  if {[catch {set attrlist_array(expand)} expand]} {
-	    lappend packopts -expand yes
-	  } else {
-	    lappend packopts -expand $expand
-	  }
-#	  puts stderr "*** $self makewidget: tag = $tag, widget = $widget, packopts = $packopts, widgetopts = $widgetopts"
-	}
-	Bi {
-	  set curnode [lindex $nodeStack end]
-	  if {[winfo class $curnode] ne "ButtonBox"} {
-	    error "Illformed XML: Bi nodes can only be children of ButtonBox nodes!"
-	  }
-#	  parray attrlist_array
-	  if {![catch {set attrlist_array(label)} label]} {
-	    lappend widgetopts -text "$label"
-	  } elseif {![catch {set attrlist_array(name)}  label]} {
-	    lappend widgetopts -text "$label"
-	  } else {
-	    lappend widgetopts -text $nodename
-	  }
-	  if {![catch {set attrlist_array(name)} name]} {
-	    lappend widgetopts -name $name
-	  }
-	  if {[catch {set attrlist_array(id)} id]} {
-	    lappend widgetopts -command [mymethod bcmdmethod "$label"]
-	    set id {}
-	  } else {
-	    lappend widgetopts -command [mymethod bcmdmethod "$id"]
-	  }
-#	  puts stderr "*** $self makewidget: curnode = $curnode, tag = $tag, widgetopts = $widgetopts"
-	  set w [eval [list $curnode add] $widgetopts]
-	  if {"$id" ne ""} {
-	    set idmap($id) $w
-	  }
-	  return {}
-	}
-	default {
-	  if {[catch {set attrlist_array(fill)} fill]} {
-	    lappend packopts -fill both
-	  } else {
-	    lappend packopts -fill $fill
-	  }
-	  if {[catch {set attrlist_array(expand)} expand]} {
-	    lappend packopts -expand yes
-	  } else {
-	    lappend packopts -expand $expand
-	  }
-	  set widget TitleFrame
-	  lappend widgetopts -text $nodename
-	}
-      }
-      regsub -all {[[:space:]]} $nodename {} wname
-      set curroot [[lindex $nodeStack end] getframe]
-      set wname $curroot.[string tolower $wname]
-      set bwname $wname
-      set i 0
-      while {[winfo exists $wname]} {
-	incr i
-	set wname $bwname$i
-      }
-#      puts stderr "*** $self makewidget: wname = $wname, tag = $tag, widget = $widget, packopts = $packopts, widgetopts = $widgetopts"
-      eval [list $widget $wname] $widgetopts
-#      if {"$widget" eq "::RolePlayingDB3::ScrolledList"} {
-#	puts stderr "*** $self makewidget: wname = $wname, $wname cget -selectmode = [$wname cget -selectmode]"
-#      }
-#      puts stderr "*** $self makewidget: winfo exists $wname = [winfo exists $wname]"
-      if {"$widget" eq "FileEntry" || 
-	  "$widget" eq "::RolePlayingDB3::Graphic"} {
-	set fileWidgets($wname) true
-      }
-      if {"$widget" eq "LabelComboBox"} {$wname setvalue first}
-      eval [list pack $wname] $packopts
-      if {![catch {set attrlist_array(id)} id]} {
-	set idmap($id) $wname
-      }
-      if {"$bindscript" ne ""} {eval $wname $bindscript}
-      lappend nodeStack $wname
-      set nodeTree($wname) [list $tag $attrlist $arglist]
+    method buildGUI {container frame} {
+        foreach c [$container children] {
+            $self makewidget $c $frame
+        }
     }
     
-    method _elementstart {tag attrlist args} {
-#      puts stderr "*** [list _elementstart $tag $attrlist $args]"
-      set wname [$self makewidget $tag $attrlist $args]
-      if {[string totitle $tag] eq "Li"} {return}
-      if {"$options(-templatevariable)" ne ""} {
-	set indent [string repeat {  } [llength $nodeStack]]
-	append generatedTemplate "$indent<rpgv3:$tag "
-	if {$needNamelist} {
-	  append generatedTemplate "xmlns:rpgv3=\""
-	  set namespace [lindex $args [expr {[lsearch -exact $args -namespace] + 1}]]
-	  append generatedTemplate "[quoteXML $namespace]"
-	  append generatedTemplate "\" "
-	  set needNamelist no
-	}	    
-	append generatedTemplate "[makeattrlist $attrlist]"
-	switch -exact [string totitle $tag] {
-	  Bi -
-	  Canvas -
-	  Button -
-	  Field {append generatedTemplate "/>\n"}
-	  default {append generatedTemplate ">\n"}
-	}
-      }
+    method makewidget {node parentframe} {
+        # puts stderr "*** [list $self makewidget $node $parentframe]"
+        set nodename [$node cget -tag]
+        set attrlist [$node cget -attributes]
+        set widget none
+        set bindscript {}
+        set label  {}
+        set widgetopts [list]
+        set packopts [list]
+        array unset attrlist_array
+        array set attrlist_array $attrlist
+        if {![catch {set attrlist_array(side)} side]} {
+            lappend packopts -side $side
+        }
+        switch -exact [string totitle $tag] {
+            Li {
+                return {}
+            }
+            Field {
+                if {[catch {set attrlist_array(fill)} fill]} {
+                    lappend packopts -fill x
+                } else {
+                    lappend packopts -fill $fill
+                }
+                if {![catch {set attrlist_array(expand)} expand]} {
+                    lappend packopts -expand $expand
+                }
+                if {[catch {set attrlist_array(name)}]} {
+                    set attrlist_array(name) "Unamed Field"
+                }
+                if {[catch {set attrlist_array(generator)}]} {
+                    set attrlist_array(generator) {}
+                }
+                if {[catch {set attrlist_array(range)}]} {
+                    set attrlist_array(range) {}
+                }
+                if {[catch {set attrlist_array(updatable)}]} {
+                    set attrlist_array(updatable) yes
+                }
+                set nodename "Field:$attrlist_array(name)"
+                set label $attrlist_array(name)
+                lappend widgetopts -label "$label:"
+                switch -exact -- "$attrlist_array(type)" {
+                    {Whole Number} {
+                        if {!$attrlist_array(updatable) && !$options(-isnewobject)} {
+                            set widget LabelEntry
+                            lappend widgetopts -editable no
+                        } else {
+                            set widget LabelSpinBox
+                            lappend widgetopts -modifycmd [mymethod setdirty]
+                            set bindscript [list bind <KeyPress> [mymethod setdirty]]
+                            if {[regexp {^([[:digit:]]*)[dD]([[:digit:]]*)$} \
+                                 "$attrlist_array(generator)" -> num sides] > 0} {
+                                lappend widgetopts -range [list $num [expr {$sides * $num}] 1]
+                            } elseif {[regexp {^[dD]%$} "$attrlist_array(generator)"] > 0} {
+                                lappend widgetopts -range {0 99 1}
+                            } else {
+                                set range $attrlist_array(range)
+                                if {[llength $range] > 1 && [llength $range] < 4} {
+                                    lappend widgetopts -range $range -text 0
+                                } else {
+                                    lappend widgetopts -range {-9999999 9999999 1} -text 0
+                                }
+                            }
+                        }
+                    }
+                    {Word / Short Phrase} {
+                        set widget LabelEntry
+                        if {!$attrlist_array(updatable) && !$options(-isnewobject)} {
+                            lappend widgetopts -editable no
+                        } else {
+                            set bindscript [list bind <KeyPress> [mymethod setdirty]]
+                        }
+                    }
+                    Color {
+                        set widget LabelSelectColor
+                        if {!$attrlist_array(updatable) && !$options(-isnewobject)} {
+                            set widget LabelEntry
+                            lappend widgetopts -editable no
+                        } else {
+                            set bindscript [list bind <KeyPress> [mymethod setdirty]]
+                            lappend widgetopts -modifycmd [mymethod setdirty]
+                        }
+                    }
+                    {Enumerated Type} {
+                        set widget LabelComboBox
+                        lappend widgetopts -editable no
+                        if {!$attrlist_array(updatable) && !$options(-isnewobject)} {
+                            set widget LabelEntry
+                        } else {
+                            set bindscript [list bind <KeyPress> [mymethod setdirty]]
+                            lappend widgetopts -values $attrlist_array(values)
+                            lappend widgetopts -modifycmd [mymethod setdirty]
+                        }
+                    }	     
+                    {Long Text} {
+                        set widget ::RolePlayingDB3::LabeledScrolledText
+                        lappend widgetopts -auto vertical -scrollbar vertical \
+                              -wrap word -width 70 -height 10 -relief sunken
+                        set bindscript [list bind <KeyPress> [mymethod setdirty]]
+                    }
+                    Graphic {
+                        set widget ::RolePlayingDB3::Graphic
+                        lappend widgetopts -modifycmd [mymethod setdirty] \
+                              -basedirectory $options(-basedirectory) \
+                              -initialdir [::RolePlayingDB3::Configuration \
+                                           getoption Imagedir]
+                    }
+                    Document {
+                        set widget FileEntry
+                        set bindscript [list bind <KeyPress> [mymethod setdirty]]
+                        lappend widgetopts -modifycmd [mymethod setdirty]
+                        lappend widgetopts -initialdir [::RolePlayingDB3::Configuration \
+                                                        getoption Docdir]
+                        lappend widgetopts -filetypes { 
+                        {"All Files"        *                   } }
+                    }
+                }
+            }
+            Canvas {
+                if {[catch {set attrlist_array(fill)} fill]} {
+                    lappend packopts -fill both
+                } else {
+                    lappend packopts -fill $fill
+                }
+                if {[catch {set attrlist_array(expand)} expand]} {
+                    lappend packopts -expand yes
+                } else {
+                    lappend packopts -expand $expand
+                }
+                set widget ::RolePlayingDB3::ScrolledCanvas
+                if {[catch {set attrlist_array(background)} background]} {
+                    lappend widgetopts -background white
+                } else {
+                    lappend widgetopts -background $background
+                }
+                #	  puts stderr "*** $self makewidget: tag = $tag, widget = $widget, packopts = $packopts, widgetopts = $widgetopts"
+            }
+            List {
+                if {[catch {set attrlist_array(fill)} fill]} {
+                    lappend packopts -fill both
+                } else {
+                    lappend packopts -fill $fill
+                }
+                if {[catch {set attrlist_array(expand)} expand]} {
+                    lappend packopts -expand yes
+                } else {
+                    lappend packopts -expand $expand
+                }
+                if {[catch {set attrlist_array(selectmode)} selectmode]} {
+                    lappend widgetopts -selectmode single
+                } else {
+                    lappend widgetopts -selectmode $selectmode
+                }
+                set widget ::RolePlayingDB3::ScrolledList
+                #	  puts stderr "*** $self makewidget: widget = $widget, widgetopts = $widgetopts"
+            }
+            Button {
+                set widget Button
+                if {[catch {set attrlist_array(label)} label] ||
+                    [catch {set attrlist_array(name)}  label]} {
+                    set label $nodename
+                }
+                lappend widgetopts -text "$label"
+                if {[catch {set attrlist_array(id)} id]} {set id "$label"}
+                lappend widgetopts -command [mymethod bcmdmethod $id]
+            }
+            Buttonbox {
+                set widget ButtonBox
+                if {![catch {set attrlist_array(orient)} orient]} {
+                    lappend widgetopts -orient $orient
+                }
+                if {![catch {set attrlist_array(homogeneous)} homogeneous]} {
+                    lappend widgetopts -homogeneous $homogeneous
+                }
+                if {[catch {set attrlist_array(fill)} fill]} {
+                    lappend packopts -fill both
+                } else {
+                    lappend packopts -fill $fill
+                }
+                if {[catch {set attrlist_array(expand)} expand]} {
+                    lappend packopts -expand yes
+                } else {
+                    lappend packopts -expand $expand
+                }
+                #	  puts stderr "*** $self makewidget: tag = $tag, widget = $widget, packopts = $packopts, widgetopts = $widgetopts"
+            }
+            Bi {
+                set curnode $parentframe
+                if {[winfo class $curnode] ne "ButtonBox"} {
+                    error "Illformed XML: Bi nodes can only be children of ButtonBox nodes!"
+                }
+                #	  parray attrlist_array
+                if {![catch {set attrlist_array(label)} label]} {
+                    lappend widgetopts -text "$label"
+                } elseif {![catch {set attrlist_array(name)}  label]} {
+                    lappend widgetopts -text "$label"
+                } else {
+                    lappend widgetopts -text $nodename
+                }
+                if {![catch {set attrlist_array(name)} name]} {
+                    lappend widgetopts -name $name
+                }
+                if {[catch {set attrlist_array(id)} id]} {
+                    lappend widgetopts -command [mymethod bcmdmethod "$label"]
+                    set id {}
+                } else {
+                    lappend widgetopts -command [mymethod bcmdmethod "$id"]
+                }
+                #	  puts stderr "*** $self makewidget: curnode = $curnode, tag = $tag, widgetopts = $widgetopts"
+                set w [eval [list $curnode add] $widgetopts]
+                if {"$id" ne ""} {
+                    set idmap($id) $w
+                }
+                return {}
+            }
+            default {
+                if {[catch {set attrlist_array(fill)} fill]} {
+                    lappend packopts -fill both
+                } else {
+                    lappend packopts -fill $fill
+                }
+                if {[catch {set attrlist_array(expand)} expand]} {
+                    lappend packopts -expand yes
+                } else {
+                    lappend packopts -expand $expand
+                }
+                set widget labelframe
+                lappend widgetopts -text $nodename
+            }
+        }
+        regsub -all {[[:space:]]} $nodename {} wname
+        #puts stderr "*** $self makewidget: lindex $nodeStack end is [lindex $nodeStack end]"
+        #puts stderr "*** $self makewidget-: its class is [winfo class [lindex $nodeStack end]]"
+        if {[winfo class $parentframe] eq "Labelframe"} {
+            set curroot $parentframe
+        } else {
+            set curroot [$parentframe getframe]
+        }
+        set wname $curroot.[string tolower $wname]
+        set bwname $wname
+        set i 0
+        while {[winfo exists $wname]} {
+            incr i
+            set wname $bwname$i
+        }
+        #      puts stderr "*** $self makewidget: wname = $wname, tag = $tag, widget = $widget, packopts = $packopts, widgetopts = $widgetopts"
+        eval [list $widget $wname] $widgetopts
+        #      if {"$widget" eq "::RolePlayingDB3::ScrolledList"} {
+        #	puts stderr "*** $self makewidget: wname = $wname, $wname cget -selectmode = [$wname cget -selectmode]"
+        #      }
+        #      puts stderr "*** $self makewidget: winfo exists $wname = [winfo exists $wname]"
+        if {"$widget" eq "FileEntry" || 
+            "$widget" eq "::RolePlayingDB3::Graphic"} {
+            set fileWidgets($wname) true
+        }
+        if {"$widget" eq "LabelComboBox"} {$wname setvalue first}
+        eval [list pack $wname] $packopts
+        if {![catch {set attrlist_array(id)} id]} {
+            set idmap($id) $wname
+        }
+        if {"$bindscript" ne ""} {eval $wname $bindscript}
+        set _widgets($container) $wname
+        set _xmlnodes($wname) $container
+        foreach c [$container children] {
+            $self makewidget $c $wname
+        }
     }
-    method _elementend {tag args} {
-#      puts stderr "*** [list _elementend $tag $args]"
-      switch -exact [string totitle $tag] {
-	Bi -
-	Li {
-	}
-	Canvas -
-	Button -
-	Buttonbox -
-	Field {
-	  set nodeStack [lrange $nodeStack 0 [expr {[llength $nodeStack] - 2}]]
-	}
-	default {
-	  if {"$options(-templatevariable)" ne ""} {
-	    set indent [string repeat {  } [llength $nodeStack]]
-	    append generatedTemplate "$indent</rpgv3:$tag >\n"
-	  }
-	  set nodeStack [lrange $nodeStack 0 [expr {[llength $nodeStack] - 2}]]
-	}
-      }
-    }
-    method _characterdata {data} {
-#      puts stderr "*** $self _characterdata $data"
-      set curnode [lindex $nodeStack end]
-      set data [string trim "$data"]
-#      puts stderr "*** $self _characterdata: curnode = $curnode"
-#      puts stderr "*** $self _characterdata: data = '$data'"
-      if {"$data" ne ""} {
-#        puts stderr "*** $self _characterdata: winfo class $curnode is [winfo class $curnode]"
-	if {[winfo class $curnode] eq "ScrolledList"} {
-	  set index [lindex [$curnode items] end]
-	  $curnode itemconfigure $index -text "$data"
-	} else {
-	  catch {$curnode configure -text "$data"}
-	}
-      }
-      if {"$options(-templatevariable)" ne ""} {
-	if {[winfo class $curnode] eq "TitleFrame"} {
-	  append generatedTemplate "[quoteXML $data]\n"
-	}
-      }
-    }
+    
     method recreateXML {file} {
       if {[catch {open $file w} shfp]} {
 	tk_messageBox -type ok -icon error -message "Internal error: cannot create $file: $shfp"
@@ -850,16 +686,17 @@ namespace eval RolePlayingDB3 {
       close $shfp
     }
     method childrenofgetframe {w} {
-      if {[catch {winfo children [$w getframe]} children]} {
-	return {}
-      } else {
-	set result [list]
-	foreach c $children {
-	  if {[catch {set nodeTree($c)}]} {continue}
-	  lappend result $c
-	}
-      }
-      return $result
+        if {[winfo class $w] eq "Labelframe"} {
+            set children [winfo children $w]
+        } elseif {[catch {winfo children [$w getframe]} children]} {
+            return {}
+        }
+        set result [list]
+        foreach c $children {
+            if {[catch {set nodeTree($c)}]} {continue}
+            lappend result $c
+        }
+        return $result
     }
     method _recreateXML_processNodesAt {node fp {needxmlns yes} {indent {}}} {
       foreach n [$self childrenofgetframe $node] {
@@ -874,9 +711,14 @@ namespace eval RolePlayingDB3 {
 	  set needxmlns no
 	}
 	puts -nonewline $fp [makeattrlist $attrlist]
-	switch -exact [string totitle "$tag"] {
+        puts stderr "*** $self _recreateXML_processNodesAt: n is $n"
+        puts stderr "*** $self -: its class is: [winfo class $n]"
+        puts stderr "*** $self -: tag is $tag"
+	catch {puts stderr "*** $self -: \$n get yields '[$n get]'"}
+	catch {puts stderr "*** $self -: \$n cget -text yields '[$n cget -text]'"}
+        switch -exact [string totitle "$tag"] {
 	  Field {
-	    puts -nonewline $fp ">"
+            puts -nonewline $fp ">"
 	    if {[catch {set fileWidgets($n)} fileflag]} {
 	      puts -nonewline $fp "[quoteXML [$n cget -text]]"
 	    } else {
@@ -1015,7 +857,7 @@ namespace eval RolePlayingDB3 {
 #		puts stderr "*** $self _outputXMLToPDF_processNodesAt: lineno = $lineno (after Graphic)"
 	      }
 	      default {
-		set text  [$n cget -text]
+		set text  [$n get]
 #		puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
 		if {$pageno < 1 || [expr {$lineno * 14}] > [lindex [$pdfobj getDrawableArea] 1]} {
 		  $self newPDFPage $pdfobj $heading "$subheading"
@@ -1073,7 +915,7 @@ namespace eval RolePlayingDB3 {
 	  Buttonbox {
 	  }
 	  default {
-	    set subheading [$n cget -text]
+	    set subheading [$n get]
 	    set dheight [expr {[lindex [$pdfobj getDrawableArea] 1] - ($lineno * 14)}]
 #	    puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
 	    if {$pageno < 1 || $dheight < 28} {
@@ -1136,8 +978,8 @@ namespace eval RolePlayingDB3 {
       set ans [$_printdialog draw]
       switch $ans {
 	0 {
-	  set result [::pdf4tcl::new %AUTO% -paper [$papersizeLCB cget -text] \
-					    -file  [$printfileFE  cget -text] \
+	  set result [::pdf4tcl::new %AUTO% -paper [$papersizeLCB get] \
+					    -file  [$printfileFE  get] \
 					    -margin 36]
           ::RolePlayingDB3::PrintDialog printprogress start
 
@@ -1255,16 +1097,16 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
     variable updateId
     variable selectFilePath
     constructor {args} {
-      install banner using Label $win.banner -anchor w
+      install banner using tk::label $win.banner -anchor w
       pack $banner -fill x
       install topframe using frame $win.topframe
-      install dirlabel using Label $topframe.dirlabel -text "Directory:" \
+      install dirlabel using tk::label $topframe.dirlabel -text "Directory:" \
 						      -underline 0
       set dirmenubtn $topframe.dirmenu
       bind $dirlabel <<AltUnderlined>> [list focus $dirmenubtn]
       install dirmenu using tk_optionMenu $topframe.dirmenu \
 						[myvar selectPath] ""
-      install dirupbutton using Button $topframe.dirupbutton -image $updirImage
+      install dirupbutton using tk::button $topframe.dirupbutton -image $updirImage
       $dirmenubtn configure -takefocus 1 -highlightthickness 2
       pack $dirupbutton -side right -padx 4 -fill both
       pack $dirlabel -side left -padx 4 -fill both
@@ -1273,20 +1115,18 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
 				-command [mymethod DblClick] -multiple no
       bind $iconList <<ListboxSelect>> [mymethod ListBrowse]
       install bottomframe using frame $win.bottomframe -bd 0
-      install caption using Label $bottomframe.caption -text "Selection:" \
+      install caption using tk::label $bottomframe.caption -text "Selection:" \
 						       -underline 0 -anchor e \
 						       -pady 0
       bind $caption <<AltUnderlined>> [list focus $bottomframe.entry]
-      install entry using Entry $bottomframe.entry
-      set iconlistData "::tk::$iconList"
-      append iconlistData (font)
-      set $iconlistData [$entry cget -font]
-      install okButton using Button $bottomframe.okButton -text "OK" \
+      install entry using tk::entry $bottomframe.entry
+      $iconList configure -font [$entry cget -font]
+      install okButton using tk::button $bottomframe.okButton -text "OK" \
 							  -underline 0 \
 							  -default active \
 							  -pady 3
       bind $okButton <<AltUnderlined>> [list $okButton invoke]
-      install cancelButton  using Button $bottomframe.cancelButton \
+      install cancelButton  using tk::button $bottomframe.cancelButton \
 							-text "Cancel" \
 							-underline 0 \
 							-default normal \
@@ -1363,10 +1203,10 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       }
     }
     method DblClick {} {
-      set selection  [tk::IconList_CurSelection $iconList]
+      set selection  [$iconList selection get]
       if { [llength $selection] != 0 } {
 	set filenameFragment \
-	    [tk::IconList_Get $iconList [lindex $selection 0]]
+	    [$iconList get [lindex $selection 0]]
 	set file [file join $options(-root) $selectPath]
 #	puts stderr "*** $self DblClick: file = $file"
 	if {[file isdirectory $file]} {
@@ -1388,9 +1228,9 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       }
     }
     method ListBrowse {} {
-      set items [::tk::IconList_CurSelection $iconList]
+      set items [$iconList selection get]
       if {[llength $items] < 1} {return}
-      set text [::tk::IconList_Get $iconList [lindex $items 0]]
+      set text [$iconList get [lindex $items 0]]
       set file [::tk::dialog::file::JoinFile $selectPath $text]
       $entry delete 0 end
       $entry insert 0 $file
@@ -1406,9 +1246,9 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       }
     }
     method OkCmd {} {
-      set selection [tk::IconList_CurSelection $iconList]
+      set selection [$iconList selection get]
       if { [llength $selection] != 0 } {
-	set iconText [tk::IconList_Get $iconList [lindex $selection 0]]
+	set iconText [$iconList get [lindex $selection 0]]
 	set iconText [file join $selectPath $iconText]
 	$self Done "$iconText"
       } else {
@@ -1454,7 +1294,7 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
 
 #      puts stderr "*** $self Update: selectPath = $selectPath"
 
-      ::tk::IconList_DeleteAll $iconList
+      $iconList deleteall
       set dirs [lsort -dictionary -unique \
 			[glob -tails \
 			      -directory [file join $options(-root) \
@@ -1466,8 +1306,7 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       foreach d $dirs {
 	lappend dirList $d
       }
-      ::tk::IconList_Add $iconList $folderImage $dirList
-      ::tk::IconList_Arrange $iconList
+      $iconList add $folderImage $dirList
       set list "."
       set dir ""
 #      puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
@@ -1562,16 +1401,16 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     variable filter "*"
     variable extUsed
     constructor {args} {
-      install banner using Label $win.banner -anchor w
+      install banner using tk::label $win.banner -anchor w
       pack $banner -fill x
       install topframe using frame $win.topframe
-      install dirlabel using Label $topframe.dirlabel -text "Directory:" \
+      install dirlabel using tk::label $topframe.dirlabel -text "Directory:" \
 						      -underline 0
       set dirmenubtn $topframe.dirmenu
       bind $dirlabel <<AltUnderlined>> [list focus $dirmenubtn]
       install dirmenu using tk_optionMenu $topframe.dirmenu \
 						[myvar selectPath] ""
-      install dirupbutton using Button $topframe.dirupbutton -image $updirImage
+      install dirupbutton using tk::button $topframe.dirupbutton -image $updirImage
       $dirmenubtn configure -takefocus 1 -highlightthickness 2
       pack $dirupbutton -side right -padx 4 -fill both
       pack $dirlabel -side left -padx 4 -fill both
@@ -1580,19 +1419,17 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 				-command [mymethod OkCmd] -multiple no
       bind $iconList <<ListboxSelect>> [mymethod ListBrowse]
       install bottomframe using frame $win.bottomframe -bd 0
-      install caption using Label $bottomframe.caption -text "File name:" \
+      install caption using tk::label $bottomframe.caption -text "File name:" \
 						       -underline 5 -anchor e \
 						       -pady 0
       bind $caption <<AltUnderlined>> [list focus $bottomframe.entry]
-      install entry using Entry $bottomframe.entry
-      set iconlistData "::tk::$iconList"
-      append iconlistData (font)
-      set $iconlistData [$entry cget -font]
-      install typeMenuLab using Button $bottomframe.typeMenuLab \
+      install entry using tk::entry $bottomframe.entry
+      $iconList configure -font [$entry cget -font]
+      install typeMenuLab using tk::button $bottomframe.typeMenuLab \
 		-text "Files of type:" -underline 9 -anchor e  \
 		-bd [$caption cget -bd] -relief [$caption cget -relief] \
 		-padx [$caption cget  -padx] -pady [$caption cget  -pady]
-      bindtags $typeMenuLab [list $typeMenuLab Label \
+      bindtags $typeMenuLab [list $typeMenuLab tk::label \
 		[winfo toplevel $typeMenuLab] all]
       install typeMenuBtn using menubutton $bottomframe.typeMenuBtn \
 				-indicatoron 1 -menu $bottomframe.typeMenuBtn.m
@@ -1600,12 +1437,12 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       $typeMenuBtn configure -takefocus 1 -highlightthickness 2 \
 		-relief raised -bd 2 -anchor w
       bind $typeMenuLab <<AltUnderlined>> [list focus $typeMenuBtn]
-      install okButton using Button $bottomframe.okButton -text "OK" \
+      install okButton using tk::button $bottomframe.okButton -text "OK" \
 							  -underline 0 \
 							  -default active \
 							  -pady 3
       bind $okButton <<AltUnderlined>> [list $okButton invoke]
-      install cancelButton  using Button $bottomframe.cancelButton \
+      install cancelButton  using tk::button $bottomframe.cancelButton \
 							-text "Cancel" \
 							-underline 0 \
 							-default normal \
@@ -1741,9 +1578,9 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       }
     }
     method ListBrowse {} {
-      set items [::tk::IconList_CurSelection $iconList]
+      set items [$iconList selection get]
       if {[llength $items] < 1} {return}
-      set text [::tk::IconList_Get $iconList [lindex $items 0]]
+      set text [$iconList get [lindex $items 0]]
       set file [::tk::dialog::file::JoinFile $selectPath $text]
       set isDir [file isdirectory [file join $options(-root) $file]]
       if {!$isDir} {
@@ -1774,8 +1611,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     method OkCmd {} {
 #      puts stderr "*** $self OkCmd"
       set filenames {}
-      foreach item [::tk::IconList_CurSelection $iconList] {
-	lappend filenames [::tk::IconList_Get $iconList $item]
+      foreach item [$iconList selection get] {
+	lappend filenames [$iconList get $item]
       }
 #      puts stderr "[list *** $self OkCmd: filenames = $filenames]"
       if {[llength $filenames] == 1} {
@@ -1998,9 +1835,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	  set options(-defaultextension) ""
 	}
       }
-      set iconlistData "::tk::$iconList"
-      append iconlistData (sbar)
-      [set $iconlistData] set 0.0 0.0
+      $iconList see 0
       $self UpdateWhenIdle
     }
     method Update {} {
@@ -2014,7 +1849,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 
 #      puts stderr "*** $self Update: selectPath = $selectPath"
 
-      ::tk::IconList_DeleteAll $iconList
+      $iconList deleteall
       set dirs [lsort -dictionary -unique \
 			[glob -tails \
 			      -directory [file join $options(-root) \
@@ -2026,7 +1861,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       foreach d $dirs {
 	lappend dirList $d
       }
-      ::tk::IconList_Add $iconList $folderImage $dirList
+      $iconList add $folderImage $dirList
 
       set cmd [list glob -tails -directory [file join $options(-root) \
 						    $selectPath] \
@@ -2040,9 +1875,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 #      puts stderr "$self Update: cmd = $cmd"
       set fileList [lsort -dictionary -unique [eval $cmd]]
 #      puts stderr "$self Update: fileList = $fileList"
-      ::tk::IconList_Add $iconList $fileImage $fileList
-
-      ::tk::IconList_Arrange $iconList
+      $iconList add $fileImage $fileList
 
       set list "."
       set dir ""

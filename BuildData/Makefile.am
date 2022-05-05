@@ -1,14 +1,13 @@
-EXTRA_DIST=Img-1.4-Mac-Universalx86.zip Img-1.4-Linux32.zip Img-1.4-Linux64.zip \
-	   Img-1.4-win32.zip Img-1.3-Linuxarmv7l.zip tclkit-darwin-univ-aqua \
-	   tclkit-linux-x86 tclkit-linux-x86_64 tclkit-win32.exe \
-	   tclkit-linux-armv7l Tclxml3.1-GenericPureTcl.zip pdf4tcl05.zip
+EXTRA_DIST=tclkit-8.6.10-aarch64-Img1.4.9 tclkit-8.6.11-armv7l-Img1.4.8 \
+	   tclkit-8.6.11-i386-Img1.4.7 tclkit-8.6.11-x86_64-Img1.4.7 \
+	   Tclxml3.1-GenericPureTcl.zip pdf4tcl05.zip
 
 BUILT_SOURCES = tclkit${BEXEEXT}
 
 noinst_SCRIPTS = tclkit${BEXEEXT}
 
-EXTRA_SCRIPTS = tclkit-darwin-univ-aqua tclkit-linux-x86 tclkit-linux-x86_64 \
-		 tclkit-win32.exe tclkit-linux-armv7l
+EXTRA_SCRIPTS = tclkit-8.6.10-aarch64-Img1.4.9 tclkit-8.6.11-armv7l-Img1.4.8 \
+		tclkit-8.6.11-i386-Img1.4.7 tclkit-8.6.11-x86_64-Img1.4.7
 #bin_SCRIPTS = $(TCLKITRUN)
 
 tclkit${BEXEEXT}: $(TCLKITBSRC) $(top_builddir)/config.status

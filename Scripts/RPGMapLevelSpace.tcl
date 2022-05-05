@@ -35,6 +35,8 @@
 #*  
 #* 
 
+package require vlerq
+package require vfs::m2m 1.8
 package require vfs::zip
 package require vfs::mk4
 package require ZipArchive
@@ -46,9 +48,9 @@ namespace eval RolePlayingDB3 {
     option {-mapbundlemountpoint mapBundleMountPoint MapBundleMountPoint} \
 		-readonly yes -default /MAP -validatemethod validatemountpoint
     proc isvalidmountpoint {mp} {
-      #puts stderr "*** isvalidmountpoint $mp"
+      puts stderr "*** isvalidmountpoint $mp"
       foreach {system additional} [file system $mp] {break}
-      #puts stderr "*** isvalidmountpoint:  system = $system, additional = $additional"
+      puts stderr "*** isvalidmountpoint:  system = $system, additional = $additional"
       if {"$system" eq "tclvfs" &&
 	  [string match {::vfs::mk4::handler mk4vfs[0-9]*} "$additional"] } {
 	return yes
@@ -57,12 +59,12 @@ namespace eval RolePlayingDB3 {
       }
     }
     method validatemountpoint {option value} {
-      #puts stderr "*** $self validatemountpoint $option $value"
-      #puts stderr "*** $self validatemountpoint: exists: [file exists $value]"
-      #puts stderr "*** $self validatemountpoint: readable: [file readable $value]"
-      #puts stderr "*** $self validatemountpoint: writable: [file writable $value]"
-      #puts stderr "*** $self validatemountpoint: isdirectory: [file isdirectory $value]"
-      #puts stderr "*** $self validatemountpoint: isvalidmountpoint: [isvalidmountpoint $value]"
+      puts stderr "*** $self validatemountpoint $option $value"
+      puts stderr "*** $self validatemountpoint: exists: [file exists $value]"
+      puts stderr "*** $self validatemountpoint: readable: [file readable $value]"
+      puts stderr "*** $self validatemountpoint: writable: [file writable $value]"
+      puts stderr "*** $self validatemountpoint: isdirectory: [file isdirectory $value]"
+      puts stderr "*** $self validatemountpoint: isvalidmountpoint: [isvalidmountpoint $value]"
       if {[file exists $value] && [file readable $value] &&
 	  [file writable $value] && [file isdirectory $value] &&
 	  [isvalidmountpoint $value]} {
@@ -397,7 +399,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::mk4::Mount $tempfile /$path
+      vfs::m2m::Mount $tempfile /$path
       file mkdir [file join /$path Levels]
       close [open [file join /$path Levels flag] w]
       file mkdir [file join /$path media]
@@ -448,7 +450,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::mk4::Mount $tempfile /$path
+      vfs::m2m::Mount $tempfile /$path
       set currentFilename $_filename 
       set currentBaseFilename [file tail $currentFilename]
       set inpath [$type genname]

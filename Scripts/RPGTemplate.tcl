@@ -39,7 +39,8 @@ package require vfs::zip
 package require vfs::mk4
 package require ZipArchive
 package require xml
-package require BWLabelComboBox
+#package require BWLabelComboBox
+package require LabelFrames
 package require RPGUtilities
 package require pdf4tcl
 
