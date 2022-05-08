@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sat May 7 13:39:32 2022
-#  Last Modified : <220507.2048>
+#  Last Modified : <220508.1534>
 #
 #  Description	
 #
@@ -45,6 +45,9 @@ package require snit
 
 
 namespace eval ::vfs::rpg {
+    proc fail {code} {
+        ::vfs::filesystem posixerror $::vfs::posix($code)
+    }
     snit::enum FileType -values {file directory}
     snit::type RPGDirent {
         variable _name
@@ -60,7 +63,7 @@ namespace eval ::vfs::rpg {
         method SetMode {mode} {set _mode $mode}
         variable _offset 0
         method Offset {} {return $_offset}
-        method SetOffset {offset} {set _offset $_offset}
+        method SetOffset {offset} {set _offset $offset}
         variable _size 0
         method Size {} {return $_size}
         method SetSize {size} {set _size $size}
@@ -71,17 +74,23 @@ namespace eval ::vfs::rpg {
             set _name $name
             $self configurelist $args
         }
+        destructor {
+            foreach f $_files {
+                $f destroy
+            }
+        }
         method AddNewDirent {name args} {
             #puts stderr "*** ${self}::AddNewDirent $name $args"
             #puts stderr "*** ${self}::AddNewDirent: options(-ftype) is $options(-ftype)"
-            if {$options(-ftype) ne "directory"} {fail ENOENT}
+            if {$options(-ftype) ne "directory"} {::vfs::rpg::fail ENOENT}
             set newent [$type create %AUTO% $name -ftype [from args -ftype]]
             #puts stderr "*** ${self}::AddNewDirent: newent is $newent"
             lappend _files $newent
+            #puts stderr "*** ${self}::AddNewDirent: _files is $_files"
             return $newent
         }
         method RemoveDirent {dirent} {
-            if {$options(-ftype) ne "directory"} {fail ENOENT}
+            if {$options(-ftype) ne "directory"} {::vfs::rpg::fail ENOENT}
             set i [lsearch -exact $_files $dirent]
             if {$i >= 0} {
                 set _files [lreplace $_files $i $i]
@@ -89,17 +98,33 @@ namespace eval ::vfs::rpg {
             return $dirent
         }
         method GetDirents {} {
-            if {$options(-ftype) ne "directory"} {fail ENOENT}
+            #puts stderr "*** ${self}::GetDirents: _files is $_files"
+            if {$options(-ftype) ne "directory"} {::vfs::rpg::fail ENOENT}
             return $_files
         }
+        method NumDirents {} {
+            if {$options(-ftype) ne "directory"} {::vfs::rpg::fail ENOENT}
+            return [llength $_files]
+        }
         method LookupName {name} {
-            if {$options(-ftype) ne "directory"} {fail ENOENT}
+            if {$options(-ftype) ne "directory"} {::vfs::rpg::fail ENOENT}
             foreach f $_files {
                 if {$name eq [$f Name]} {
                     return $f
                 }
             }
             return {}
+        }
+        method LookupMatch {pattern {types {file directory}}} {
+            set result [list]
+            if {$options(-ftype) ne "directory"} {::vfs::rpg::fail ENOENT}
+            foreach f $_files {
+                if {[string match $pattern [$f Name]] &&
+                    [$f cget -ftype] in $types} {
+                    lappend result $f
+                }
+            }
+            return $result
         }
         
     }
@@ -109,7 +134,7 @@ namespace eval ::vfs::rpg {
         component rootdirectory
         variable _fd
         variable _backingfile
-        variable _freespace 0
+        variable _dirty no
         constructor {backingfile args} {
             install rootdirectory using RPGDirent %AUTO% . -ftype directory
             set _backingfile [::file normalize $backingfile]
@@ -134,20 +159,19 @@ namespace eval ::vfs::rpg {
             seek $_fd -4 end
             binary scan [read $_fd 4] i treesize
             seek $_fd [expr {-(4+$treesize)}] end
-            puts stderr "*** *** ${self}::_reload_dirtree: treesize is $treesize"
+            #puts stderr "*** ${self}::_reload_dirtree: treesize is $treesize"
             set tree [read $_fd $treesize]
-            puts stderr "*** ${self}::_reload_dirtree: tree is $tree"
+            #puts stderr "*** ${self}::_reload_dirtree: tree is $tree"
             _copyDictToRoot $rootdirectory $tree
         }
         proc _copyDictToRoot {dir branch} {
-            puts stderr "*** _copyDictToRoot: $dir ([$dir Name]) $branch"
-            foreach k [dict keys $branch] {
-                set value [dict get $branch $k]
+            #puts stderr "*** _copyDictToRoot: $dir ([$dir Name]) $branch"
+            foreach {name value} $branch {
                 if {[lindex $value 0] ne {/FILE/}} {
-                    set newdirent [$dir AddNewDirent $k -ftype directory]
+                    set newdirent [$dir AddNewDirent $name -ftype directory]
                     _copyDictToRoot $newdirent $value
                 } else {
-                    set newdirent [$branch AddNewDirent $k -ftype file]
+                    set newdirent [$dir AddNewDirent $name -ftype file]
                     lassign $value dummy mtime mode off size
                     $newdirent SetMTime $mtime
                     $newdirent SetMode $mode
@@ -157,32 +181,33 @@ namespace eval ::vfs::rpg {
             }
         }
         destructor {
-            $self _flush_dirtree
+            if {$_dirty} {$self _flush_dirtree}
             close $_fd
+            $rootdirectory destroy
         }
         proc _makedict {file} {
-            puts stderr "*** _makedict: file is $file, \[\$file Name] is [$file Name]"
-            if {[$file cget -ftype] eq "directory"} {
-                set tree {}
-                foreach d [$file GetDirents] {
-                    dict set tree [$d Name] [_makedict $d]
-                }
-                return $tree
-            } else {
+            #puts stderr "*** _makedict: file is $file, \[\$file Name] is [$file Name]"
+            if {[$file cget -ftype] eq "file"} {
                 return [list {/FILE/} [$file MTime] [$file Mode] \
                         [$file Offset] [$file Size]]
+            } else {
+                set tree [list]
+                foreach d [$file GetDirents] {
+                    lappend tree [$d Name] [_makedict $d]
+                }
+                return $tree
             }
         }
         method _flush_dirtree {} {
             set dirtree [_makedict $rootdirectory]
-            puts stderr "*** _flush_dirtree: dirtree is $dirtree"
-            seek $_fd $_freespace start
+            #puts stderr "*** _flush_dirtree: dirtree is $dirtree"
+            seek $_fd 0 end
             set treesize [string length $dirtree]
             puts -nonewline $_fd "$dirtree"
             puts -nonewline $_fd [binary format i $treesize]
         }
         method _handler {cmd root relative actualpath args} {
-            puts stderr "*** ${self}::_handler '$cmd' '$root' '$relative' '$actualpath' $args"
+            #puts stderr "*** ${self}::_handler '$cmd' '$root' '$relative' '$actualpath' $args"
             switch -- $cmd {
                 access {
                     return [$self _access $relative [lindex $args 0]]
@@ -190,9 +215,28 @@ namespace eval ::vfs::rpg {
                 createdirectory {
                     return [$self _createdirectory $relative]
                 }
+                deletefile {
+                    return [$self _deletefile $relative]
+                }
+                fileattributes {
+                    return [$self _fileattributes $relative {*}$args]
+                }
+                matchindirectory {
+                    return [$self _matchindirectory $relative {*}$args]
+                }
+                open {
+                    return [$self _open $relative {*}$args]
+                }
+                removedirectory {
+                    return [$self _removedirectory $relative {*}$args]
+                }
                 stat {
                     return [$self _stat $relative]
                 }
+                utime {
+                    return [$self _utime $relative {*}$args]
+                }
+                
             }
         }
         proc _findDirent {parent pathlist} {
@@ -204,16 +248,23 @@ namespace eval ::vfs::rpg {
                         [lrange $pathlist 1 end]]
             }
         }
-            
+        method _utime {path atime mtime} {
+            #puts stderr "*** ${self}::_utime $path $atime $mtime"
+            set pathkeys [file split $path]
+            set dirent [_findDirent $rootdirectory $pathkeys]
+            if {$dirent eq ""} {::vfs::rpg::fail  ENOENT}
+            $dirent SetMTime $mtime
+            set _dirty yes
+        }
         method _access {filename mode} {
             #puts stderr "*** ${self}::_access $filename $mode"
             set pathkeys [file split $filename]
             #puts stderr "*** ${self}::_access: \{$pathkeys\}"
             set dirent [_findDirent $rootdirectory $pathkeys]
-            if {$dirent eq ""} {fail  ENOENT}
+            if {$dirent eq ""} {::vfs::rpg::fail  ENOENT}
             if {$mode == 0} {return}
             set fmode [$dirent Mode]
-            if {($mode & $fmode) == 0} {fail  ENOENT}
+            if {($mode & $fmode) == 0} {::vfs::rpg::fail EACCES}
         }
         method _createdirectory {newdire} {
             #puts stderr "*** ${self}::_createdirectory $newdire"
@@ -226,13 +277,14 @@ namespace eval ::vfs::rpg {
             #puts stderr "*** ${self}::_createdirectory: newdirname is $newdirname"
             set parent [_findDirent $rootdirectory $parentpathkeys]
             $parent AddNewDirent $newdirname -ftype directory
+            set _dirty yes
         }
         method _stat {path} {
             #puts stderr "*** ${self}::_stat $path"
             set pathkeys [file split $path]
             #puts stderr "*** ${self}::_stat: \{$pathkeys\}"
             set dirent [_findDirent $rootdirectory $pathkeys]
-            if {$dirent eq {}} {fail ENOENT}
+            if {$dirent eq {}} {::vfs::rpg::fail ENOENT}
             set sb(type) [$dirent cget -ftype]
             set sb(mtime) [$dirent MTime]
             set sb(mode) [$dirent Mode]
@@ -247,6 +299,124 @@ namespace eval ::vfs::rpg {
             set sb(ctime) $sb(mtime)
             return [array get sb]
         }
+        method _deletefile {path} {
+            puts stderr "*** ${self}::_deletefile $path"
+            if {$path eq "."  || $path eq ""} {::vfs::rpg::fail EACCES}
+            set pathkeys [file split $path]
+            set dirpathkeys [lrange $pathkeys 0 end-1]
+            set filename [lindex $pathkeys end]
+            set dirent [_findDirent $rootdirectory $dirpathkeys]
+            if {$dirent eq {}} {::vfs::rpg::fail ENOENT}
+            set filedirent [$dirent LookupName $filename]
+            if {$filedirent eq {}} {return}
+            if {[$filedirent cget -type] eq "directory"} {
+                ::vfs::rpg::fail EISDIR
+            }
+            set deleteddirent [$dirent RemoveDirent $filedirent]
+            $deleteddirent destroy
+            set _dirty yes
+        }
+        method _removedirectory {path recursiveP} {
+            puts stderr "*** ${self}::_removedirectory $path $recursiveP"
+            if {$path eq "."  || $path eq ""} {::vfs::rpg::fail EACCES}
+            set pathkeys [file split $path]
+            set dirpathkeys [lrange $pathkeys 0 end-1]
+            set filename [lindex $pathkeys end]
+            set dirent [_findDirent $rootdirectory $dirpathkeys]
+            if {$dirent eq {}} {::vfs::rpg::fail ENOENT}
+            set filedirent [$dirent LookupName $filename]
+            if {$filedirent eq {}} {return}
+            if {![$filedirent cget -type] eq "directory"} {
+                ::vfs::rpg::fail ENOTDIR
+            }
+            if {!$recursiveP && [$filedirent NumDirents] > 0} {
+                ::vfs::rpg::fail EISDIR
+            }
+            set deleteddirent [$dirent RemoveDirent $filedirent]
+            $deleteddirent destroy
+            set _dirty yes
+        }
+        method _fileattributes {$path args} {
+            puts stderr "*** ${self}::_fileattributes $path $args"
+            set pathkeys [file split $path]
+            set dirent [_findDirent $rootdirectory $pathkeys]
+            if {$dirent eq {}} {::vfs::rpg::fail ENOENT}
+            if {[llength $args] == 0} {
+                return [list -permissions [format {0%o} [$dirent Mode]]]
+            } elseif {[llength $args] == 1} {
+                if {[lindex $args 0] ne "-permissions"} {::vfs::rpg::fail ENODEV}
+                return [format {0%o} [$dirent Mode]]
+            } else {
+                ::vfs::rpg::fail ENODEV
+            }
+        }
+        method _matchindirectory {path pattern types args} {
+            if {$pattern eq {}} {
+                if {![::vfs::matchDirectories $types]} {
+                    return {}
+                } else {
+                    return $path
+                }
+            }
+            set returntypes [list]
+            if {[::vfs::matchDirectories $types]} {
+                lappend returntypes directory
+            }
+            if {[::vfs::matchFiles $types]} {
+                lappend returntypes file
+            }
+            set pathkeys [file split $path]
+            set dirent [_findDirent $rootdirectory $pathkeys]
+            set result [list]
+            foreach f [$dirent LookupMatch $pattern $returntypes] {
+                lappend result [file join [namespace tail $self] $path [$f Name]]
+            }
+            return $result
+        }
+        method _open {path mode permissions} {
+            if {$mode eq {}} {set mode r}
+            # workaround: Tclvfs can't handle channels in write-only modes; see Tclvfs bug #1004273
+            if {$mode eq "w"} {set mode w+}
+            if {$mode eq "a"} {set mode a+}
+            set pathkeys [file split $path]
+            set dirpath [lrange $pathkeys 0 end-1]
+            set filename [lindex $pathkeys end]
+            set directorydirent [_findDirent $rootdirectory $dirpath]
+            set dirent [$directorydirent LookupName $filename]
+            if {$directorydirent eq {}} {::vfs::rpg::fail ENOENT}
+            # if mode is read or read+write, the file must already exist
+            if {$mode in {r r+} && $dirent eq {}} {::vfs::rpg::fail ENOENT}
+            set channelID [vfs::memchan $filename]
+            set defaulttrans [fconfigure $channelID -translation]
+            if {$mode ni {w w+} && $dirent ne {}} {
+                # Append to an existing file
+                seek $_fd [$dirent Offset] start
+                fconfigure $channelID -translation binary
+                puts -nonewline $channelID [read $_fd [$dirent Size]]
+                fconfigure $channelID -translation $defaulttrans
+                if {$mode in {r r+}} {
+                    seek $channelID 0 start
+                }
+            }
+            if {$dirent eq {}} {
+                set dirent [$directorydirent AddNewDirent $filename -ftype file]
+            }
+            return [list $channelID [mymethod _close $channelID $dirent $mode]]
+        }
+        method _close {channelID dirent mode} {
+            if {$mode in {r r+}} {return}
+            seek $_fd 0 end
+            seek $channelID 0 end
+            set filesize [tell $channelID]
+            set offset [tell $_fd]
+            seek $channelID 0 start
+            fconfigure $channelID -translation binary
+            puts -nonewline $_fd [read $channelID $filesize]
+            $dirent SetOffset $offset
+            $dirent SetSize   $filesize
+            $dirent SetMTime  [clock seconds]
+            set _dirty yes
+        }
     }
     
     proc Mount {mkfile local args} {
@@ -257,3 +427,5 @@ namespace eval ::vfs::rpg {
     }
         
 }
+
+package provide vfs::rpg 1.0

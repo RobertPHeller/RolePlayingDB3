@@ -35,10 +35,8 @@
 #*  
 #* 
 
-package require vlerq
-package require vfs::m2m 1.8
+package require vfs::rpg
 package require vfs::zip
-package require vfs::mk4
 package require ZipArchive
 package require RPGUtilities
 package require pdf4tcl
@@ -399,7 +397,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::m2m::Mount $tempfile /$path
+      vfs::rpg::Mount $tempfile /$path
       file mkdir [file join /$path Levels]
       close [open [file join /$path Levels flag] w]
       file mkdir [file join /$path media]
@@ -450,7 +448,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::m2m::Mount $tempfile /$path
+      vfs::rpg::Mount $tempfile /$path
       set currentFilename $_filename 
       set currentBaseFilename [file tail $currentFilename]
       set inpath [$type genname]

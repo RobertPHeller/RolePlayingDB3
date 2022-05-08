@@ -36,7 +36,7 @@
 #* 
 
 package require vfs::zip
-package require vfs::m2m
+package require vfs::rpg
 package require ZipArchive
 package require ParseXML
 package require RPGUtilities
@@ -259,7 +259,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname $options(-sheetclass)]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::m2m::Mount $tempfile /$path
+      vfs::rpg::Mount $tempfile /$path
       file mkdir [file join /$path media]
       close [open [file join /$path media flag] w]
       file mkdir [file join /$path xml]
@@ -352,7 +352,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname $options(-sheetclass)]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::m2m::Mount $tempfile /$path
+      vfs::rpg::Mount $tempfile /$path
       set currentFilename $_filename 
       set currentBaseFilename [file tail $currentFilename]
       set inpath [$type genname $options(-sheetclass)]
