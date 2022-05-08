@@ -324,9 +324,9 @@ namespace eval RolePlayingDB3 {
 				-parent . -side bottom \
 				-title "Edit Map" \
 				-transient yes]
-      $_editDialog add -name new    -text {Create}
-      $_editDialog add -name open   -text {Open}  
-      $_editDialog add -name cancel -text {Cancel}
+      $_editDialog add new    -text {Create}
+      $_editDialog add open   -text {Open}  
+      $_editDialog add cancel -text {Cancel}
       pack [message [$_editDialog getframe].message \
 	-text "Create a new Map file or\nopen an existing Map file?" \
 	-aspect 500] -fill both
@@ -441,6 +441,49 @@ namespace eval RolePlayingDB3 {
 			-openfilename $currentFilename \
 			-class MapEditor]
     }
+    proc _copyCreateRPGdirsHelper {srcfile destdir} {
+        #puts stderr "*** _copyCreateRPGdirsHelper $srcfile $destdir"
+        file stat $srcfile fssrc
+        #puts stderr "*** _copyCreateRPGdirsHelper: $srcfile $fssrc(size) bytes, type: $fssrc(type)"
+        set filename [file tail $srcfile]
+        if {$fssrc(type) ne "directory"} {
+            file copy $srcfile $destdir
+            #file stat [file join $destdir $filename] fs
+            #puts stderr "*** _copyCreateRPGdirsHelper: [file join $destdir $filename]: $fs(size) bytes"
+        } else {
+            set files [glob -nocomplain [file join $srcfile *]]
+            file mkdir [file join $destdir $filename]
+            foreach f $files {
+                _copyCreateRPGdirsHelper $f [file join $destdir $filename]
+            }
+        }
+    }
+    proc _copyCreateRPGdirs {src dest} {
+        file mkdir [file join $dest Levels]
+        if {[catch {glob -nocomplain [file join $src Levels *]} levelfiles]} {
+            close [open [file join $dest Levels flag] w]
+        } else {
+            foreach f $levelfiles {
+                _copyCreateRPGdirsHelper $f [file join $dest Levels]
+            }
+        }
+        file mkdir [file join $dest media]
+        if {[catch {glob -nocomplain [file join $src media *]} mediafiles]} {
+            close [open [file join $dest media flag] w]
+        } else {
+             foreach f $mediafiles {
+                 _copyCreateRPGdirsHelper $f [file join $dest media]
+             }
+        }
+        file mkdir [file join $dest xml]
+        if {[catch {glob -nocomplain [file join $src xml *]} xmlfiles]} {
+            close [open [file join $dest xml flag] w]
+        } else {
+             foreach f $xmlfiles {
+                 _copyCreateRPGdirsHelper $f [file join $dest xml]
+             }
+        }
+    }
     method openold {_filename} {
       set path [$type genname]
       set tempfile [file join $::RolePlayingDB3::TmpDir $path]
@@ -453,18 +496,7 @@ namespace eval RolePlayingDB3 {
       set currentBaseFilename [file tail $currentFilename]
       set inpath [$type genname]
       vfs::zip::Mount $currentFilename $inpath
-      if {[catch {file copy [file join $inpath Levels] /$path}]} {
-	file mkdir [file join /$path Levels]
-	close [open [file join /$path Levels flag] w]
-      }
-      if {[catch {file copy [file join $inpath xml] /$path}]} {
-	file mkdir [file join /$path xml]
-	close [open [file join /$path xml flag] w]
-      }
-      if {[catch {file copy [file join $inpath media] /$path}]} {
-	file mkdir [file join /$path media]
-	close [open [file join /$path media flag] w]
-      }
+      _copyCreateRPGdirs $inpath /$path
       vfs::unmount $inpath
       [winfo toplevel $win] configure -title "Map Editor: $currentBaseFilename"
     }
