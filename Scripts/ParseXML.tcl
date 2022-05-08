@@ -111,6 +111,11 @@ snit::type SimpleDOMElement {
   # @param d The new data.
     set _data $d
   }
+  method appenddata {d} {
+      ## Method to append to the element's data.
+      # @param d The new data.
+      append _data $d
+  }
   method display {{fp stdout} {indent {}} args} {
   ## Method to display a node, along with its children, and a proper XML 
   # document.
@@ -145,6 +150,7 @@ snit::type SimpleDOMElement {
     if {[llength $_children] > 0} {
       puts $fp "$indent<$ns$options(-tag)${nsdecl}[_formattrlist $options(-attributes)]>"
 #      puts stderr "*** $self display: \[lindex \$_children 0\] = [lindex $_children 0]"
+      if {$_data ne ""} {puts $fp [_quoteXML $_data]}
       foreach child $_children {
 #        puts stderr "*** $self display: child = $child"
 	$child display $fp "$indent  "
@@ -337,9 +343,11 @@ snit::type ParseXML {
   method _characterdata {data} {
     ## Callback called with the text enclosed by an element.
     # @param data The text enclosed by an element.
-#    puts stderr "*** $self _characterdata: nodeStack = $nodeStack"
+    #puts stderr "*** $self _characterdata: nodeStack = $nodeStack"
     set curnode [lindex $nodeStack end]
-    $curnode setdata $data
+    #puts stderr "*** $self _characterdata: curnode is a [$curnode cget -tag]"
+    #puts stderr "*** $self _characterdata: data is '$data'"
+    $curnode appenddata [string trim $data]
   }
   method displayTree {{fp stdout} args} {
       ## @publicsection Display the XML tree.

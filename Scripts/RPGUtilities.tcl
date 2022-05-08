@@ -254,7 +254,7 @@ namespace eval RolePlayingDB3 {
       }
 #      puts stderr "*** $self updatepicture: fullpath (final) is $fullpath"
       if {[catch {image create photo -file $fullpath} newimage]} {
-	puts stderr "*** $self updatepicture: image create photo failed: $newimage"
+	#puts stderr "*** $self updatepicture: image create photo failed: $newimage"
 	return
       }
 #      puts stderr "*** $self updatepicture: newimage is $newimage"
@@ -296,7 +296,7 @@ namespace eval RolePlayingDB3 {
     constructor {args} {
       set auto [from args -auto]
       set scrollbar [from args -scrollbar]
-      installhull using labelframe
+      installhull using labelframe -class LabeledScrolledText
       install scroll using ScrolledWindow $win.scroll \
 					-auto $auto -scrollbar $scrollbar
       pack $scroll -fill both -expand yes
@@ -341,7 +341,7 @@ namespace eval RolePlayingDB3 {
 								 -readonly yes
     option {-dirtyvariable dirtyVariable DirtyVariable} -default {}
     method setdirty {} {
-        puts stderr "*** $self setdirty"
+        #puts stderr "*** $self setdirty"
         if {"$options(-dirtyvariable)" ne ""} {
             upvar #0 "$options(-dirtyvariable)" isdirty
             set isdirty yes
@@ -353,6 +353,7 @@ namespace eval RolePlayingDB3 {
     option {-buttoncommand buttonCommand ButtonCommand} -default {}
     option {-isnewobject isNewObject IsNewObject} -readonly yes -default no \
 						  -type snit::boolean
+    option {-rootcontainer rootContainer RootContainer} -readonly yes
     variable nodeStack
     variable nodeTree -array {}
     variable fileWidgets -array {}
@@ -390,11 +391,13 @@ namespace eval RolePlayingDB3 {
       $hull setwidget $editframe
       $self configurelist $args
       install parsedXML using ParseXML %AUTO% $options(-xml)
-      set xmlcontainer [$parsedXML getElementsByTagName $options(-sheetclass) \
+      set xmlcontainer [$parsedXML getElementsByTagName $options(-rootcontainer) \
                         -depth 1]
-      set _widgets($xmlcontainer) $editframe
-      set _xmlnodes($editframe) $xmlcontainer
-      $self buildGUI $xmlcontainer $editframe
+      set lf [labelframe [$editframe getframe].container -text [$xmlcontainer data]]
+      pack $lf -fill both -expand yes 
+      set _widgets($xmlcontainer) $lf
+      set _xmlnodes($lf) $xmlcontainer
+      $self buildGUI $xmlcontainer $lf
       if {"$options(-templatevariable)" ne ""} {
 	upvar #0 "$options(-templatevariable)" template
 	set template $generatedTemplate
@@ -410,18 +413,20 @@ namespace eval RolePlayingDB3 {
     method makewidget {node parentframe} {
         # puts stderr "*** [list $self makewidget $node $parentframe]"
         set nodename [$node cget -tag]
+        set tag $nodename
         set attrlist [$node cget -attributes]
         set widget none
         set bindscript {}
         set label  {}
         set widgetopts [list]
         set packopts [list]
+        set widgetdata [string trim [$node data]]
         array unset attrlist_array
         array set attrlist_array $attrlist
         if {![catch {set attrlist_array(side)} side]} {
             lappend packopts -side $side
         }
-        switch -exact [string totitle $tag] {
+        switch -exact [string totitle $nodename] {
             Li {
                 return {}
             }
@@ -669,9 +674,11 @@ namespace eval RolePlayingDB3 {
             set idmap($id) $wname
         }
         if {"$bindscript" ne ""} {eval $wname $bindscript}
-        set _widgets($container) $wname
-        set _xmlnodes($wname) $container
-        foreach c [$container children] {
+        #puts stderr "*** $self makewidget: [winfo class $wname] <= '$widgetdata'"
+        catch {$wname configure -text $widgetdata}
+        set _widgets($node) $wname
+        set _xmlnodes($wname) $node
+        foreach c [$node children] {
             $self makewidget $c $wname
         }
     }
@@ -682,97 +689,26 @@ namespace eval RolePlayingDB3 {
 	return
       }
       puts $shfp {<?xml version="1.0" ?>}
-      $self _recreateXML_processNodesAt $editframe $shfp
-      close $shfp
-    }
-    method childrenofgetframe {w} {
-        if {[winfo class $w] eq "Labelframe"} {
-            set children [winfo children $w]
-        } elseif {[catch {winfo children [$w getframe]} children]} {
-            return {}
-        }
-        set result [list]
-        foreach c $children {
-            if {[catch {set nodeTree($c)}]} {continue}
-            lappend result $c
-        }
-        return $result
-    }
-    method _recreateXML_processNodesAt {node fp {needxmlns yes} {indent {}}} {
-      foreach n [$self childrenofgetframe $node] {
-	if {[catch {set nodeTree($n)} data]} {continue}
-	foreach {tag attrlist args} $data {break}
-	puts -nonewline $fp "$indent<rpgv3:$tag "
-	if {$needxmlns} {
-	  puts -nonewline $fp "xmlns:rpgv3=\""
-	  set namespace [lindex $args [expr {[lsearch -exact $args -namespace] + 1}]]
-	  puts -nonewline $fp "[quoteXML $namespace]"
-	  puts -nonewline $fp "\" "
-	  set needxmlns no
-	}
-	puts -nonewline $fp [makeattrlist $attrlist]
-        puts stderr "*** $self _recreateXML_processNodesAt: n is $n"
-        puts stderr "*** $self -: its class is: [winfo class $n]"
-        puts stderr "*** $self -: tag is $tag"
-	catch {puts stderr "*** $self -: \$n get yields '[$n get]'"}
-	catch {puts stderr "*** $self -: \$n cget -text yields '[$n cget -text]'"}
-        switch -exact [string totitle "$tag"] {
-	  Field {
-            puts -nonewline $fp ">"
-	    if {[catch {set fileWidgets($n)} fileflag]} {
-	      puts -nonewline $fp "[quoteXML [$n cget -text]]"
-	    } else {
-	      set curfile "[$n cget -text]"
-	      set storedfile "$curfile"
-	      if {"$curfile" ne "" && "$options(-filewidgethandler)" ne ""} {
-		set storedfile [uplevel \#0 "$options(-filewidgethandler)" "$curfile"]
-	      }
-	      puts -nonewline $fp "[quoteXML $storedfile]"
-	    }
-	    puts $fp "$indent</rpgv3:$tag>"
-	  }
-	  List {
-	    puts $fp ">"
-	    foreach li [$n items] {
-	      puts -nonewline $fp "$indent  <rpgv3:Li [makeattrlist [$n itemcget $li -data]] >"
-	      puts $fp "[quoteXML [$n itemcget $li -text]]</rpgv3:Li>"
-	    }
-	    puts $fp "$indent</rpgv3:$tag>"
-	  }
-	  Buttonbox {
-	    puts -nonewline $fp ">"
-	    for {set i 0} {$i <= [$n index end]} {incr i} {
-	      set alist [list]
-	      foreach {opt attr} {-text label -name name} {
-		set v [$n itemcget $i $opt]
-		if {"$v" ne ""} {lappend alist $attr $v}
-	      }
-	      set cmd [$n itemcget $i -command]
-	      set v [lindex $cmd end]
-	      if {"$v" ne ""} {lappend alist id $v}
-	      puts $fp "$indent  <rpgv3:Bi [makeattrlist $alist] />" 
-	    }
-	    puts $fp "$indent</rpgv3:$tag>"
-	  }
-	  Button -
-	  Canvas {
-	    puts $fp "/>"
-	  }
-	  default {
-	    puts -nonewline $fp ">"
-	    puts $fp "[quoteXML [$n cget -text]]"
-	    $self _recreateXML_processNodesAt $n $fp $needxmlns "$indent  "
-	    puts $fp "$indent</rpgv3:$tag>"
-	  }
-	}
+      foreach w [array names _widgets] {
+          if {[catch {$w setdata [$_widgets($w) cget -text]}]} {
+              puts stderr "$_widgets($w) cget -text failed: [winfo class $_widgets($w)]"
+          }
       }
+      #$self _recreateXML_processNodesAt $editframe $shfp
+      $parsedXML displayTree $shfp {} -addnamespace yes
+      close $shfp
     }
     method outputXMLToPDF {pdfobj {heading "Sheet"} {curpage 0} {curline 1000}} {
       $pdfobj setFont 10 Courier
       $pdfobj setLineSpacing [expr {14.0 / 10.0}]
       set pageno $curpage
       set lineno $curline
-      $self _outputXMLToPDF_processNodesAt $heading {} $editframe $pdfobj
+      foreach w [array names _widgets] {
+          catch {$_widgets($w) setdata [$w cget -text]}
+      }
+      set xmlcontainer [$parsedXML getElementsByTagName $options(-rootcontainer) \
+                        -depth 1]
+      $self _outputXMLToPDF_processNodesAt $heading "" $xmlcontainer $pdfobj
     }
     method newPDFPage {pdfobj heading subheading} {
       incr pageno
@@ -785,10 +721,25 @@ namespace eval RolePlayingDB3 {
       $pdfobj setTextPosition 0 [expr {$lineno * 14}]
       ::RolePlayingDB3::PrintDialog printprogress setpageno $pageno
     }
+    proc _fitString {pdfobj line twidth} {
+        regexp -indices {([[:space:]]+)|$} $line wordend
+        
+        while {[$pdfobj getStringWidth [string range $line 0 \
+                                        [expr {[lindex $wordend 0] -1}]]] < \
+                  $twidth} {
+            set e1 [expr {[lindex $wordend 0]-1}]
+            set s1 [expr {[lindex $wordend 1]+1}]
+            #puts stderr "*** ::_fitString: s1 is $s1, line is [string length $line] long"
+            if {$s1 >= [string length $line]} {break}
+            regexp -indices -start $s1 {([[:space:]]+)|$} $line wordend
+            #puts stderr "*** ::_fitString: wordend is $wordend"
+        }
+        return [list [string range $line 0 $e1] [string range $line $s1 end]]
+    }
     method _outputXMLToPDF_processNodesAt {heading subheading node pdfobj {indent 0}} {
-      foreach n [$self childrenofgetframe $node] {
-	if {[catch {set nodeTree($n)} data]} {continue}
-	foreach {tag attrlist args} $data {break}
+        set tag [$node cget -tag]
+        set data [$node data]
+        set attrlist [$node cget -attributes]
 	array unset attrlist_array
 	array set attrlist_array $attrlist
         if {[catch {set attrlist_array(name)} label]} {
@@ -807,20 +758,27 @@ namespace eval RolePlayingDB3 {
 		incr lineno
 		set y [expr {$lineno * 14}]
 		set bottom [lindex [$pdfobj getDrawableArea] 1]
-		regsub {\.[[:digit:]]*$} [$n index end-1c] {} lines
-		for {set i 1} {$i <= $lines} {incr i} {
-		  if {($y + 14) >= $bottom} {
-		    $self newPDFPage $pdfobj $heading "$subheading"
-		    set y [expr {$lineno * 14}]
-		  }
-		  $pdfobj text [$n get ${i}.0 "${i}.0 lineend"] -x $indent
-		  $pdfobj newLine
-		  incr lineno
-		  set y [expr {$lineno * 14}]
+                set thetext $data
+                set twidth [expr {[lindex [$pdfobj getDrawableArea] 0] - $indent}]
+		foreach line [split $thetext "\n"] {
+                    while {true} {
+                        #puts stderr "*** $self _outputXMLToPDF_processNodesAt (Long Text): line is '$line'"
+                        lassign [_fitString $pdfobj $line $twidth] l1 l2
+                        if {($y + 14) >= $bottom} {
+                            $self newPDFPage $pdfobj $heading "$subheading"
+                            set y [expr {$lineno * 14}]
+                        }
+                        $pdfobj text $l1 -x $indent
+                        $pdfobj newLine
+                        incr lineno
+                        set y [expr {$lineno * 14}]
+                        set line $l2
+                        if {$l2 eq ""} {break}
+                    }
 		}
 	      }
 	      Graphic {
-		set image [$n getimage]
+		set image [$_widgets($node) getimage]
 		set imwidth [image width $image]
 		set imheight [image height $image]
 		set dwidth [expr {[lindex [$pdfobj getDrawableArea] 0] - $indent}]
@@ -857,7 +815,7 @@ namespace eval RolePlayingDB3 {
 #		puts stderr "*** $self _outputXMLToPDF_processNodesAt: lineno = $lineno (after Graphic)"
 	      }
 	      default {
-		set text  [$n get]
+		set text  $data
 #		puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
 		if {$pageno < 1 || [expr {$lineno * 14}] > [lindex [$pdfobj getDrawableArea] 1]} {
 		  $self newPDFPage $pdfobj $heading "$subheading"
@@ -870,8 +828,8 @@ namespace eval RolePlayingDB3 {
 	    }
 	  }
 	  List {
-	    foreach li [$n items] {
-	      set text [$n itemcget $li -text]
+	    foreach li [$_widgets($node) items] {
+	      set text [$_widgets($node) itemcget $li -text]
 	      if {$pageno < 1 || [expr {$lineno * 14}] > [lindex [$pdfobj getDrawableArea] 1]} {
 		$self newPDFPage $pdfobj "$heading" "$subheading"
 	      }
@@ -883,7 +841,7 @@ namespace eval RolePlayingDB3 {
 	  Canvas {
 	    set dheight [expr {[lindex [$pdfobj getDrawableArea] 1] - ($lineno * 14)}]
 	    set dwidth [expr {[lindex [$pdfobj getDrawableArea] 0] - $indent}]
-	    set bbox [$n bbox all]
+	    set bbox [$_widgets($node) bbox all]
 	    set cw [expr {[lindex $bbox 2] - [lindex $bbox 0]}]
 	    set ch [expr {[lindex $bbox 3] - [lindex $bbox 1]}]
 	    if {$dwidth < $cw} {
@@ -905,7 +863,7 @@ namespace eval RolePlayingDB3 {
 	    if {$pageno < 1 || $height > $dheight} {
 	      $self newPDFPage $pdfobj "$heading" "$subheading"
 	    }
-	    $pdfobj canvas $n -x $indent -y [expr {$lineno * 14}] \
+	    $pdfobj canvas $_widgets($node) -x $indent -y [expr {$lineno * 14}] \
 			      -height $height -bg yes
 	    set lines [expr {int(ceil(double($height) / 14.0))+2}]
 	    for {set i 0} {$i < $lines} {incr i} {$pdfobj newLine}
@@ -915,7 +873,7 @@ namespace eval RolePlayingDB3 {
 	  Buttonbox {
 	  }
 	  default {
-	    set subheading [$n get]
+	    set subheading $data
 	    set dheight [expr {[lindex [$pdfobj getDrawableArea] 1] - ($lineno * 14)}]
 #	    puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
 	    if {$pageno < 1 || $dheight < 28} {
@@ -927,11 +885,12 @@ namespace eval RolePlayingDB3 {
 	    incr lineno
 #	    puts stderr "*** $self _outputXMLToPDF_processNodesAt: lineno = $lineno (after Container)"
 	    $pdfobj setFont 10 Courier
-	    $self _outputXMLToPDF_processNodesAt "$heading" "$subheading" $n $pdfobj [expr {$indent + 24}]
+            foreach c [$node children] {
+                $self _outputXMLToPDF_processNodesAt "$heading" "$subheading" $c $pdfobj [expr {$indent + 24}]
+            }
 	  }
 	}
       }
-    }
   }
   snit::macro ::RolePlayingDB3::GeneratePrintDialog {nameprefix additionalcomps createbody} {
     typecomponent _printdialog
@@ -949,8 +908,8 @@ namespace eval RolePlayingDB3 {
 				-cancel 1 -default 0 -modal local \
 				-parent . -side bottom \
 				-title "Print" -transient yes]
-      $_printdialog add -name print  -text {Print}
-      $_printdialog add -name cancel -text {Cancel}
+      $_printdialog add print   -text {Print}
+      $_printdialog add cancel  -text {Cancel}
       set frame [$_printdialog getframe]
       set printfileFE [FileEntry $frame.printfileFE -label "Output file:" \
 						    -labelwidth 12 \
@@ -962,7 +921,7 @@ namespace eval RolePlayingDB3 {
 							  -editable no \
 					  -values [::pdf4tcl::getPaperSizeList]]
       pack $papersizeLCB -fill x
-      $papersizeLCB setvalue first
+      $papersizeLCB set [lindex [$papersizeLCB cget -values] 0]
     } "$nameprefix" createPrintDialogBody 
     
     append createPrintDialogBody $createbody
@@ -1014,7 +973,7 @@ namespace eval RolePlayingDB3 {
 					-image $printerIcon -default 0 \
 					-modal none -parent . -side bottom \
 					-title "Print Progress" -transient yes]
-      $_printProgressDialog add -name dismis -text {Dismis} -state disabled \
+      $_printProgressDialog add dismis -text {Dismis} -state disabled \
       			        -command [mytypemethod _DismisPrintProgress]
       set frame [$_printProgressDialog getframe]
       set printprogressPageNoLE [LabelEntry $frame.printprogressPageNoLE \
@@ -1022,15 +981,19 @@ namespace eval RolePlayingDB3 {
 				    -text "" -editable no]
       pack $printprogressPageNoLE -fill x
     }
+    typevariable _oldfocus
+    typevariable _oldgrab
     typemethod {printprogress start} {args} {
       set parent [from args -parent .]
       $type create_printProgressDialog
       $printprogressPageNoLE configure -text ""
       $_printProgressDialog configure -parent $parent
       wm transient [winfo toplevel $_printProgressDialog] $parent
-      ::BWidget::focus set $printprogressPageNoLE
-      ::BWidget::grab set  $_printProgressDialog
-      $_printProgressDialog itemconfigure 0 -state disabled
+      set _oldfocus [focus -displayof $printprogressPageNoLE]
+      focus $printprogressPageNoLE
+      set _oldgrab [grab current $_printProgressDialog]
+      grab set $_printProgressDialog
+      $_printProgressDialog itemconfigure dismis -state disabled
       $_printProgressDialog draw
     }
     typemethod {printprogress setpageno} {pageno} {
@@ -1039,9 +1002,10 @@ namespace eval RolePlayingDB3 {
     }
       
     typemethod {printprogress end} {} {
-      $_printProgressDialog itemconfigure 0 -state normal
-      ::BWidget::grab release  $_printProgressDialog
-      ::BWidget::focus release $printprogressPageNoLE
+        $_printProgressDialog itemconfigure dismis -state normal
+        grab release $_printProgressDialog
+        if {$_oldgrab ne ""} {grab set $_oldgrab}
+        focus $_oldfocus
     }
     typemethod _DismisPrintProgress {} {
       $_printProgressDialog withdraw

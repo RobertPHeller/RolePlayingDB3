@@ -35,10 +35,8 @@
 #*  
 #* 
 
-package require vlerq
-package require vfs::m2m 1.8
 package require vfs::zip
-package require vfs::mk4
+package require vfs::m2m
 package require ZipArchive
 package require ParseXML
 package require RPGUtilities
@@ -64,7 +62,7 @@ namespace eval RolePlayingDB3 {
     variable currentBaseFilename
     variable isdirty no
     method setdirty {} {
-        puts stderr "*** $self setdirty"
+        #puts stderr "*** $self setdirty"
         set isdirty yes
     }
     variable path
@@ -329,6 +327,24 @@ namespace eval RolePlayingDB3 {
 			-openfilename $filename \
 			-class ${sheetclass}Editor]
     }      
+    proc _copyCreateRPGdirs {src dest} {
+        file mkdir [file join $dest media]
+        if {[catch {glob -nocomplain [file join $src media *]} mediafiles]} {
+            close [open [file join $dest media flag] w]
+        } else {
+             foreach f $mediafiles {
+                 file copy $f [file join $dest media]
+             }
+        }
+        file mkdir [file join $dest xml]
+        if {[catch {glob -nocomplain [file join $src xml *]} xmlfiles]} {
+            close [open [file join $dest xml flag] w]
+        } else {
+             foreach f $xmlfiles {
+                 file copy $f [file join $dest xml]
+             }
+        }
+    }
     method openold {_filename} {
       set path [$type genname $options(-sheetclass)]
       set tempfile [file join $::RolePlayingDB3::TmpDir $path]
@@ -341,13 +357,7 @@ namespace eval RolePlayingDB3 {
       set currentBaseFilename [file tail $currentFilename]
       set inpath [$type genname $options(-sheetclass)]
       vfs::zip::Mount $currentFilename $inpath
-      if {[catch {file copy [file join $inpath media] /$path}]} {
-	file mkdir [file join /$path media]
-	close [open [file join /$path media flag] w]
-      }
-      if {[catch {file copy [file join $inpath xml] /$path}]} {
-	file mkdir [file join /$path xml]
-      }
+      _copyCreateRPGdirs $inpath /$path
       vfs::unmount $inpath
       [winfo toplevel $win] configure -title "$options(-sheetclass) $currentBaseFilename"
     }
@@ -364,7 +374,7 @@ namespace eval RolePlayingDB3 {
 				      -title "Save As File"]
       }
       if {"$_filename" eq {}} {return}
-      puts stderr "*** $self saveas: isdirty = $isdirty"  
+      #puts stderr "*** $self saveas: isdirty = $isdirty"  
       if {$isdirty} {$self recreateXML}
       #$self recreateXML
       ::ZipArchive createZipFromDirtree $_filename /$path \
@@ -387,7 +397,7 @@ namespace eval RolePlayingDB3 {
       if {"$currentFilename" eq ""} {
 	set heading "$currentBaseFilename"
       } else {
-	set heading "$currentFilename"
+	set heading [file tail "$currentFilename"]
       }
       $sheetframe outputXMLToPDF $pdfobj $heading
       ::RolePlayingDB3::PrintDialog printprogress end      
@@ -451,7 +461,8 @@ namespace eval RolePlayingDB3 {
 					-templatevariable [myvar options(-template)] \
 					-dirtyvariable [myvar isdirty] \
 					-filewidgethandler [mymethod _filewidgethandler] \
-					-xmlfile $xmlfile -basedirectory /$path
+                                        -xmlfile $xmlfile -basedirectory /$path \
+                                        -rootcontainer $options(-sheetclass)
       pack $sheetframe -fill both -expand yes
       $self configurelist $args
 #      puts stderr "*** $type $self: parseMode = $parseMode"
@@ -500,7 +511,6 @@ namespace eval RolePlayingDB3 {
     }
   }
 }
-
 
 
 package provide RPGSheetEdit 1.0
