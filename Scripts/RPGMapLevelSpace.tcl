@@ -40,35 +40,42 @@ package require vfs::zip
 package require ZipArchive
 package require RPGUtilities
 package require pdf4tcl
+package require ParseXML
+package require IconImage
+package require Dialog
+package require ButtonBox
+package require LabelFrames
+package require ScrollableFrame
+package require Dialog
 
 namespace eval RolePlayingDB3 {
   snit::macro ::RolePlayingDB3::MapBundleMountPoint {} {
     option {-mapbundlemountpoint mapBundleMountPoint MapBundleMountPoint} \
 		-readonly yes -default /MAP -validatemethod validatemountpoint
     proc isvalidmountpoint {mp} {
-      puts stderr "*** isvalidmountpoint $mp"
+      #puts stderr "*** isvalidmountpoint $mp"
       foreach {system additional} [file system $mp] {break}
-      puts stderr "*** isvalidmountpoint:  system = $system, additional = $additional"
+      #puts stderr "*** isvalidmountpoint:  system = $system, additional = $additional"
       if {"$system" eq "tclvfs" &&
-	  [string match {::vfs::mk4::handler mk4vfs[0-9]*} "$additional"] } {
+	  [string match {::snit::RT.CallInstance ::vfs::rpg::RPGFileSystem::* _handler} "$additional"] } {
 	return yes
       } else {
 	return no
       }
     }
     method validatemountpoint {option value} {
-      puts stderr "*** $self validatemountpoint $option $value"
-      puts stderr "*** $self validatemountpoint: exists: [file exists $value]"
-      puts stderr "*** $self validatemountpoint: readable: [file readable $value]"
-      puts stderr "*** $self validatemountpoint: writable: [file writable $value]"
-      puts stderr "*** $self validatemountpoint: isdirectory: [file isdirectory $value]"
-      puts stderr "*** $self validatemountpoint: isvalidmountpoint: [isvalidmountpoint $value]"
+      #puts stderr "*** $self validatemountpoint $option $value"
+      #puts stderr "*** $self validatemountpoint: exists: [file exists $value]"
+      #puts stderr "*** $self validatemountpoint: readable: [file readable $value]"
+      #puts stderr "*** $self validatemountpoint: writable: [file writable $value]"
+      #puts stderr "*** $self validatemountpoint: isdirectory: [file isdirectory $value]"
+      #puts stderr "*** $self validatemountpoint: isvalidmountpoint: [isvalidmountpoint $value]"
       if {[file exists $value] && [file readable $value] &&
 	  [file writable $value] && [file isdirectory $value] &&
 	  [isvalidmountpoint $value]} {
 	return $value
       } else {
-	error "Expected a valid tclvfs / mk4vfs1 mount point for $option, but got $value"
+	error "Expected a valid tclvfs / vfs::rpg::RPGFileSystem mount point for $option, but got $value"
       }
     }     
   }
@@ -597,44 +604,41 @@ namespace eval RolePlayingDB3 {
       } else {
 	error "Neither -template nor -openfilename was passed!"
       }
-      install banner using Label $win.banner \
+      install banner using ttk::label $win.banner \
 			-image $bannerImage -anchor w \
 			-background $bannerBackground
       pack $banner -fill x
-      install toolbar using ButtonBox $win.toolbar -orient horizontal \
-						   -homogeneous no
+      install toolbar using ButtonBox $win.toolbar -orient horizontal
       pack $toolbar -fill x
-      $toolbar add -name newlevel -text {New Level} \
+      $toolbar add ttk::button newlevel -text {New Level} \
 				  -command [mymethod _newlevel]
-      $toolbar add -name dellevel -text {Delete Level} \
+      $toolbar add ttk::button dellevel -text {Delete Level} \
 				  -command [mymethod _deletelevel]
-      $toolbar add -name editlevel -text {Edit Level} \
+      $toolbar add ttk::button editlevel -text {Edit Level} \
 				   -command [mymethod _editlevel]
-      $toolbar add -name extractmedia -text {Extract Media} \
+      $toolbar add ttk::button extractmedia -text {Extract Media} \
 				  -command [mymethod _extractmedia]
-      install panes using PanedWindow $win.panes -side top
+      install panes using ttk::panedwindow $win.panes -orient horizontal
       pack $panes -fill both -expand yes
-      set sbpane [$panes add -weight 1]
-      install sbpanes using PanedWindow $sbpane.sbpanes -side right
-      pack $sbpanes -fill both -expand yes
-      set levelpane [$sbpanes add -weight 1]
+      install sbpanes using ttk::panedwindow $panes.sbpanes -orient vertical
+      $panes add $sbpanes -weight 1
       install leveltree using ::RolePlayingDB3::LabeledDirTree \
-		$levelpane.leveltree -showextension no -filepattern *.xml \
+		$sbpanes.leveltree -showextension no -filepattern *.xml \
 				     -label "Levels" -nofiles yes -opendirs no \
 				     -sortfunction [mymethod _sortlevelsbydepth]
-      pack $leveltree -expand yes -fill both
-      set mediapane [$sbpanes add -weight 1]
+      $sbpanes add $leveltree -weight 1
       install mediatree using ::RolePlayingDB3::LabeledDirTree \
-		$mediapane.mediatree -showextension yes -filepattern * \
-				     -label "Media"
-      pack $mediatree -expand yes -fill both
-      set mappane [$panes add -weight 5]
+            $sbpanes.mediatree -showextension yes -filepattern * \
+            -label "Media"
+      $sbpanes add $mediatree -weight 5
+      
       install mapframe using ::RolePlayingDB3::XMLContentEditor \
-			$mappane.mapframe -xml $XML -isnewobject $isnew \
-					  -dirtyvariable [myvar isdirty] \
-					  -filewidgethandler [mymethod _filewidgethandler] \
-					  -xmlfile $xmlfile -basedirectory /$path
-      pack $mapframe -fill both -expand yes
+            $panes.mapframe -xml $XML -isnewobject $isnew \
+            -rootcontainer Map \
+            -dirtyvariable [myvar isdirty] \
+            -filewidgethandler [mymethod _filewidgethandler] \
+            -xmlfile $xmlfile -basedirectory /$path
+      $panes add $mapframe -weight 5
       $leveltree configure -directory [file join /$path Levels]
       $mediatree configure -directory [file join /$path media]
     }
@@ -652,9 +656,9 @@ namespace eval RolePlayingDB3 {
       }
       set xmlb [read $lfp]
       close $lfp
-      set a_depth [::RolePlayingDB3::XMLContentEditor ExtractTagValue $xmla [mymethod _matchfield Depth] 0]
+      set a_depth [::RolePlayingDB3::XMLContentEditor ExtractTagValue $xmla Depth 0]
 #      puts stderr "*** $self _sortlevelsbydepth: a_depth = $a_depth"
-      set b_depth [::RolePlayingDB3::XMLContentEditor ExtractTagValue $xmlb [mymethod _matchfield Depth] 0]
+      set b_depth [::RolePlayingDB3::XMLContentEditor ExtractTagValue $xmlb Depth 0]
 #      puts stderr "*** $self _sortlevelsbydepth: b_depth = $b_depth"
       set comp [expr {$a_depth - $b_depth}]
 #      puts stderr "*** $self _sortlevelsbydepth: comp = $comp"
@@ -741,7 +745,7 @@ namespace eval RolePlayingDB3 {
     }
     method _deletelevel {} {
       if {[llength [glob -nocomplain -type d [file join /$path Levels *]]] == 0} {return}
-      set selection [$leveltree selection get]
+      set selection [$leveltree selection]
       if {[llength $selection] > 0} {
 	set level [$leveltree itemcget [lindex $selection 0] -fullpath]
       } else {
@@ -784,7 +788,7 @@ namespace eval RolePlayingDB3 {
       set parent [from args -parent $win]
       if {[llength [glob -nocomplain -type d [file join /$path Levels *]]] == 0} {return}
       if {[llength [glob -nocomplain -type d [file join /$path Levels *]]] == 0} {return}
-      set selection [$leveltree selection get]
+      set selection [$leveltree selection]
       if {[llength $selection] > 0} {
 	set level [$leveltree itemcget [lindex $selection 0] -fullpath]
       } else {
@@ -834,7 +838,7 @@ namespace eval RolePlayingDB3 {
       }
     }
     method _extractmedia {} {
-      set selection [$mediatree selection get]
+      set selection [$mediatree selection]
       if {[llength $selection] > 0} {
 	set sourcefile [$mediatree itemcget [lindex $selection 0] -fullpath]
 	if {![file isfile $destfile]} {
@@ -1033,9 +1037,10 @@ namespace eval RolePlayingDB3 {
       set XML [read $shfp]
       close $shfp
       set temppath [::RolePlayingDB3::XMLContentEditor $parent.templevel%AUTO% \
-			-xml $XML -isnewobject no -dirtyvariable {} \
-			-filewidgethandler {}  -xmlfile {} \
-			-basedirectory $mapbundlemountpoint]
+                    -xml $XML -isnewobject no -dirtyvariable {} \
+                    -filewidgethandler {}  -xmlfile {} \
+                    -basedirectory $mapbundlemountpoint \
+                    -rootcontainer Level]
       set map [$temppath getElementWidgetById map]
       foreach s [lsort -dictionary [glob -nocomplain [file join $leveldir *.xml]]] {
 	if {[file tail $s] eq "levelinfo.xml"} {continue}
@@ -1156,35 +1161,33 @@ namespace eval RolePlayingDB3 {
       } else {
 	error "Neither -template nor a valid -leveldir was passed!"
       }
-      install banner using Label $win.banner \
+      install banner using ttk::label $win.banner \
 			-image $bannerImage -anchor w \
 			-background $bannerBackground
       pack $banner -fill x  
-      install toolbar using ButtonBox $win.toolbar -orient horizontal \
-						   -homogeneous no
+      install toolbar using ButtonBox $win.toolbar -orient horizontal
       pack $toolbar -fill x
-      $toolbar add -name newspace -text {New Space} \
+      $toolbar add ttk::button newspace -text {New Space} \
 				  -command [mymethod _newspace]
-      $toolbar add -name delspace -text {Delete Space} \
+      $toolbar add ttk::button delspace -text {Delete Space} \
 				  -command [mymethod _deletespace]
-      $toolbar add -name editspace -text {Edit Space} \
+      $toolbar add ttk::button editspace -text {Edit Space} \
 				   -command [mymethod _editspace]
-      install panes using PanedWindow $win.panes -side top
+      install panes using ttk::panedwindow $win.panes -orient horizontal
       pack $panes -fill both -expand yes
-      set sbpane [$panes add -weight 1]
       install spacetree using ::RolePlayingDB3::LabeledDirTree \
-		$sbpane.spacetree -showextension no -filepattern *.xml \
+		$panes.spacetree -showextension no -filepattern *.xml \
 				  -label "Spaces"
-      pack $spacetree -expand yes -fill both
-      set levelpane [$panes add -weight 5]
+      $panes add $spacetree -weight 1
       install levelframe using ::RolePlayingDB3::XMLContentEditor \
-			$levelpane.levelframe -xml $XML -isnewobject $isnew \
-					      -dirtyvariable [myvar isdirty] \
-					      -filewidgethandler [mymethod _filewidgethandler] \
-					      -xmlfile $xmlfile \
-					      -buttoncommand [mymethod _button] \
-					      -basedirectory $options(-mapbundlemountpoint)
-      pack $levelframe -fill both -expand yes
+            $panes.levelframe -xml $XML -isnewobject $isnew \
+            -dirtyvariable [myvar isdirty] \
+            -filewidgethandler [mymethod _filewidgethandler] \
+            -xmlfile $xmlfile \
+            -buttoncommand [mymethod _button] \
+            -basedirectory $options(-mapbundlemountpoint) \
+            -rootcontainer Level
+      $panes add $levelframe -weight 5
       $spacetree configure -directory $options(-leveldir)
       $self updatelevelmap
       set zoomtobutton [$levelframe getElementWidgetById zoomto]
@@ -1221,9 +1224,9 @@ namespace eval RolePlayingDB3 {
       }
       set spacexml [read $xmlfp]
       close $xmlfp
-      set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "X Coord"] 0]
-      set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "Y Coord"] 0]
-      set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "Color"] white]
+      set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml "X Coord" 0]
+      set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml "Y Coord" 0]
+      set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml "Color" white]
       foreach {xc yc} [$mapeditor scaleXY $X $Y 32] {break}
       $mapeditor drawspace $canvas $xc $yc $color 32 \
 			-tag "[file tail [file rootname $spacefile]]"
@@ -1240,7 +1243,7 @@ namespace eval RolePlayingDB3 {
     method updatelevelmap {} {
       set map [$levelframe getElementWidgetById map]
       $map delete all
-      foreach n [$spacetree nodes root] {
+      foreach n [$spacetree children {}] {
         set fullpath [$spacetree itemcget $n -fullpath]
 	if {[file tail $fullpath] eq "levelinfo.xml"} {
 	  continue
@@ -1250,9 +1253,9 @@ namespace eval RolePlayingDB3 {
 	}
 	set spacexml [read $xmlfp]
 	close $xmlfp
-	set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "X Coord"] 0]
-	set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "Y Coord"] 0]
-	set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [myproc _matchfield "Color"] white]
+	set X [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml "X Coord" 0]
+	set Y [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml "Y Coord" 0]
+	set color [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml "Color" white]
 	foreach {xc yc} [$options(-mapeditor) scaleXY $X $Y [expr {32 * $zoomfactor}]] {break}
 	$self drawspace $map $xc $yc $color [expr {32 * $zoomfactor}] \
 			-tag "[file tail [file rootname $fullpath]]"
@@ -1373,7 +1376,7 @@ namespace eval RolePlayingDB3 {
       if {[llength [glob -nocomplain -type f [file join $options(-leveldir) *.xml]]] == 1} {
 	return
       }
-      set selection [$spacetree selection get]
+      set selection [$spacetree selection]
       if {[llength $selection] > 0} {
 	set space [$spacetree itemcget [lindex $selection 0] -fullpath]
       } else {
@@ -1417,7 +1420,7 @@ namespace eval RolePlayingDB3 {
       if {[llength [glob -nocomplain -type f [file join $options(-leveldir) *.xml]]] == 1} {
 	return
       }
-      set selection [$spacetree selection get]
+      set selection [$spacetree selection]
       if {[llength $selection] > 0} {
 	set space [$spacetree itemcget [lindex $selection 0] -fullpath]
       } else {
@@ -1472,12 +1475,14 @@ namespace eval RolePlayingDB3 {
       $map bindcanvas <3>      [mymethod _cancelSelectPosition %W]
       $map bindcanvas <Escape> [mymethod _cancelSelectPosition %W]
       raise [winfo toplevel $win]
-      ::BWidget::grab set [winfo toplevel $win]
+      set oldgrab [grab current [winfo toplevel $win]]
+      grab set [winfo toplevel $win]
       set _positionSelected 0
-#      puts stderr "*** $self setspaceposition (before vwait): _positionSelected = $_positionSelected"
+      #puts stderr "*** $self setspaceposition (before vwait): _positionSelected = $_positionSelected"
       vwait [myvar _positionSelected]
-#      puts stderr "*** $self setspaceposition (after vwait): _positionSelected = $_positionSelected"
-      ::BWidget::grab release [winfo toplevel $win]
+      #puts stderr "*** $self setspaceposition (after vwait): _positionSelected = $_positionSelected"
+      grab release [winfo toplevel $win]
+      if {$oldgrab ne ""} {grab set $oldgrab}
       $map bindcanvas <Motion> {}
       $map bindcanvas <1>      {}
       $map bindcanvas <3>      {}
@@ -1506,8 +1511,8 @@ namespace eval RolePlayingDB3 {
 	}
 	set spacexml [read $xmlfp]
 	close $xmlfp
-	set Xother [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "X Coord"] 0]
-	set Yother [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml [list ::RolePlayingDB3::LevelEditor::_matchfield "Y Coord"] 0]
+	set Xother [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml "X Coord" 0]
+	set Yother [::RolePlayingDB3::XMLContentEditor ExtractTagValue $spacexml "Y Coord" 0]
 	if {$X == $Xother && $Y == $Yother} {
 	  return yes
 	}
@@ -1734,9 +1739,9 @@ namespace eval RolePlayingDB3 {
       set XML [read $shfp]
       close $shfp
       set temppath [::RolePlayingDB3::XMLContentEditor $parent.tempspace%AUTO% \
-			-xml $XML -isnewobject no -dirtyvariable {} \
-			-filewidgethandler {}  -xmlfile {} \
-			-basedirectory $mapbundlemountpoint]
+                    -xml $XML -isnewobject no -dirtyvariable {} \
+                    -filewidgethandler {}  -xmlfile {} \
+                    -rootcontainer Space -basedirectory $mapbundlemountpoint]
       drawspace [$temppath getElementWidgetById map] \
 		[$temppath getElementWidgetById itemlist] \
 		[$temppath getElementWidgetById exitlist] \
@@ -1821,24 +1826,24 @@ namespace eval RolePlayingDB3 {
       } else {
 	error "Neither -template nor a valid -spacefile was passed!"
       }
-      install banner using Label $win.banner \
+      install banner using ttk::label $win.banner \
 			-image $bannerImage -anchor w \
 			-background $bannerBackground  
       pack $banner -fill x
-      install toolbar using ButtonBox $win.toolbar -orient horizontal \
-						   -homogeneous no
+      install toolbar using ButtonBox $win.toolbar -orient horizontal
       pack $toolbar -fill x
-      $toolbar add -name positionspace -text {Set Space Position} \
+      $toolbar add ttk::button positionspace -text {Set Space Position} \
 				       -command [mymethod _setspaceposition] \
 				       -state disabled
       if {$isnew} {$toolbar itemconfigure 0 -state normal}
       install spaceframe using ::RolePlayingDB3::XMLContentEditor \
-			$win.spaceframe -xml $XML -isnewobject $isnew \
-					-dirtyvariable [myvar isdirty] \
-					-filewidgethandler [mymethod _filewidgethandler] \
-					-xmlfile $xmlfile \
-					-buttoncommand [mymethod _button] \
-					-basedirectory $options(-mapbundlemountpoint)
+            $win.spaceframe -xml $XML -isnewobject $isnew \
+            -dirtyvariable [myvar isdirty] \
+            -filewidgethandler [mymethod _filewidgethandler] \
+            -xmlfile $xmlfile \
+            -buttoncommand [mymethod _button] \
+            -basedirectory $options(-mapbundlemountpoint) \
+            -rootcontainer Space
       pack $spaceframe -fill both -expand yes
       set spacecanvas [$spaceframe getElementWidgetById map]
       set zoomtobutton [$spaceframe getElementWidgetById zoomto]
@@ -1932,14 +1937,14 @@ namespace eval RolePlayingDB3 {
 				[expr {$zoomfactor * 320}] \
 				-tag background
       foreach i [$itemlist items] {
-	set iData [$itemlist itemcget $i -data]
+	set iData [lindex [$itemlist itemcget $i -values] 1]
 	set xc [expr {$zoomfactor * [getFromAttrList X $iData 0]}]
 	set yc [expr {$zoomfactor * [getFromAttrList Y $iData 0]}]
 	set imfile [file join $mp [getFromAttrList imfile $iData]]
 	$spacecanvas create image $xc $yc -image [image create photo -file $imfile]
       }
       foreach e [$exitlist items] {
-	set eData [$exitlist itemcget $e -data]
+	set eData [lindex [$exitlist itemcget $e -values] 1]
 	set xc [expr {$zoomfactor * [getFromAttrList X $eData 0]}]
 	set yc [expr {$zoomfactor * [getFromAttrList Y $eData 0]}]
 	set imfile [file join $mp [getFromAttrList imfile $eData]]
@@ -1978,8 +1983,8 @@ namespace eval RolePlayingDB3 {
 			-cancel 1 -default 0 -modal local \
 			-parent [winfo toplevel $win] -side bottom \
 			-title "Add New Item" -transient yes
-      $_itemDialog add -name new    -text {Create}
-      $_itemDialog add -name cancel -text {Cancel}
+      $_itemDialog add new    -text {Create}
+      $_itemDialog add cancel -text {Cancel}
       set frame [$_itemDialog getframe]
       install i_nameLE using LabelEntry $frame.nameLE -label "Name:" \
 						    -labelwidth 10
@@ -2017,8 +2022,8 @@ namespace eval RolePlayingDB3 {
 			-cancel 1 -default 0 -modal local \
 			-parent [winfo toplevel $win] -side bottom \
 			-title "Add New Exit" -transient yes
-      $_exitDialog add -name new    -text {Create}
-      $_exitDialog add -name cancel -text {Cancel}
+      $_exitDialog add new    -text {Create}
+      $_exitDialog add cancel -text {Cancel}
       set frame [$_exitDialog getframe]
       install e_nameLE using LabelEntry $frame.nameLE -label "Name:" \
 						    -labelwidth 14
@@ -2049,15 +2054,12 @@ namespace eval RolePlayingDB3 {
 					-text "Exit to space:" -width 14
       pack $e_otherSpaceNameLF -fill x
       set e_otherSpaceNameLF_f [$e_otherSpaceNameLF getframe]
-      install e_otherSpaceNameE using Entry $e_otherSpaceNameLF_f.entry \
+      install e_otherSpaceNameE using ttk::entry $e_otherSpaceNameLF_f.entry \
 				-text $options(-spacefile)
       pack $e_otherSpaceNameE -side left -fill x -expand yes
-      install e_otherSpaceNameB using Button $e_otherSpaceNameLF_f.browse \
+      install e_otherSpaceNameB using ttk::button $e_otherSpaceNameLF_f.browse \
 				-command [mymethod _browseOtherSpace] \
-				-image [image create photo \
-						-file [file join \
-							$::BWIDGET::LIBRARY \
-							images openfold.gif]]
+				-image [IconImage image openfold]
       pack $e_otherSpaceNameB -side right
       install e_otherSpaceName_nameDialog \
 		using ::RolePlayingDB3::chroot_getFile \
@@ -2083,7 +2085,8 @@ namespace eval RolePlayingDB3 {
       set curfile [$e_otherSpaceNameE cget -text]
       set newfile [$e_otherSpaceName_nameDialog draw -initialfile "$curfile"]
       if {"$newfile" eq ""} {return}
-      $e_otherSpaceNameE configure -text "$newfile"
+      $e_otherSpaceNameE delete 0 end
+      $e_otherSpaceNameE insert end "$newfile"
     }
     method _addnewitem {} {
       set itemlist [$spaceframe getElementWidgetById itemlist]
@@ -2099,18 +2102,18 @@ namespace eval RolePlayingDB3 {
       insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$i_imfileFE cget -text]"] attrList
       insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$i_sheetFileFE cget -text]"] attrList
 #      puts stderr "*** $self _addnewitem: attrList = $attrList"
-      $itemlist insert end #auto -text "$descr" -data "$attrList"
+      $itemlist insert end -text "$descr" -values [list $descr "$attrList"]
       $self redrawspace
       set isdirty yes
       if {$needmediatreeupdated} {$options(-leveleditor) updatemediatree}
     }
     method _edititem {} {
       set itemlist [$spaceframe getElementWidgetById itemlist]
-      set selection [$itemlist selection get]
+      set selection [$itemlist selection]
       if {[llength $selection] < 1} {return}
       set index [lindex $selection 0]
-      set attrList [$itemlist itemcget $index -data]
-      set descr    [$itemlist itemcget $index -text]
+      set attrList [lindex [$itemlist itemcget $index -values] 1]
+      set descr    [lindex [$itemlist itemcget $index -values] 0]
       $_itemDialog itemconfigure 0 -text {Update}
       $i_nameLE configure -text "[getFromAttrList name $attrList]"
       $i_descrLE configure -text "$descr"
@@ -2127,7 +2130,7 @@ namespace eval RolePlayingDB3 {
       set needmediatreeupdated no
       insertOrReplaceInAttrList imfile [$self _filewidgethandler "[$i_imfileFE cget -text]"] attrList
       insertOrReplaceInAttrList sheet [$self _filewidgethandler "[$i_sheetFileFE cget -text]"] attrList
-      $itemlist itemconfigure $index -data $attrList
+      $itemlist itemconfigure $index -values [list $values $attrList]
       $itemlist itemconfigure $index -text $descr
       $self redrawspace
       set isdirty yes
@@ -2135,11 +2138,11 @@ namespace eval RolePlayingDB3 {
     }
     method _deleteitem {} {
       set itemlist [$spaceframe getElementWidgetById itemlist]
-      set selection [$itemlist selection get]
+      set selection [$itemlist selection]
       if {[llength $selection] < 1} {return}
       set index [lindex $selection 0]
-      set attrList [$itemlist itemcget $index -data]
-      set descr    [$itemlist itemcget $index -text]
+      set attrList [lindex [$itemlist itemcget $index -values] 1]
+      set descr    [lindex [$itemlist itemcget $index -values] 0]
       if {[tk_messageBox -type yesno -default no -icon question -parent $win \
 			 -message "Really delete $descr?"]} {
 	$itemlist delete $index
@@ -2164,7 +2167,7 @@ namespace eval RolePlayingDB3 {
       if {"$spacename" eq ""} {return}
       insertOrReplaceInAttrList otherspace "$spacename" attrList
 #      puts stderr "*** $self _addnewexit: attrList = $attrList"
-      $exitlist insert end #auto -text "$descr" -data "$attrList"
+      $exitlist insert end -text "$descr" -values [list $descr "$attrList"]
       $self redrawspace
       set isdirty yes
       if {$needmediatreeupdated} {$options(-leveleditor) updatemediatree}
@@ -2191,11 +2194,11 @@ namespace eval RolePlayingDB3 {
 #    }
     method _editexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
-      set selection [$exitlist selection get]
+      set selection [$exitlist selection]
       if {[llength $selection] < 1} {return}
       set index [lindex $selection 0]
-      set attrList [$exitlist itemcget $index -data]
-      set descr    [$exitlist itemcget $index -text]
+      set attrList [lindex [$exitlist itemcget $index -values] 1]
+      set descr    [lindex [$exitlist itemcget $index -values] 0]
       $_exitDialog itemconfigure 0 -text {Update}
       $e_nameLE configure -text "[getFromAttrList name $attrList]"
       $e_descrLE configure -text "$descr"
@@ -2218,18 +2221,18 @@ namespace eval RolePlayingDB3 {
       if {"$spacename" eq ""} {return}
       insertOrReplaceInAttrList otherspace "$spacename" attrList
 #      puts stderr "*** $self _editexit: attrList = $attrList"
-      $exitlist insert end #auto -text "$descr" -data "$attrList"
+      $exitlist insert end -text "$descr" -values [list $descr "$attrList"]
       $self redrawspace
       set isdirty yes
       if {$needmediatreeupdated} {$options(-leveleditor) updatemediatree}
     }
     method _deleteexit {} {
       set exitlist [$spaceframe getElementWidgetById exitlist]
-      set selection [$exitlist selection get]
+      set selection [$exitlist selection]
       if {[llength $selection] < 1} {return}
       set index [lindex $selection 0]
-      set attrList [$exitlist itemcget $index -data]
-      set descr    [$exitlist itemcget $index -text]
+      set attrList [lindex [$exitlist itemcget $index -values] 1]
+      set descr    [lindex [$exitlist itemcget $index -values] 0]
       if {[tk_messageBox -type yesno -default no -icon question -parent $win \
       			 -message "Really delete $descr?"]} {
 	$exitlist delete $index
@@ -2246,3 +2249,4 @@ namespace eval RolePlayingDB3 {
 }
 
 package provide RPGMapLevelSpace 1.0
+

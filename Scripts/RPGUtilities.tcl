@@ -47,6 +47,8 @@ package require ParseXML
 #package require LabelSelectColor
 package require LabelFrames
 package require pdf4tcl
+package require Dialog
+package require ButtonBox
 package require ScrollableFrame
 
 namespace eval RolePlayingDB3 {
@@ -88,13 +90,12 @@ namespace eval RolePlayingDB3 {
     component scroll
     component tree
     delegate option -label to hull as -text
-    delegate method * to tree except {cget configure xview yview insert delete
-				      move reorder itemconfigure itemcget 
-				      parent}
+    delegate method * to tree except {cget configure xview yview add insert 
+                                      delete move reorder item parent}
     delegate option * to tree except {-xscrollcommand -yscrollcommand}
     method itemcget {node option} {
       switch -glob -- $option {
-	-fullpath {return [$tree itemcget $node -data]}
+	-fullpath {return [$tree item $node -values]}
 	-dirnode  {return [$tree parent   $node]}
 	default {
 		error "Unsuported option $option, should be one of -fullpath or -dirnode"
@@ -112,9 +113,8 @@ namespace eval RolePlayingDB3 {
       foreach directory $sorteddirs {
 	regsub -all {[[:space:]]} "[file rootname [file tail $directory]]" {_} nodename
 #	puts stderr "*** [namespace which dirtree]: directory = $directory, nodename = $nodename"
-	set thisnode [$tree insert end "$parent" \
-			"$nodename#auto" \
-			-data "$directory" \
+	set thisnode [$tree insert "$parent" end  \
+			-values "$directory" \
 			-text "[file tail $directory]" \
 			-open $opendirs \
 			-image "$openfold"]
@@ -136,31 +136,30 @@ namespace eval RolePlayingDB3 {
 	} else {
 	  set text [file rootname [file tail $file]]
 	}
-	$tree insert end $parent \
-			"$nodename#auto" \
-			-data $file \
+	$tree insert $parent end \
+			-values $file \
 			-text "$text" \
 			-open no
       }
     }
     method redrawdirtree {} {
       if {"$options(-directory)" eq ""} {return}
-      $tree delete [$tree nodes root]
-      dirtree $tree root $options(-directory) $options(-filepattern) \
-			 $options(-showextension) $options(-sortfunction) \
-			 $options(-opendirs) $options(-nofiles)
+      $tree delete [$tree children {}]
+      dirtree $tree {} $options(-directory) $options(-filepattern) \
+            $options(-showextension) $options(-sortfunction) \
+            $options(-opendirs) $options(-nofiles)
     }
     constructor {args} {
       set options(-isnewobject) [from args -isnewobject]
       set options(-auto) [from args -auto]
       set options(-scrollbar) [from args -scrollbar]
       installhull using labelframe
-      install scroll using ScrolledWindow [$hull getframe].scroll \
+      install scroll using ScrolledWindow $win.scroll \
 					-auto $options(-auto) \
 					-scrollbar $options(-scrollbar)
       pack $scroll -fill both -expand yes
-      install tree using Tree [$scroll getframe].tree
-      pack $tree -fill both -expand yes
+      install tree using ttk::treeview [$scroll getframe].tree -show tree \
+            -selectmode browse
       $scroll setwidget $tree
       $self configurelist $args
     }
@@ -181,7 +180,6 @@ namespace eval RolePlayingDB3 {
 					-auto $auto -scrollbar $scrollbar
       pack $scroll -fill both -expand yes
       install canvas using canvas [$scroll getframe].canvas
-      pack $canvas -fill both -expand yes
       $scroll setwidget $canvas
       $self configurelist  $args
     }
@@ -193,20 +191,29 @@ namespace eval RolePlayingDB3 {
     component scroll
     component list
     delegate option * to list except {-xscrollcommand -yscrollcommand}
-    delegate method * to list except {cget configure xview yview}
+    delegate method * to list except {children item insert add cget configure 
+        xview yview children}
     option  -auto -readonly yes -default both \
 		  -type {snit::enum -values {none both vertical horizontal}}
     option  -scrollbar -readonly yes -default both \
-		  -type {snit::enum -values {none both vertical horizontal}}
+          -type {snit::enum -values {none both vertical horizontal}}
+    method items {} {return [$list children {}]}
+    method itemcget {item option} {
+        return [$list item $item $option]
+    }
+    method insert {where args} {
+        $list insert {} $where {*}$args
+    }
+    
     constructor {args} {
       set auto [from args -auto]
       set scrollbar [from args -scrollbar]
       install scroll using ScrolledWindow $win.scroll \
 					-auto $auto -scrollbar $scrollbar
       pack $scroll -fill both -expand yes
-      install list using ListBox [$scroll getframe].list \
-				-selectmode [from args -selectmode none]
-      pack $list -fill both -expand yes
+      install list using ttk::treeview [$scroll getframe].list \
+            -selectmode [from args -selectmode none] \
+            -show {} -columns {descr attrList} -displaycolumns {descr}
       $scroll setwidget $list
       $self configurelist  $args
     }
@@ -404,12 +411,19 @@ namespace eval RolePlayingDB3 {
       }
       if {"$options(-xmlfile)" ne ""} {$self recreateXML "$options(-xmlfile)"}
     }
+    destructor {
+        $parsedXML destroy
+    }
     method buildGUI {container frame} {
         foreach c [$container children] {
             $self makewidget $c $frame
         }
     }
-    
+    typevariable genindex 0
+    typemethod genname {class} {
+        incr genindex
+        return [format {%s%05d} $class $genindex]
+    }
     method makewidget {node parentframe} {
         # puts stderr "*** [list $self makewidget $node $parentframe]"
         set nodename [$node cget -tag]
@@ -492,7 +506,6 @@ namespace eval RolePlayingDB3 {
                             set widget LabelEntry
                             lappend widgetopts -editable no
                         } else {
-                            set bindscript [list bind <KeyPress> [mymethod setdirty]]
                             lappend widgetopts -modifycmd [mymethod setdirty]
                         }
                     }
@@ -562,8 +575,10 @@ namespace eval RolePlayingDB3 {
                     lappend packopts -expand $expand
                 }
                 if {[catch {set attrlist_array(selectmode)} selectmode]} {
-                    lappend widgetopts -selectmode single
+                    lappend widgetopts -selectmode browse
                 } else {
+                    if {$selectmode eq "single"} {set selectmode browse}
+                    if {$selectmode eq "multiple"} {set selectmode extended}
                     lappend widgetopts -selectmode $selectmode
                 }
                 set widget ::RolePlayingDB3::ScrolledList
@@ -601,6 +616,7 @@ namespace eval RolePlayingDB3 {
             }
             Bi {
                 set curnode $parentframe
+                set buttonname [$type genname button]
                 if {[winfo class $curnode] ne "ButtonBox"} {
                     error "Illformed XML: Bi nodes can only be children of ButtonBox nodes!"
                 }
@@ -613,7 +629,8 @@ namespace eval RolePlayingDB3 {
                     lappend widgetopts -text $nodename
                 }
                 if {![catch {set attrlist_array(name)} name]} {
-                    lappend widgetopts -name $name
+                    set buttonname [string tolower [regsub {[[:space:]]} $name {_}]]
+                    #lappend widgetopts -name $name
                 }
                 if {[catch {set attrlist_array(id)} id]} {
                     lappend widgetopts -command [mymethod bcmdmethod "$label"]
@@ -622,7 +639,7 @@ namespace eval RolePlayingDB3 {
                     lappend widgetopts -command [mymethod bcmdmethod "$id"]
                 }
                 #	  puts stderr "*** $self makewidget: curnode = $curnode, tag = $tag, widgetopts = $widgetopts"
-                set w [eval [list $curnode add] $widgetopts]
+                set w [eval [list $curnode add ttk::button $buttonname] $widgetopts]
                 if {"$id" ne ""} {
                     set idmap($id) $w
                 }
@@ -890,7 +907,20 @@ namespace eval RolePlayingDB3 {
             }
 	  }
 	}
-      }
+    }
+    typemethod ExtractTagValue {xmlstring name default} {
+        set result $default
+        set xml [ParseXML %AUTO% $xmlstring]
+        set fields [$xml getElementsByTagName Field]
+        foreach f $fields {
+            if {[$f attribute name] eq "$name"} {
+                set result [$f data]
+                break
+            }
+        }
+        $xml destroy
+        return $result
+    }
   }
   snit::macro ::RolePlayingDB3::GeneratePrintDialog {nameprefix additionalcomps createbody} {
     typecomponent _printdialog
@@ -1256,7 +1286,7 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       $win       configure -cursor watch
       update idletasks
 
-#      puts stderr "*** $self Update: selectPath = $selectPath"
+      # puts stderr "*** $self Update: selectPath = $selectPath"
 
       $iconList deleteall
       set dirs [lsort -dictionary -unique \
@@ -1265,7 +1295,7 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
 						    $selectPath] -type d \
 				-nocomplain *]]
 
-#      puts stderr "[list *** $self Update: dirs = $dirs]"
+      #puts stderr "[list *** $self Update: dirs = $dirs]"
       set dirList {}
       foreach d $dirs {
 	lappend dirList $d
@@ -1273,12 +1303,12 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       $iconList add $folderImage $dirList
       set list "."
       set dir ""
-#      puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
+      #puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
       foreach subdir [file split $selectPath] {
 	set dir [file join $dir $subdir]
 	lappend list $dir
       }
-#      puts stderr "[list *** $self Update: list = $list]"
+      #puts stderr "[list *** $self Update: list = $list]"
       $dirmenu delete 0 end
       set var [myvar selectPath]
       foreach path $list {
@@ -1488,6 +1518,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	  [file isdirectory [file join $options(-root) $initialdir]]} {
 	set selectFile $initialfile
 	set selectPath [file dirname $initialfile]
+        if {$selectPath eq "."} {set selectPath {}}
       }
       $entry delete 0 end
       $entry insert 0 $selectFile
@@ -1499,8 +1530,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	trace vdelete [myvar selectPath] [lindex $trace 0] [lindex $trace 1]
       }
       $dirmenubtn configure -textvariable {}
-#      puts stderr "*** method draw (after vwait): selectFilePath = $selectFilePath"
-#      puts stderr "*** method draw (after vwait): file join $options(-root) $selectFilePath = [file join $options(-root) $selectFilePath]"
+      #puts stderr "*** method draw (after vwait): selectFilePath = $selectFilePath"
+      #puts stderr "*** method draw (after vwait): file join $options(-root) $selectFilePath = [file join $options(-root) $selectFilePath]"
       if {"$selectFilePath" eq ""} {
 	return $selectFilePath
       } else {
@@ -1532,11 +1563,11 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	  	-icon warning
 	} else {
 	  cd $appPWD
-#	  puts stderr "*** $self ListInvoke: setting selectPath to $file"
+	  #puts stderr "*** $self ListInvoke: setting selectPath to $file"
 	  set selectPath $file
         }
       } else {
-#        puts stderr "*** $self ListInvoke: setting selectFile to $file"
+        #puts stderr "*** $self ListInvoke: setting selectFile to $file"
         set selectFile $file
         $self Done
       }
@@ -1567,18 +1598,19 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     }
     method UpDirCmd {} {
       if {"$selectPath" ne ""} {
-#	puts stderr "[list *** $self UpDirCmd: selectPath = $selectPath]"
-#	puts stderr "[list *** $self UpDirCmd: file dirname $selectPath = [file dirname $selectPath]]"
+	#puts stderr "[list *** $self UpDirCmd: selectPath = $selectPath]"
+	#puts stderr "[list *** $self UpDirCmd: file dirname $selectPath = [file dirname $selectPath]]"
         set selectPath [file dirname $selectPath]
+        if {$selectPath eq "."} {set selectPath {}}
       }
     }
     method OkCmd {} {
-#      puts stderr "*** $self OkCmd"
+      #puts stderr "*** $self OkCmd"
       set filenames {}
       foreach item [$iconList selection get] {
 	lappend filenames [$iconList get $item]
       }
-#      puts stderr "[list *** $self OkCmd: filenames = $filenames]"
+      #puts stderr "[list *** $self OkCmd: filenames = $filenames]"
       if {[llength $filenames] == 1} {
 	set filename [lindex $filenames 0]
 	set file [::tk::dialog::file::JoinFile $selectPath $filename]
@@ -1771,8 +1803,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       trace variable selectPath w [mymethod SetPath]
     }
     method SetPath {name1 name2 op} {
-#      puts stderr "*** $self SetPath $name1 $name2 $op"
-#      puts stderr "*** $self SetPath: winfo exists $win = [winfo exists $win]"
+      #puts stderr "*** $self SetPath $name1 $name2 $op"
+      #puts stderr "*** $self SetPath: winfo exists $win = [winfo exists $win]"
       if {[winfo exists $win]} {
 	$self UpdateWhenIdle
       }      
@@ -1803,6 +1835,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       $self UpdateWhenIdle
     }
     method Update {} {
+      #puts stderr "*** $self Update (enter)"
       if {![winfo exists $win]} {return}
       catch {unset updateId}
       set entCursor [$entry cget -cursor]
@@ -1811,7 +1844,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       $win       configure -cursor watch
       update idletasks
 
-#      puts stderr "*** $self Update: selectPath = $selectPath"
+      #puts stderr "*** $self Update: selectPath = $selectPath"
 
       $iconList deleteall
       set dirs [lsort -dictionary -unique \
@@ -1820,7 +1853,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 						    $selectPath] -type d \
 				-nocomplain *]]
 
-#      puts stderr "[list *** $self Update: dirs = $dirs]"
+      #puts stderr "[list *** $self Update: dirs = $dirs]"
       set dirList {}
       foreach d $dirs {
 	lappend dirList $d
@@ -1830,25 +1863,25 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       set cmd [list glob -tails -directory [file join $options(-root) \
 						    $selectPath] \
 			 -type {f b c l p s} -nocomplain]
-#      puts stderr "$self Update: filter = $filter"
+      #puts stderr "*** $self Update: filter = $filter"
       if {[string equal $filter *]} {
 	lappend cmd .* *
       } else {
 	eval [list lappend cmd] *$filter
       }
-#      puts stderr "$self Update: cmd = $cmd"
+      #puts stderr "*** $self Update: cmd = $cmd"
       set fileList [lsort -dictionary -unique [eval $cmd]]
-#      puts stderr "$self Update: fileList = $fileList"
+      #puts stderr "*** $self Update: fileList = $fileList"
       $iconList add $fileImage $fileList
 
-      set list "."
+      set list ""
       set dir ""
-#      puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
+      #puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
       foreach subdir [file split $selectPath] {
 	set dir [file join $dir $subdir]
 	lappend list $dir
       }
-#      puts stderr "[list *** $self Update: list = $list]"
+      #puts stderr "[list *** $self Update: list = $list]"
       $dirmenu delete 0 end
       set var [myvar selectPath]
       foreach path $list {
@@ -1865,6 +1898,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 
       $entry configure -cursor $entCursor
       $win       configure -cursor $dlgCursor
+      #puts stderr "*** $self Update (exit)"
     }
     method Done {{_selectFilePath ""}} {
       if {[string equal $_selectFilePath ""]} {

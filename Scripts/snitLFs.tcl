@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Wed Jul 10 16:07:16 2013
-#  Last Modified : <220504.1627>
+#  Last Modified : <220509.1210>
 #
 #  Description	
 #
@@ -378,6 +378,7 @@ snit::widget LabelSelectColor {
     component label
     component entry
     component browse
+    option -modifycmd -default ""
     delegate option * to entry except {-class -style}
     delegate option -label to label as -text
     delegate option -labelwidth to label as -width
@@ -406,7 +407,8 @@ snit::widget LabelSelectColor {
     constructor {args} {
         install label using ttk::label $win.label
         pack $label -side left
-        install entry using ttk::entry $win.entry
+        install entry using ttk::entry $win.entry \
+              -validatecommand [mymethod _triggerModify] -validate key
         pack $entry -side left -fill x -expand yes
         set bimage [from args -fileimage $palette]
         set options(-fileimage) $bimage
@@ -416,13 +418,23 @@ snit::widget LabelSelectColor {
         $self configurelist $args
         if {[$entry get] eq ""} {$entry insert end white}
     }
+    method bind {sequence script} {
+        bind $entry $sequence $script
+    }
     method _ColorPopup {} {
         set newcolor [tk_chooseColor -initialcolor "[$entry get]" \
                       -title $options(-title) -parent $win]
         if {"$newcolor" ne ""} {
             $entry delete 0 end
             $entry insert end "$newcolor"
+            $self _triggerModify
         }
+    }
+    method _triggerModify {} {
+        if {"$options(-modifycmd)" ne ""} {
+            uplevel #0 "$options(-modifycmd)"
+        }
+        return true
     }
 }
     

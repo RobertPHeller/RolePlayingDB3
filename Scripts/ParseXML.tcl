@@ -316,7 +316,7 @@ snit::type ParseXML {
     $p free
   } 
   destructor {
-      $rootnode destroy
+      if {$rootnode ne ""} {$rootnode destroy}
   }
   method _elementstart {tag attrlist args} {
     ## @privatesection Callback called at the start of of XML element.
