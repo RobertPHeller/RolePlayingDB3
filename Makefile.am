@@ -56,28 +56,22 @@ RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages) $(AllHelpDep)
 if MACOSX
 # create application for Mac OSX
 	-rm -rf RolePlayingDB3.app
+	mkdir -p RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset
 	mkdir -p RolePlayingDB3.app/Contents/MacOS/
 	cp RolePlayingDB3$(EXEEXT) RolePlayingDB3.app/Contents/MacOS/
-	-rm -rf RolePlayingDB3.iconset
-	mkdir RolePlayingDB3.iconset
-	sips -z 16 16     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_16x16.png
-	sips -z 32 32     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_16x16@2x.png
-	sips -z 32 32     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_32x32.png
-	sips -z 64 64     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_32x32@2x.png
-	sips -z 128 128   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_128x128.png
-	sips -z 256 256   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_128x128@2x.png
-	sips -z 256 256   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_256x256.png
-	sips -z 512 512   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_256x256@2x.png
-	sips -z 512 512   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_512x512.png
-	sips -z 1024 1024 $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_512x512@2x.png
-	iconutil -c icns RolePlayingDB3.iconset
-	-rm -rf RolePlayingDB3.iconset
-	mkdir -p RolePlayingDB3.app/Contents/Resources/
-	cp RolePlayingDB3.icns RolePlayingDB3.app/Contents/Resources/
-	$(TCLKIT) $(top_srcdir)/BuildScripts/MacOSXPlist.kit RolePlayingDB3 1.0 "1994,1995,2002-2005  Robert Heller D/B/A Deepwoods Software"
-	plutil -convert binary1 -o RolePlayingDB3.app/Contents/Info.plist \
-		RolePlayingDB3.plist
-	-rm -f RolePlayingDB3.plist RolePlayingDB3.icns
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 16x16 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_16x16.png 
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 32x32 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_16x16@2x.png
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 32x32 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_32x32.png
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 64x64 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_32x32@2x.png
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 128x128 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_128x128.png
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 256x256 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_128x128@2x.png
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 256x256 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_256x256.png
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 512x512 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_256x256@2x.png
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 512x512 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_512x512.png
+	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 1024x1024 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_512x512@2x.png
+	$(TCLKIT) $(top_srcdir)/BuildScripts/MacOSXPlist.kit RolePlayingDB3 1.0 "1994,1995,2002-2005,2022  Robert Heller D/B/A Deepwoods Software"
+	cp RolePlayingDB3.plist RolePlayingDB3.app/Contents/Info.plist
+	-rm -f RolePlayingDB3.plist
 
 install-exec-local: RolePlayingDB3.app
 	$(INSTALL) -d $(DESTDIR)$(bindir)

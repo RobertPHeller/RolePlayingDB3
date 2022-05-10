@@ -114,8 +114,7 @@ AC_PATH_PROGS(UNZIP,unzip)
 AC_MSG_CHECKING([Checking target tclkit])
 case $target_os in 
   macos | darwin*) 
-    AC_SUBST(TCLKITRUN, "ERROR")
-    AC_MSG_NOTICE([Unsupported target os for tclkit])
+    AC_SUBST(TCLKITRUN, tclkit-8.6.11-Darwin-Img1.4.13)
     AC_SUBST(NEED_APP_BUNDLE,[true])
     ;;
   linux-gnu*)
@@ -139,9 +138,9 @@ case $target_os in
      AC_SUBST(NEED_APP_BUNDLE,[false])
      ;;
 
-   mingw32* | winnt | windows* | cygwin)
-     AC_SUBST(TCLKITRUN, ERROR)
-     AC_MSG_NOTICE([Unsupported target os for tclkit])
+   mingw* | winnt | windows* | cygwin)
+     AC_SUBST(TCLKITRUN, tclkit-8.6.11-WIN64-Img1.4.13.exe)
+     AC_MSG_NOTICE([Only supporting 64-bit!])
      AC_SUBST(NEED_APP_BUNDLE,[false])
      AC_SUBST(EXEEXT, .exe)
      ;;
@@ -153,13 +152,13 @@ esac
 AC_MSG_RESULT(TCLKITRUN is [$TCLKITRUN])
 
 AM_CONDITIONAL(MACOSX, test x${NEED_APP_BUNDLE} = xtrue)
+AC_PATH_PROG(CONVERT,convert,/bin/true)
 
 
 AC_MSG_CHECKING([Checking build tclkit])
 case $build_os in 
   macos | darwin*) 
-    AC_SUBST(TCLKITBSRC, ERROR)
-    AC_MSG_NOTICE([Unsupported build os for tclkit])
+    AC_SUBST(TCLKITBSRC, tclkit-8.6.11-Darwin-Img1.4.13)
     AC_SUBST(BEXEEXT, )
     ;;
   linux-gnu)
@@ -183,10 +182,10 @@ case $build_os in
      esac
      ;;
 
-   mingw32 | winnt | windows* | cygwin)
+   mingw* | winnt | windows* | cygwin)
      AC_SUBST(BEXEEXT, .exe)
-     AC_SUBST(TCLKITBSRC, ERROR)
-     AC_MSG_NOTICE([Unsupported build os for tclkit])
+     AC_SUBST(TCLKITBSRC, tclkit-8.6.11-WIN64-Img1.4.13.exe)
+     AC_MSG_NOTICE([Only supporting 64-bit])
      ;;
    *) 
      AC_MSG_ERROR([Unsupported Operating System: $build_os])
