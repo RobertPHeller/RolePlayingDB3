@@ -247,6 +247,7 @@ AWK = @AWK@
 BEXEEXT = @BEXEEXT@
 BIBTEX = @BIBTEX@
 BUILD_DIR = @BUILD_DIR@
+CONVERT = @CONVERT@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DOXYGEN = @DOXYGEN@
@@ -987,28 +988,22 @@ RolePlayingDB3$(EXEEXT): $(AllScripts) $(AllImages) $(AllHelpDep)
 	-rm -rf RolePlayingDB3.vfs RolePlayingDB3.kit
 # create application for Mac OSX
 @MACOSX_TRUE@	-rm -rf RolePlayingDB3.app
+@MACOSX_TRUE@	mkdir -p RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset
 @MACOSX_TRUE@	mkdir -p RolePlayingDB3.app/Contents/MacOS/
 @MACOSX_TRUE@	cp RolePlayingDB3$(EXEEXT) RolePlayingDB3.app/Contents/MacOS/
-@MACOSX_TRUE@	-rm -rf RolePlayingDB3.iconset
-@MACOSX_TRUE@	mkdir RolePlayingDB3.iconset
-@MACOSX_TRUE@	sips -z 16 16     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_16x16.png
-@MACOSX_TRUE@	sips -z 32 32     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_16x16@2x.png
-@MACOSX_TRUE@	sips -z 32 32     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_32x32.png
-@MACOSX_TRUE@	sips -z 64 64     $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_32x32@2x.png
-@MACOSX_TRUE@	sips -z 128 128   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_128x128.png
-@MACOSX_TRUE@	sips -z 256 256   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_128x128@2x.png
-@MACOSX_TRUE@	sips -z 256 256   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_256x256.png
-@MACOSX_TRUE@	sips -z 512 512   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_256x256@2x.png
-@MACOSX_TRUE@	sips -z 512 512   $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_512x512.png
-@MACOSX_TRUE@	sips -z 1024 1024 $(srcdir)/RolePlayingDB3.png --out RolePlayingDB3.iconset/icon_512x512@2x.png
-@MACOSX_TRUE@	iconutil -c icns RolePlayingDB3.iconset
-@MACOSX_TRUE@	-rm -rf RolePlayingDB3.iconset
-@MACOSX_TRUE@	mkdir -p RolePlayingDB3.app/Contents/Resources/
-@MACOSX_TRUE@	cp RolePlayingDB3.icns RolePlayingDB3.app/Contents/Resources/
-@MACOSX_TRUE@	$(TCLKIT) $(top_srcdir)/BuildScripts/MacOSXPlist.kit RolePlayingDB3 1.0 "1994,1995,2002-2005  Robert Heller D/B/A Deepwoods Software"
-@MACOSX_TRUE@	plutil -convert binary1 -o RolePlayingDB3.app/Contents/Info.plist \
-@MACOSX_TRUE@		RolePlayingDB3.plist
-@MACOSX_TRUE@	-rm -f RolePlayingDB3.plist RolePlayingDB3.icns
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 16x16 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_16x16.png 
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 32x32 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_16x16@2x.png
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 32x32 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_32x32.png
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 64x64 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_32x32@2x.png
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 128x128 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_128x128.png
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 256x256 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_128x128@2x.png
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 256x256 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_256x256.png
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 512x512 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_256x256@2x.png
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 512x512 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_512x512.png
+@MACOSX_TRUE@	$(CONVERT) $(srcdir)/RolePlayingDB3.png -resize 1024x1024 RolePlayingDB3.app/Contents/Resources/RolePlayingDB3.iconset/icon_512x512@2x.png
+@MACOSX_TRUE@	$(TCLKIT) $(top_srcdir)/BuildScripts/MacOSXPlist.kit RolePlayingDB3 1.0 "1994,1995,2002-2005,2022  Robert Heller D/B/A Deepwoods Software"
+@MACOSX_TRUE@	cp RolePlayingDB3.plist RolePlayingDB3.app/Contents/Info.plist
+@MACOSX_TRUE@	-rm -f RolePlayingDB3.plist
 
 @MACOSX_TRUE@install-exec-local: RolePlayingDB3.app
 @MACOSX_TRUE@	$(INSTALL) -d $(DESTDIR)$(bindir)

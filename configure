@@ -590,6 +590,7 @@ SYSTEMVERSION
 SED
 BEXEEXT
 TCLKITBSRC
+CONVERT
 MACOSX_FALSE
 MACOSX_TRUE
 EXEEXT
@@ -3089,10 +3090,8 @@ done
 $as_echo_n "checking Checking target tclkit... " >&6; }
 case $target_os in
   macos | darwin*)
-    TCLKITRUN="ERROR"
+    TCLKITRUN=tclkit-8.6.11-Darwin-Img1.4.13
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Unsupported target os for tclkit" >&5
-$as_echo "$as_me: Unsupported target os for tclkit" >&6;}
     NEED_APP_BUNDLE=true
 
     ;;
@@ -3122,11 +3121,11 @@ $as_echo "$as_me: Unsupported target os for tclkit" >&6;}
 
      ;;
 
-   mingw32* | winnt | windows* | cygwin)
-     TCLKITRUN=ERROR
+   mingw* | winnt | windows* | cygwin)
+     TCLKITRUN=tclkit-8.6.11-WIN64-Img1.4.13.exe
 
-     { $as_echo "$as_me:${as_lineno-$LINENO}: Unsupported target os for tclkit" >&5
-$as_echo "$as_me: Unsupported target os for tclkit" >&6;}
+     { $as_echo "$as_me:${as_lineno-$LINENO}: Only supporting 64-bit!" >&5
+$as_echo "$as_me: Only supporting 64-bit!" >&6;}
      NEED_APP_BUNDLE=false
 
      EXEEXT=.exe
@@ -3148,16 +3147,55 @@ else
   MACOSX_FALSE=
 fi
 
+# Extract the first word of "convert", so it can be a program name with args.
+set dummy convert; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_CONVERT+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $CONVERT in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CONVERT="$CONVERT" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_CONVERT="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_path_CONVERT" && ac_cv_path_CONVERT="/bin/true"
+  ;;
+esac
+fi
+CONVERT=$ac_cv_path_CONVERT
+if test -n "$CONVERT"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CONVERT" >&5
+$as_echo "$CONVERT" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking Checking build tclkit" >&5
 $as_echo_n "checking Checking build tclkit... " >&6; }
 case $build_os in
   macos | darwin*)
-    TCLKITBSRC=ERROR
+    TCLKITBSRC=tclkit-8.6.11-Darwin-Img1.4.13
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Unsupported build os for tclkit" >&5
-$as_echo "$as_me: Unsupported build os for tclkit" >&6;}
 
     ;;
   linux-gnu)
@@ -3185,13 +3223,13 @@ $as_echo "$as_me: Unsupported build os for tclkit" >&6;}
      esac
      ;;
 
-   mingw32 | winnt | windows* | cygwin)
+   mingw* | winnt | windows* | cygwin)
      BEXEEXT=.exe
 
-     TCLKITBSRC=ERROR
+     TCLKITBSRC=tclkit-8.6.11-WIN64-Img1.4.13.exe
 
-     { $as_echo "$as_me:${as_lineno-$LINENO}: Unsupported build os for tclkit" >&5
-$as_echo "$as_me: Unsupported build os for tclkit" >&6;}
+     { $as_echo "$as_me:${as_lineno-$LINENO}: Only supporting 64-bit" >&5
+$as_echo "$as_me: Only supporting 64-bit" >&6;}
      ;;
    *)
      as_fn_error $? "Unsupported Operating System: $build_os" "$LINENO" 5

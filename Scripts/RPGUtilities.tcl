@@ -442,6 +442,9 @@ namespace eval RolePlayingDB3 {
         }
         switch -exact [string totitle $nodename] {
             Li {
+                set curnode $parentframe
+                $curnode insert end -text $widgetdata \
+                      -values [list $widgetdata $attrlist]
                 return {}
             }
             Field {
@@ -582,7 +585,6 @@ namespace eval RolePlayingDB3 {
                     lappend widgetopts -selectmode $selectmode
                 }
                 set widget ::RolePlayingDB3::ScrolledList
-                #	  puts stderr "*** $self makewidget: widget = $widget, widgetopts = $widgetopts"
             }
             Button {
                 set widget Button
@@ -681,7 +683,7 @@ namespace eval RolePlayingDB3 {
         #	puts stderr "*** $self makewidget: wname = $wname, $wname cget -selectmode = [$wname cget -selectmode]"
         #      }
         #      puts stderr "*** $self makewidget: winfo exists $wname = [winfo exists $wname]"
-        if {"$widget" eq "FileEntry" || 
+        if {"$widget" eq "FileEntry" ||
             "$widget" eq "::RolePlayingDB3::Graphic"} {
             set fileWidgets($wname) true
         }
@@ -699,7 +701,6 @@ namespace eval RolePlayingDB3 {
             $self makewidget $c $wname
         }
     }
-    
     method recreateXML {file} {
       if {[catch {open $file w} shfp]} {
 	tk_messageBox -type ok -icon error -message "Internal error: cannot create $file: $shfp"
@@ -707,8 +708,34 @@ namespace eval RolePlayingDB3 {
       }
       puts $shfp {<?xml version="1.0" ?>}
       foreach w [array names _widgets] {
-          if {[catch {$w setdata [$_widgets($w) cget -text]}]} {
-              puts stderr "$_widgets($w) cget -text failed: [winfo class $_widgets($w)]"
+          switch [winfo class $_widgets($w)] {
+              ScrolledList {
+                  # lists
+                  set parentnode $_xmlnodes($_widgets($w))
+                  foreach c [$parentnode children] {
+                      $parentnode removeChild $c
+                      $c destroy
+                  }
+                  foreach item [$_widgets($w) items] {
+                      lassign [$_widgets($w) itemcget $item -values] descr attrlist
+                      set child [SimpleDOMElement create %AUTO% \
+                                 -tag Li \
+                                 -attributes $attrlist \
+                                 -opts [list -namespace http://www.deepsoft.com/roleplayingdb/v3xmlns]]
+                      $child setdata $descr
+                      $parentnode addchild $child
+                  }
+              }
+              ButtonBox -
+              ScrolledCanvas {
+                  # nothing here
+              }
+              default {
+                  # everything else should just a text data of some sort
+                  if {[catch {$w setdata [$_widgets($w) cget -text]}]} {
+                      puts stderr "$_widgets($w) cget -text failed: [winfo class $_widgets($w)]"
+                  }
+              }
           }
       }
       #$self _recreateXML_processNodesAt $editframe $shfp
@@ -740,7 +767,6 @@ namespace eval RolePlayingDB3 {
     }
     proc _fitString {pdfobj line twidth} {
         regexp -indices {([[:space:]]+)|$} $line wordend
-        
         while {[$pdfobj getStringWidth [string range $line 0 \
                                         [expr {[lindex $wordend 0] -1}]]] < \
                   $twidth} {
@@ -833,27 +859,29 @@ namespace eval RolePlayingDB3 {
 	      }
 	      default {
 		set text  $data
-#		puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
+                #puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
 		if {$pageno < 1 || [expr {$lineno * 14}] > [lindex [$pdfobj getDrawableArea] 1]} {
 		  $self newPDFPage $pdfobj $heading "$subheading"
 		}
 		$pdfobj text "$label: $text" -x $indent
 		$pdfobj newLine
 		incr lineno
-#		puts stderr "*** $self _outputXMLToPDF_processNodesAt: lineno = $lineno (after Other field)"
+                #puts stderr "*** $self _outputXMLToPDF_processNodesAt: lineno = $lineno (after Other field)"
 	      }
 	    }
 	  }
 	  List {
-	    foreach li [$_widgets($node) items] {
-	      set text [$_widgets($node) itemcget $li -text]
-	      if {$pageno < 1 || [expr {$lineno * 14}] > [lindex [$pdfobj getDrawableArea] 1]} {
-		$self newPDFPage $pdfobj "$heading" "$subheading"
-	      }
-	      $pdfobj text "$text" -x $indent
-	      $pdfobj newLine
-	      incr lineno
-	    }
+              foreach c [$node children] {
+                  set text [$c data]
+                  #puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
+                  if {$pageno < 1 || [expr {$lineno * 14}] > [lindex [$pdfobj getDrawableArea] 1]} {
+                      $self newPDFPage $pdfobj $heading "$subheading"
+                  }
+                  $pdfobj text " * $text" -x $indent
+                  $pdfobj newLine
+                  incr lineno
+                  #puts stderr "*** $self _outputXMLToPDF_processNodesAt: lineno = $lineno (after List element)"
+              }
 	  }
 	  Canvas {
 	    set dheight [expr {[lindex [$pdfobj getDrawableArea] 1] - ($lineno * 14)}]
@@ -885,7 +913,7 @@ namespace eval RolePlayingDB3 {
 	    set lines [expr {int(ceil(double($height) / 14.0))+2}]
 	    for {set i 0} {$i < $lines} {incr i} {$pdfobj newLine}
 	    incr lineno $lines
-	  }
+          }
 	  Button -
 	  Buttonbox {
 	  }
@@ -952,8 +980,7 @@ namespace eval RolePlayingDB3 {
 					  -values [::pdf4tcl::getPaperSizeList]]
       pack $papersizeLCB -fill x
       $papersizeLCB set [lindex [$papersizeLCB cget -values] 0]
-    } "$nameprefix" createPrintDialogBody 
-    
+    } "$nameprefix" createPrintDialogBody
     append createPrintDialogBody $createbody
     typemethod createPrintDialog {} $createPrintDialogBody
     typemethod drawPrintDialog {args} {
@@ -971,7 +998,6 @@ namespace eval RolePlayingDB3 {
 					    -file  [$printfileFE  get] \
 					    -margin 36]
           ::RolePlayingDB3::PrintDialog printprogress start
-
 	}
 	1 {
 	  set result {}
@@ -980,12 +1006,10 @@ namespace eval RolePlayingDB3 {
       return $result
     }
   }
-
   snit::type PrintDialog {
     pragma -hastypedestroy no
     pragma -hasinstances no
     pragma -hastypeinfo no
-
     typecomponent _printProgressDialog
     typecomponent   printprogressPageNoLE
     typeconstructor {
@@ -1030,7 +1054,6 @@ namespace eval RolePlayingDB3 {
       $printprogressPageNoLE configure -text "$pageno"
       update idle
     }
-      
     typemethod {printprogress end} {} {
         $_printProgressDialog itemconfigure dismis -state normal
         grab release $_printProgressDialog
@@ -1086,7 +1109,6 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
     component   entry
     component   okButton
     component   cancelButton
-
     variable selectPath {}
     variable updateId
     variable selectFilePath
@@ -1153,13 +1175,12 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       $self configurelist $args
       set initialdir $options(-initialdir)
       set initdirpathtype [file pathtype $initialdir]
-      if {"$initdirpathtype" eq "absolute" || 
+      if {"$initdirpathtype" eq "absolute" ||
 	  "$initdirpathtype" eq "volumerelative"} {
 	set initialdir [eval [linsert [lrange \
 					[file split $options(-initialdir)] \
 					1 end] \
 				      0 file join]]
-				      
       }
       if {[winfo viewable [winfo toplevel $options(-parent)]]} {
 	wm transient $win $options(-parent)
@@ -1275,7 +1296,7 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
 	$self UpdateWhenIdle
 	$entry delete 0 end
 	$entry insert end $selectPath
-      }      
+      }
     }
     method Update {} {
       if {![winfo exists $win]} {return}
@@ -1285,16 +1306,13 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
       $entry configure -cursor watch
       $win       configure -cursor watch
       update idletasks
-
       # puts stderr "*** $self Update: selectPath = $selectPath"
-
       $iconList deleteall
       set dirs [lsort -dictionary -unique \
 			[glob -tails \
 			      -directory [file join $options(-root) \
 						    $selectPath] -type d \
 				-nocomplain *]]
-
       #puts stderr "[list *** $self Update: dirs = $dirs]"
       set dirList {}
       foreach d $dirs {
@@ -1387,7 +1405,6 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     component     typeMenu
     component   okButton
     component   cancelButton
-    
     variable selectPath {}
     variable selectFile {}
     variable updateId
@@ -1474,22 +1491,19 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
       set initialfile $options(-initialfile)
       if {"$initialdir" eq ""} {set initialdir [file dirname $initialfile]}
       set initdirpathtype [file pathtype $initialdir]
-      if {"$initdirpathtype" eq "absolute" || 
+      if {"$initdirpathtype" eq "absolute" ||
 	  "$initdirpathtype" eq "volumerelative"} {
 	set initialdir [eval [linsert [lrange \
 					[file split $options(-initialdir)] \
 					1 end] \
 				      0 file join]]
-				      
       }
       set initialfile [file join $initialdir [file tail $initialfile]]
-
       if {[winfo viewable [winfo toplevel $options(-parent)]]} {
 	wm transient $win $options(-parent)
       }
       trace variable [myvar selectPath] w [mymethod SetPath]
       $dirmenubtn configure -textvariable [myvar selectPath]
-
       # Initialize the file types menu
       #
       if {[llength $options(-filetypes)]} {
@@ -1508,7 +1522,6 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
 	$typeMenuBtn configure -state disabled -takefocus 0
 	$typeMenuBtn configure -state disabled
       }
-
       set previousEntryText ""
       $self UpdateWhenIdle
       ::tk::PlaceWindow $win widget $options(-parent)
@@ -1729,11 +1742,8 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
     #	a subdirectory name
     #
     method ResolveFile {context text defaultext} {
-
       set appPWD [pwd]
-
       set path [::tk::dialog::file::JoinFile $context $text]
-
       # If the file has no extension, append the default.  Be careful not
       # to do this for directories, otherwise typing a dirname in the box
       # will give back "dirname.extension" instead of trying to change dir.

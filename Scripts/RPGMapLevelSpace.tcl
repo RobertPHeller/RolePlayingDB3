@@ -455,7 +455,7 @@ namespace eval RolePlayingDB3 {
         set filename [file tail $srcfile]
         if {$fssrc(type) ne "directory"} {
             file copy $srcfile $destdir
-            #file stat [file join $destdir $filename] fs
+            file stat [file join $destdir $filename] fs
             #puts stderr "*** _copyCreateRPGdirsHelper: [file join $destdir $filename]: $fs(size) bytes"
         } else {
             set files [glob -nocomplain [file join $srcfile *]]
@@ -2220,8 +2220,9 @@ namespace eval RolePlayingDB3 {
       set spacename "[$e_otherSpaceNameE cget -text]"
       if {"$spacename" eq ""} {return}
       insertOrReplaceInAttrList otherspace "$spacename" attrList
-#      puts stderr "*** $self _editexit: attrList = $attrList"
-      $exitlist insert end -text "$descr" -values [list $descr "$attrList"]
+      #puts stderr "*** $self _editexit: attrList = $attrList"
+      $exitlist itemconfigure $index -text "$descr" 
+      $exitlist itemconfigure $index -values [list $descr "$attrList"]
       $self redrawspace
       set isdirty yes
       if {$needmediatreeupdated} {$options(-leveleditor) updatemediatree}
