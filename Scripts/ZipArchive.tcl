@@ -61,15 +61,24 @@ snit::type ZipArchive {
   method addToStream {stream fin fout} {
     set offset $written
     if {[file isdirectory $fin]} {
-      set data ""
-      append fout "/"
-      set datacompresed [string range [::vfs::zip -mode compress $data] 2 end-4]
+        set data ""
+        if {[string index $fout end] ne "/"} {append fout "/"}
+        set datacompresed ""
+        set compressionMethod 0
+        set mode 0040744
     } else {
-      set fdata [open $fin r]
-      fconfigure $fdata -encoding binary -translation binary
-      set data [read $fdata]
-      set datacompresed [string range [::vfs::zip -mode compress $data] 2 end-4]
-      close $fdata
+        set fdata [open $fin r]
+        fconfigure $fdata -encoding binary -translation binary
+        set data [read $fdata]
+        close $fdata
+        if {$data eq ""} {
+            set datacompresed {}
+            set compressionMethod 0
+        } else {
+            set datacompresed [string range [::vfs::zip -mode compress $data] 2 end-4]
+            set compressionMethod 8
+        }
+        set mode 0100744
     }
 
     binary scan \x04\x03\x4B\x50 I LFH_SIG
@@ -83,7 +92,7 @@ snit::type ZipArchive {
     $self writeShort $stream 0
     incr written 4
 
-    $self writeShort $stream 8
+    $self writeShort $stream $compressionMethod
     incr written 2
 
     # last mod. time and date
@@ -121,7 +130,7 @@ snit::type ZipArchive {
     puts -nonewline $stream $datacompresed
     incr written $csize
 
-    return [list $offset $dosTime $crc $csize $size]
+    return [list $offset $dosTime $crc $csize $size $mode]
   }
 
   method createFile {file args} {
@@ -139,8 +148,8 @@ snit::type ZipArchive {
     set cdOffset $written
 
     foreach {fin fout} $files desc $descriptionList {
-      foreach {offset dosTime crc csize size} $desc {}
-      $self writeCentralFileHeader $ostream $fin $fout $offset $dosTime $size $csize $crc
+      lassign $desc offset dosTime crc csize size mode
+      $self writeCentralFileHeader $ostream $fin $fout $offset $dosTime $size $csize $crc $mode
     }
 
     set cdLength [expr {$written - $cdOffset}]
@@ -203,19 +212,20 @@ snit::type ZipArchive {
 		     ($minute << 5) | ($secound >> 1)}]
     return $value
   }
-  method writeCentralFileHeader {ostream fin fout offset dosTime size csize crc} {
+  method writeCentralFileHeader {ostream fin fout offset dosTime size csize crc mode} {
     # CFH 0X02014B50L
     binary scan \x02\x01\x4B\x50 I CFH_SIG
     $self writeLong $ostream $CFH_SIG
     incr written 4
 
-    if {$::tcl_platform(platform) eq "windows"} {
-        # unix
-        set pid 5
-    } else {
-        # windows
-        set pid 11
-    }
+    set pid 3
+    #if {$::tcl_platform(platform) eq "windows"} {
+    #    # unix
+    #    set pid 5
+    #} else {
+    #    # windows
+    #    set pid 11
+    #}
     $self writeShort $ostream [expr { (($pid << 8) | 20)}]
     incr written 2
 
@@ -227,7 +237,11 @@ snit::type ZipArchive {
     incr written 4
 
     # compression method
-    $self writeShort $ostream 8
+    if {$size == $csize && $size == 0} {
+        $self writeShort $ostream 0;# Zero length files (and directories) -- Stored
+    } else {
+        $self writeShort $ostream 8;# Deflate for everything else
+    }
     incr written 2
 
     # last mod. time and date
@@ -267,7 +281,7 @@ snit::type ZipArchive {
     incr written 2
 
     # external file attributes
-    $self writeLong $ostream 0
+    $self writeLong $ostream [expr {$mode << 16}]
     incr written 4
 
     # relative offset of LFH
