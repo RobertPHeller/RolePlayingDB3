@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sat May 7 13:39:32 2022
-#  Last Modified : <220517.1334>
+#  Last Modified : <220517.1656>
 #
 #  Description	
 #
@@ -419,7 +419,8 @@ namespace eval ::vfs::rpg {
             if {$dirent eq ""} {::vfs::rpg::fail  ENOENT}
             if {$mode == 0} {return}
             set fmode [$dirent Mode]
-            if {(($mode >> 6) & $fmode) == 0} {::vfs::rpg::fail EACCES}
+            #puts stderr [format {*** %s::_access: mode = 0%o, fmode = 0%o} $self $mode $fmode]
+            if {($mode & ($fmode >> 6)) == 0} {::vfs::rpg::fail EACCES}
         }
         method _createdirectory {newdire} {
             ## Implements mkdir.
