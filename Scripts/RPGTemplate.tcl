@@ -36,9 +36,9 @@
 #* 
 
 package require vfs::zip
-package require vfs::mk4
+package require vfs::rpg
 package require ZipArchive
-package require xml
+package require ParseXML
 #package require BWLabelComboBox
 package require LabelFrames
 package require RPGUtilities
@@ -130,9 +130,9 @@ namespace eval RolePlayingDB3 {
 					-parent . -side bottom \
 					-title "Edit Template" \
 					-transient yes]
-      $_editDialog add -name new    -text {Create}
-      $_editDialog add -name open   -text {Open}
-      $_editDialog add -name cancel -text {Cancel}
+      $_editDialog add new    -text {Create}
+      $_editDialog add open   -text {Open}
+      $_editDialog add cancel -text {Cancel}
       pack [message [$_editDialog getframe].message \
 			-text "Create a new Template file or\nopen an existing Template file?" \
 			-aspect 500] -fill both
@@ -172,7 +172,7 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::mk4::Mount $tempfile /$path
+      vfs::rpg::Mount $tempfile /$path
       foreach theclass {Character Dressing Monster Spell Treasure TrickTrap} {
 	file mkdir [file join /$path $theclass]
         close [open [file join /$path $theclass flag] w]
@@ -214,6 +214,24 @@ namespace eval RolePlayingDB3 {
 			-class TemplateEditor]
       $newTop openold "$currentFilename"
     }
+    proc _copyTemplateTreeHelper {srcfile destdir} {
+        #puts stderr "*** _copyTemplateTreeHelper $srcfile $destdir"
+        file stat $srcfile fssrc
+        #puts stderr "*** _copyTemplateTreeHelper: $srcfile $fssrc(size) bytes, type: $fssrc(type)"
+        set filename [file tail $srcfile]
+        if {$fssrc(type) ne "directory"} {
+            file copy $srcfile $destdir
+            file stat [file join $destdir $filename] fs
+            #puts stderr "*** _copyTemplateTreeHelper: [file join $destdir $filename]: $fs(size) bytes"
+        } else {
+            set files [glob -nocomplain [file join $srcfile *]]
+            file mkdir [file join $destdir $filename]
+            foreach f $files {
+                _copyTemplateTreeHelper $f [file join $destdir $filename]
+            }
+        }
+    }
+    
     method openold {_filename} {
       set path [$type genname]
       set tempfile [file join $::RolePlayingDB3::TmpDir $path]
@@ -221,17 +239,14 @@ namespace eval RolePlayingDB3 {
 	set path [$type genname]
 	set tempfile [file join $::RolePlayingDB3::TmpDir $path]
       }
-      vfs::mk4::Mount $tempfile /$path
+      vfs::rpg::Mount $tempfile /$path
       set currentFilename $_filename
       set currentBaseFilename [file tail $currentFilename]
       $sidebartree configure -label "$currentBaseFilename"
       set inpath [$type genname]
       vfs::zip::Mount $currentFilename $inpath
       foreach classDir {Character Dressing Monster Spell Treasure TrickTrap} {
-        if {[catch {file copy [file join $inpath $classDir] /$path}]} {
-	  file mkdir /$path $classDir
-	  close [open [file join /$path $classDir flag] w]
-	}
+          _copyTemplateTreeHelper [file join $inpath $classDir] /$path
       }
 
 #      puts stderr "*** $self openold: files in $currentFilename ($inpath): [glob -nocomplain $inpath/*]"
@@ -306,9 +321,9 @@ namespace eval RolePlayingDB3 {
       ::RolePlayingDB3::PrintDialog printprogress setpageno $pageno
     }
     method _outputXMLToPDF_processNodesAt {heading subheading node pdfobj {indent 0}} {
-      foreach n [$templatetree nodes "$node"] {
+      foreach n [$templatetree children "$node"] {
 	if {[string is integer -strict $n]} {
-	  set subheading "[$templatetree itemcget "$n" -data]"
+	  set subheading "[$templatetree item "$n" -values]"
 	  set dheight [expr {[lindex [$pdfobj getDrawableArea] 1] - ($lineno * 14)}]
 #	  puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
 	  if {$pageno < 1 || $dheight < 28} {
@@ -321,7 +336,7 @@ namespace eval RolePlayingDB3 {
 #	  puts stderr "*** $self _outputXMLToPDF_processNodesAt: lineno = $lineno (after Container)"
 	  $pdfobj setFont 10 Courier
 	} else {
-	  set text [$templatetree itemcget "$n" -text]
+	  set text [$templatetree item "$n" -text]
 	  set dheight [expr {[lindex [$pdfobj getDrawableArea] 1] - ($lineno * 14)}]
 #	  puts stderr "*** $self _outputXMLToPDF_processNodesAt: pageno = $pageno, lineno = $lineno"
 	  if {$pageno < 1 || $dheight < 28} {
@@ -349,32 +364,31 @@ namespace eval RolePlayingDB3 {
       destroy [winfo toplevel $win]
     }
     constructor {args} {
-      install banner using Label $win.banner -image $bannerImage -anchor w \
+      install banner using ttk::label $win.banner -image $bannerImage -anchor w \
 				-background $bannerBackground
       pack $banner -fill x
-      install toolbar using ButtonBox $win.toolbar -orient horizontal \
-						   -homogeneous no
+      install toolbar using ButtonBox $win.toolbar -orient horizontal
       pack $toolbar -fill x
-      $toolbar add -name addtemp -text {Add Template} \
+      $toolbar add ttk::button addtemp -text {Add Template} \
 				 -command [mymethod _addtemplate]
-      $toolbar add -name deltemp -text {Delete Template}  \
+      $toolbar add ttk::button deltemp -text {Delete Template}  \
 				 -command [mymethod _deletetemplate]
-      $toolbar add -name addfield -text {Add Field or Container} \
+      $toolbar add ttk::button addfield -text {Add Field or Container} \
 				  -command [mymethod _addfield]
-      $toolbar add -name edittext -text {Edit Container Text} \
+      $toolbar add ttk::button edittext -text {Edit Container Text} \
 				  -command [mymethod _edittext]
-      $toolbar add -name delfield -text {Delete Field or Container} \
+      $toolbar add ttk::button delfield -text {Delete Field or Container} \
 				  -command [mymethod _deletefield]
-      $toolbar add -name editfield -text {Edit Field} \
+      $toolbar add ttk::button editfield -text {Edit Field} \
 				   -command [mymethod _editfield]
-      install panes using PanedWindow $win.panes -side top
+      install panes using ttk::panedwindow $win.panes -orient horizontal
       pack $panes -fill both -expand yes
-      set sbpane [$panes add -weight 1]
-      install sidebartree using ::RolePlayingDB3::LabeledDirTree $sbpane.sidebarname \
+      install sidebartree using ::RolePlayingDB3::LabeledDirTree $panes.sidebartree \
 				-showextension no -filepattern *.xml
-      pack $sidebartree -fill both -expand yes
-      $sidebartree bindText <Double-Button-1> [mymethod _openTemplate]
-      set tmppane [$panes add -weight 5]
+      $panes add $sidebartree -weight 1
+      $sidebartree binditem file <Double-Button-1> [mymethod _openTemplate]
+      set tmppane [ttk::frame $panes.tmppane]
+      $panes add $tmppane -weight 5
       install templatename using LabelEntry $tmppane.templatename \
 				-editable no -label "Open Template:" \
 				-textvariable [myvar currentTemplateName]
@@ -382,12 +396,16 @@ namespace eval RolePlayingDB3 {
       install templatesw using ScrolledWindow $tmppane.templatesw \
 						-scrollbar both -auto both
       pack $templatesw -fill both -expand yes
-      install templatetree using Tree [$templatesw getframe].templatetree
-      pack $templatetree -fill both -expand yes
+      install templatetree using ttk::treeview \
+            [$templatesw getframe].templatetree \
+            -columns {tag attlist} \
+            -displaycolumns {} \
+            -show tree \
+            -selectmode browse
       $templatesw setwidget $templatetree
-      $templatetree bindText $rightbuttonRelease  [mymethod _postItemMenu]
-      $templatetree bindText $middlebuttonPress   [mymethod _startMove %x %y]
-      $templatetree bindText $middlebuttonRelease [mymethod _endMove %x %y]
+      $templatetree tag bind item $rightbuttonRelease  [mymethod _postItemMenu %x %y]
+      $templatetree tag bind item $middlebuttonPress   [mymethod _startMove %x %y]
+      $templatetree tag bind item $middlebuttonRelease [mymethod _endMove %x %y]
       $self configurelist $args
 
       update
@@ -397,8 +415,8 @@ namespace eval RolePlayingDB3 {
 					-parent $win -side bottom \
 					-title "Add New Template" \
 					-transient yes
-      $_addNewTemplateDialog add -name add    -text {Add}
-      $_addNewTemplateDialog add -name cancel -text {Cancel}
+      $_addNewTemplateDialog add add    -text {Add}
+      $_addNewTemplateDialog add cancel -text {Cancel}
       set dframe [$_addNewTemplateDialog getframe]
       install newTemplateName using LabelEntry $dframe.newTemplateName \
 					-label "Name:" -labelwidth 6
@@ -409,7 +427,7 @@ namespace eval RolePlayingDB3 {
 					         Treasure TrickTrap Dressing} \
 					-editable no
       pack $newTemplateClass -fill x
-      $newTemplateClass setvalue first
+      $newTemplateClass set [lindex [$newTemplateClass cget -values] 0]
 
       #update
       install _addNewFieldDialog using Dialog [winfo toplevel $win].addNewFieldDialog \
@@ -418,8 +436,8 @@ namespace eval RolePlayingDB3 {
 					-parent $win -side bottom \
 					-title "Add New Field" \
 					-transient yes
-      $_addNewFieldDialog add -name add    -text {Add}
-      $_addNewFieldDialog add -name cancel -text {Cancel}
+      $_addNewFieldDialog add add    -text {Add}
+      $_addNewFieldDialog add cancel -text {Cancel}
       set dframe [$_addNewFieldDialog getframe]
       install newFieldName using LabelEntry $dframe.newFieldName \
 				-label "Name:" -labelwidth 10
@@ -431,7 +449,7 @@ namespace eval RolePlayingDB3 {
 					 {Long Text} {Graphic} {Document}
 					 {Container}}
       pack $newFieldType -fill x
-      $newFieldType setvalue first
+      $newFieldType set [lindex [$newFieldType cget -values] 0]
       install newFieldGenerator using LabelComboBox $dframe.newFieldGenerator \
 				-label "Generator:" -labelwidth 10 \
 				-editable yes \
@@ -439,13 +457,13 @@ namespace eval RolePlayingDB3 {
 					 1d8 2d8 3d8 4d8 5d8 1d10 2d10 3d10
 					 1d12 2d12 3d12 1d20 2d20}
       pack $newFieldGenerator -fill x
-      $newFieldGenerator setvalue first
+      $newFieldGenerator set [lindex [$newFieldGenerator cget -values] 0]
       install newFieldUpdatable using LabelComboBox $dframe.newFieldUpdatable \
 				-label "Updatable:" -labelwidth 10 \
 				-editable no \
 				-values {yes no}
       pack $newFieldUpdatable -fill x
-      $newFieldUpdatable setvalue first
+      $newFieldUpdatable set [lindex [$newFieldUpdatable cget -values] 0]
 
       install _editFieldDialog using Dialog [winfo toplevel $win].editFieldDialog \
 					-image $templateMonster \
@@ -453,8 +471,8 @@ namespace eval RolePlayingDB3 {
 					-parent $win -side bottom \
 					-title "Edit Field" \
 					-transient yes
-      $_editFieldDialog add -name add    -text {Update}
-      $_editFieldDialog add -name cancel -text {Cancel}
+      $_editFieldDialog add add    -text {Update}
+      $_editFieldDialog add cancel -text {Cancel}
       set dframe [$_editFieldDialog getframe]
       install theFieldName using LabelEntry $dframe.theFieldName \
 				-label "Name:" -labelwidth 10 \
@@ -466,7 +484,7 @@ namespace eval RolePlayingDB3 {
 				-values {{Whole Number} {Word / Short Phrase}
 					 {Long Text} {Graphic} {Document}}
       pack $theFieldType -fill x
-      $theFieldType setvalue first
+      $theFieldType set [lindex [$theFieldType cget -values] 0]
       install theFieldGenerator using LabelComboBox $dframe.theFieldGenerator \
 				-label "Generator:" -labelwidth 10 \
 				-editable yes \
@@ -474,13 +492,13 @@ namespace eval RolePlayingDB3 {
 					 1d8 2d8 3d8 4d8 5d8 1d10 2d10 3d10
 					 1d12 2d12 3d12 1d20 2d20}
       pack $theFieldGenerator -fill x
-      $theFieldGenerator setvalue first
+      $theFieldGenerator set [lindex [$theFieldGenerator cget -values] 0]
       install theFieldUpdatable using LabelComboBox $dframe.theFieldUpdatable \
 				-label "Updatable:" -labelwidth 10 \
 				-editable no \
 				-values {yes no}
       pack $theFieldUpdatable -fill x
-      $theFieldUpdatable setvalue first
+      $theFieldUpdatable set [lindex [$theFieldUpdatable cget -values] 0]
 
       #update
       install _editContainerTextDialog using \
@@ -490,8 +508,8 @@ namespace eval RolePlayingDB3 {
 				-parent $win -side bottom \
 				-title "Edit container text" \
 				-transient yes
-     $_editContainerTextDialog add -name update -text {Update}
-     $_editContainerTextDialog add -name cancel -text {Cancel}
+     $_editContainerTextDialog add update -text {Update}
+     $_editContainerTextDialog add cancel -text {Cancel}
      set dframe [$_editContainerTextDialog getframe]
      install containerText using LabelEntry $dframe.containerText \
 				-label "Text:" -labelwidth 5
@@ -544,7 +562,7 @@ namespace eval RolePlayingDB3 {
       }
     }
     variable templateFile {}
-    variable nodeStack {}
+    variable parsedxml {}
     method _openTemplate {thetemplate} {
       set templateFile [$sidebartree itemcget $thetemplate -fullpath]
       regsub "/$path/" [file rootname "$templateFile"] {} currentTemplateName
@@ -554,52 +572,45 @@ namespace eval RolePlayingDB3 {
       }
       set xml [read $fp]
       close $fp
-      $templatetree delete [$templatetree nodes root]
-      set p [xml::parser -elementstartcommand [mymethod _elementstart] \
-			 -elementendcommand   [mymethod _elementend] \
-			 -characterdatacommand [mymethod _characterdata]]
-      set nodeStack {root}
-      $p parse $xml
-      $p free
+      $templatetree delete [$templatetree children {}]
+      set parsedxml [ParseXML create %AUTO% $xml]
+      $self _populate_templatetree [lindex [$parsedxml children] 0] {}
     }
-    method _elementstart {tag attlist args} {
-      set nodename $tag
-      if {"$tag" eq "Field"} {
-	foreach {n v} $attlist {
-	  if {"$n" eq "name"} {set nodename "Field:$v"}
-	}
-	set open no
-      } else {
-	set open yes
-      }
-      set text "$nodename"
-      foreach {n v} $attlist {
-	if {"$n" ne "name" && "$v" ne ""} {
-	  append text " $n=\"$v\""
-	}
-      }
-      regsub -all {[[:space:]]} "$nodename" {_} nodename
-      set item [$templatetree insert end "[lindex $nodeStack end]" \
-			"${nodename}#auto" -text $text \
-			-data [list $tag $attlist $args] \
-			-open $open]
-      lappend nodeStack $item
-    }
-    method _elementend {tag args} {
-      set nodeStack [lrange $nodeStack 0 [expr {[llength $nodeStack] - 2}]]
-    }
-    method _characterdata {data} {
-      set data [string trim "$data"]
-      if {"$data" ne ""} {
-	$templatetree insert 0 "[lindex $nodeStack end]" #auto \
-			-text "$data" -data "$data"
-      }
+    method _populate_templatetree {node treenode} {
+        set tag [$node cget -tag]
+        set attlist [$node cget -attributes]
+        set data [string trim [$node data]]
+        set nodename $tag
+        if {"$tag" eq "Field"} {
+            foreach {n v} $attlist {
+                if {"$n" eq "name"} {set nodename "Field:$v"}
+            }
+            set open no
+        } else {
+            set open yes
+        }
+        set text "$nodename"
+        foreach {n v} $attlist {
+            if {"$n" ne "name" && "$v" ne ""} {
+                append text " $n=\"$v\""
+            }
+        }
+        regsub -all {[[:space:]]} "$nodename" {_} nodename
+        set treenode [$templatetree insert $treenode end -text $text -tag item \
+                      -values [list $tag $attlist] -open $open]
+        if {$data ne ""} {
+            $templatetree insert $treenode end -text $data \
+                  -values [list $data {}] -open no
+        }
+        foreach c [$node children] {
+            $self _populate_templatetree $c $treenode
+        }
     }
     method _addfield {{item {}} {menu {}}} {
       if {"$item" ne ""} {
 	set selected [list $item]
       } else {
-	set selected [$templatetree selection get]
+	set selected [$templatetree selection]
       }
       if {"$menu" ne ""} {
 	catch {$menu unpost}
@@ -612,7 +623,7 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set parent [lindex $selected 0]
-	  foreach {tag attrlist args} [$templatetree itemcget "$parent" -data] {break}
+	  foreach {tag attrlist args} [$templatetree item "$parent" -values] {break}
 	  if {"$tag" eq "Field"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Fields cannot be used as Containers!"
 	    return
@@ -695,11 +706,11 @@ namespace eval RolePlayingDB3 {
       return "$quoted"
     }
     method _processNodesAt {node fp {needxmlns yes} {indent {}}} {
-      foreach n [$templatetree nodes "$node"] {
+      foreach n [$templatetree children "$node"] {
 	if {[string is integer -strict $n]} {
-	  puts -nonewline $fp [quoteXML [$templatetree itemcget "$n" -data]]
+	  puts -nonewline $fp [quoteXML [$templatetree item "$n" -values]]
 	} else {
-	  foreach {tag attrlist args} [$templatetree itemcget "$n" -data] {break}
+	  foreach {tag attrlist args} [$templatetree item "$n" -values] {break}
 	  puts -nonewline $fp "$indent<rpgv3:$tag "
           if {$needxmlns} {
 	    puts -nonewline $fp "xmlns:rpgv3=\""
@@ -713,7 +724,7 @@ namespace eval RolePlayingDB3 {
 	    puts -nonewline $fp "$nn=\"[quoteXML $vv]\" "
 	  }
 	  if {"$tag" ne "Field" && 
-	      ([llength [$templatetree nodes "$n"]] > 0 || 
+	      ([llength [$templatetree children "$n"]] > 0 || 
 	       [llength $attrlist] == 0 ||
 	       ([llength $attrlist] == 2 && [lindex $attrlist 0] eq "name"))} {
 	    puts $fp ">"
@@ -729,7 +740,7 @@ namespace eval RolePlayingDB3 {
       if {"$item" ne ""} {
 	set selected [list $item]
       } else {
-	set selected [$templatetree selection get]
+	set selected [$templatetree selection]
       }
       if {"$menu" ne ""} {
 	catch {$menu unpost}
@@ -742,11 +753,11 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set thefield "[lindex $selected 0]"
-	  if {[$templatetree parent "$thefield"] eq "root"} {
+	  if {[$templatetree parent "$thefield"] eq ""} {
 	    tk_messageBox -parent $win -type ok -icon warning -message "This is the toplevel container and cannot be deleted!"
 	    return
 	  }
-	  if {[llength [$templatetree nodes "$thefield"]] > 0} {
+	  if {[llength [$templatetree children "$thefield"]] > 0} {
 	    tk_messageBox -parent $win -type ok -icon info -message "This container is not empty, please be very sure you want to delete it!"
 	  }
 	  set ans [tk_messageBox -parent $win -type yesno -icon question -message "Are you sure you want to delete $thefield?"]
@@ -764,7 +775,7 @@ namespace eval RolePlayingDB3 {
       if {"$item" ne ""} {
 	set selected [list $item]
       } else {
-	set selected [$templatetree selection get]
+	set selected [$templatetree selection]
       }
       if {"$menu" ne ""} {
 	catch {$menu unpost}
@@ -777,8 +788,8 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set thecontainer "[lindex $selected 0]"
-	  set t [$templatetree itemcget "$thecontainer" -text]
-	  set d [$templatetree itemcget "$thecontainer" -data]
+	  set t [$templatetree item "$thecontainer" -text]
+	  set d [$templatetree item "$thecontainer" -values]
 	  if {[string is integer -strict $thecontainer] && "$t" eq "$d"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added to text!"
 	    return
@@ -788,12 +799,12 @@ namespace eval RolePlayingDB3 {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added a Field!"
 	    return
 	  }
-	  set children [$templatetree nodes "$thecontainer"]
+	  set children [$templatetree children "$thecontainer"]
 	  set oldtext {}
 	  set oldnode {}
 	  foreach child $children {
 	    if {[string is integer -strict $child]} {
-	      set oldtext [$templatetree itemcget "$child" -data]
+	      set oldtext [$templatetree item "$child" -values]
 	      set oldnode $child
 	      break
 	    }
@@ -807,7 +818,7 @@ namespace eval RolePlayingDB3 {
 		if {"$newtext" eq ""} {
 		  $templatetree delete "$oldnode"
 		} else {
-		  $templatetree itemconfigure "$oldnode" -text "$newtext" \
+		  $templatetree item "$oldnode" -text "$newtext" \
 						       -data "$newtext"
 		}
 	      } elseif {"$newtext" ne ""} {
@@ -829,7 +840,7 @@ namespace eval RolePlayingDB3 {
       if {"$item" ne ""} {
 	set selected [list $item]
       } else {
-	set selected [$templatetree selection get]
+	set selected [$templatetree selection]
       }
       if {"$menu" ne ""} {
 	catch {$menu unpost}
@@ -842,8 +853,8 @@ namespace eval RolePlayingDB3 {
 	}
 	1 {
 	  set thefield "[lindex $selected 0]"
-	  set t [$templatetree itemcget "$thefield" -text]
-	  set d [$templatetree itemcget "$thefield" -data]
+	  set t [$templatetree item "$thefield" -text]
+	  set d [$templatetree item "$thefield" -values]
 	  if {[string is integer -strict "$thefield"] && "$t" eq "$d"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a field.  Text cannot be directly edited!"
 	    return
@@ -884,7 +895,7 @@ namespace eval RolePlayingDB3 {
 		  append text " $n=\"$v\""
 		}
 	      }
-	      $templatetree itemconfigure "$thefield" -text $text -data [list $tag $attrlist $args]
+	      $templatetree item "$thefield" -text $text -data [list $tag $attrlist $args]
 	      $self _regenerateXMLFromTree
 	    }
 	  }
@@ -906,8 +917,8 @@ namespace eval RolePlayingDB3 {
 	incr count
 	set mpath "$basepath$count"
       }
-      set t [$templatetree itemcget "$item" -text]
-      set d [$templatetree itemcget "$item" -data]
+      set t [$templatetree item "$item" -text]
+      set d [$templatetree item "$item" -values]
 #      puts stderr "*** $self _postItemMenu: item = $item, t = $t, d = $d"
       if {[string is integer -strict "$item"] && "$t" eq "$d"} {return};# Text
       foreach {tag attrlist args} $d {break}
@@ -951,7 +962,7 @@ namespace eval RolePlayingDB3 {
       $templatetree configure -cursor $oldCursor
       if {$toY != $fromY} {
 #	puts stderr "*** $self _endMove: toY = $toY, $fromY = $fromY"
-	set which [$templatetree find @$toX,$toY]
+	set which [$templatetree identify item $toX $toY]
 	if {"$which" eq ""} {
 	  tk_messageBox -type ok -icon info \
 		-message "Cannot move to nowhere"
@@ -974,7 +985,7 @@ namespace eval RolePlayingDB3 {
 	  return
         }
 	if {$myparent eq $hisparent} {
-	  set currentOrder [$templatetree nodes $hisparent]
+	  set currentOrder [$templatetree children $hisparent]
 	  set itemIndex [lsearch -exact $currentOrder $item]
 	  set newOrder [lreplace $currentOrder $itemIndex $itemIndex]
 	  set whichIndex [lsearch -exact $newOrder $which]
