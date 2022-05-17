@@ -117,7 +117,7 @@ namespace eval RolePlayingDB3 {
 			-values "$directory" \
 			-text "[file tail $directory]" \
 			-open $opendirs \
-			-image "$openfold"]
+			-image "$openfold" -tag directory]
 	dirtree $tree $thisnode $directory $pattern $showextension $sortfunction $opendirs $nofiles
       }
       if {$nofiles} {return}
@@ -137,9 +137,10 @@ namespace eval RolePlayingDB3 {
 	  set text [file rootname [file tail $file]]
 	}
 	$tree insert $parent end \
-			-values $file \
-			-text "$text" \
-			-open no
+              -values $file \
+              -text "$text" \
+              -open no \
+              -tag file
       }
     }
     method redrawdirtree {} {
@@ -148,6 +149,15 @@ namespace eval RolePlayingDB3 {
       dirtree $tree {} $options(-directory) $options(-filepattern) \
             $options(-showextension) $options(-sortfunction) \
             $options(-opendirs) $options(-nofiles)
+    }
+    method binditem {what sequence script} {
+        $tree tag bind $what $sequence [mymethod _bindHelper %x %y $script]
+    }
+    method _bindHelper {x y script} {
+        set item [$tree identify item $x $y]
+        if {$item ne {}} {
+            uplevel #0 "$script $item"
+        }
     }
     constructor {args} {
       set options(-isnewobject) [from args -isnewobject]
