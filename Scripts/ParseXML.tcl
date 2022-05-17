@@ -296,6 +296,7 @@ snit::type ParseXML {
   # @param _ Options. None at present.
   delegate method getElementsByTagName to rootnode
   delegate method getElementsById to rootnode
+  delegate method children to rootnode
   component rootnode
   ## @privatesection The (dummy) root node.
   variable nodeStack [list]
