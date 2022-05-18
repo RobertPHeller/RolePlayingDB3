@@ -307,7 +307,7 @@ namespace eval RolePlayingDB3 {
       $pdfobj setLineSpacing [expr {14.0 / 10.0}]
       set pageno 0
       set lineno 1000
-      $self _outputXMLToPDF_processNodesAt $heading {} root $pdfobj
+      $self _outputXMLToPDF_processNodesAt $heading {} {} $pdfobj
     }
     method newPDFPage {pdfobj heading subheading} {
       incr pageno
@@ -576,6 +576,9 @@ namespace eval RolePlayingDB3 {
       set parsedxml [ParseXML create %AUTO% $xml]
       $self _populate_templatetree [lindex [$parsedxml children] 0] {}
     }
+    variable _xmlnodes -array {}
+    variable _treenodes -array {}
+    variable _datanodes -array {}
     method _populate_templatetree {node treenode} {
         set tag [$node cget -tag]
         set attlist [$node cget -attributes]
@@ -596,14 +599,17 @@ namespace eval RolePlayingDB3 {
             }
         }
         regsub -all {[[:space:]]} "$nodename" {_} nodename
-        set treenode [$templatetree insert $treenode end -text $text -tag item \
-                      -values [list $tag $attlist] -open $open]
-        if {$data ne ""} {
-            $templatetree insert $treenode end -text $data \
-                  -values [list $data {}] -open no
+        set newtreenode [$templatetree insert $treenode end -text $text \
+                         -tag item -values [list $tag $attlist] -open $open]
+        set _xmlnodes($newtreenode) $node
+        set _treenodes($node) $newtreenode
+        if {"$tag" ne "Field"} {
+            set datanode [$templatetree insert $newtreenode end -text $data \
+                          -values [list $data {}] -open no]
+            set _datanodes($node) $datanode
         }
         foreach c [$node children] {
-            $self _populate_templatetree $c $treenode
+            $self _populate_templatetree $c $newtreenode
         }
     }
     method _addfield {{item {}} {menu {}}} {
@@ -670,12 +676,22 @@ namespace eval RolePlayingDB3 {
 		}
 	      }
 	      regsub -all {[[:space:]]} "$nodename" {_} nodename
-	      set newnode [$templatetree insert end "$parent" "${nodename}#auto" -text $text \
-		-data [list $tag  $attrlist \
-			    [list -namespace \
-				  http://www.deepsoft.com/roleplayingdb/v3xmlns]] \
-		-open yes]
+	      set newnode [$templatetree insert "$parent" end -text $text \
+		-values [list $tag  $attrlist] \
+		-open yes -tag item]
 	      $templatetree see "$newnode"
+              set newxmlnode [SimpleDOMElement create %AUTO% \
+                              -tag $tag -attributes $attrlist \
+                              -opts [list -namespace \
+                                     http://www.deepsoft.com/roleplayingdb/v3xmlns]]
+              $_xmlnodes($parent) addchild $newxmlnode
+              set _xmlnodes($newnode) $newxmlnode
+              set _treenodes($newxmlnode) $newnode
+              if {$tag ne "Field"} {
+                  set datanode [$templatetree insert $newnode end -text "" \
+                                -values [list {} {}] -open no]
+                  set _datanodes($newxmlnode) $datanode
+              }
 	      $self _regenerateXMLFromTree
 	    }
 	    1 {return}
@@ -688,54 +704,24 @@ namespace eval RolePlayingDB3 {
       }
     }
     method _regenerateXMLFromTree {} {
-      if {[catch {open $templateFile w} fp]} {
-	error "_regenerateXMLFromTree: open $templateFile w: $fp"
-	return
-      }
-      puts $fp {<?xml version="1.0" ?>}
-      $self _processNodesAt root $fp
-      close $fp
-      set isdirty yes
+        foreach item [array names _xmlnodes] {
+            set node $_xmlnodes($item)
+            lassign [$templatetree item $item -values] tag attributes
+            $node configure -attributes $attributes
+        }
+        foreach node [array names _datanodes] {
+            set item $_datanodes($node)
+            $node setdata [$templatetree item $item -text]
+        }
+        if {[catch {open $templateFile w} fp]} {
+            error "_regenerateXMLFromTree: open $templateFile w: $fp"
+            return
+        }
+        puts $fp {<?xml version="1.0" ?>}
+        $parsedxml displayTree $fp {} -addnamespace yes
+        close $fp
+        set isdirty yes
     }
-    proc quoteXML {text} {
-      regsub -all {&} $text   {\&amp;} quoted
-      regsub -all {<} $quoted {\&lt;} quoted
-      regsub -all {>} $quoted {\&gt;} quoted
-      regsub -all {'} $quoted {\&apos;} quoted
-      regsub -all {"} $quoted {\&quot;} quoted
-      return "$quoted"
-    }
-    method _processNodesAt {node fp {needxmlns yes} {indent {}}} {
-      foreach n [$templatetree children "$node"] {
-	if {[string is integer -strict $n]} {
-	  puts -nonewline $fp [quoteXML [$templatetree item "$n" -values]]
-	} else {
-	  foreach {tag attrlist args} [$templatetree item "$n" -values] {break}
-	  puts -nonewline $fp "$indent<rpgv3:$tag "
-          if {$needxmlns} {
-	    puts -nonewline $fp "xmlns:rpgv3=\""
-	    set namespace [lindex $args [expr {[lsearch -exact $args -namespace] + 1}]]
-	    puts -nonewline $fp "[quoteXML $namespace]"
-	    puts -nonewline $fp "\" "
-	    set needxmlns no
-	  }
-	  foreach {nn vv} $attrlist {
-	    if {"$vv" eq ""} {continue}
-	    puts -nonewline $fp "$nn=\"[quoteXML $vv]\" "
-	  }
-	  if {"$tag" ne "Field" && 
-	      ([llength [$templatetree children "$n"]] > 0 || 
-	       [llength $attrlist] == 0 ||
-	       ([llength $attrlist] == 2 && [lindex $attrlist 0] eq "name"))} {
-	    puts $fp ">"
-	    $self _processNodesAt $n $fp $needxmlns "$indent  "
-	    puts $fp "$indent</rpgv3:$tag>"
-	  } else {
-	    puts $fp "/>"
-	  }
-	}
-      }
-    }	  
     method _deletefield {{item {}} {menu {}}} {
       if {"$item" ne ""} {
 	set selected [list $item]
@@ -757,12 +743,16 @@ namespace eval RolePlayingDB3 {
 	    tk_messageBox -parent $win -type ok -icon warning -message "This is the toplevel container and cannot be deleted!"
 	    return
 	  }
-	  if {[llength [$templatetree children "$thefield"]] > 0} {
+	  if {[llength [$templatetree children "$thefield"]] > 1} {
 	    tk_messageBox -parent $win -type ok -icon info -message "This container is not empty, please be very sure you want to delete it!"
 	  }
-	  set ans [tk_messageBox -parent $win -type yesno -icon question -message "Are you sure you want to delete $thefield?"]
+	  set ans [tk_messageBox -parent $win -type yesno -icon question -message "Are you sure you want to delete [$_xmlnodes($thefield) attribute name]?"]
 	  if {"$ans" ne "yes"} {return}
-	    
+          set node $_xmlnodes($thefield)
+          set parent $_xmlnodes([$templatetree parent "$thefield"])
+          $self _clearmaps $node
+          $parent removeChild $node
+          $node destroy
 	  $templatetree delete "$thefield"
 	  $self _regenerateXMLFromTree
 	}
@@ -770,6 +760,17 @@ namespace eval RolePlayingDB3 {
 	  tk_messageBox -parent $win -type ok -icon info -message "Please select only one field or container to delete!"
 	}
       }
+    }
+    method _clearmaps {node} {
+        #puts stderr "*** ${self}::_clearmaps $node"
+        set thefield $_treenodes($node)
+        #puts stderr "*** ${self}::_clearmaps: thefield is $thefield"
+        unset _xmlnodes($thefield)
+        unset _treenodes($node)
+        catch {unset _datanodes($node)}
+        foreach c [$node children] {  
+            $self _clearmaps $c
+        }
     }
     method _edittext {{item {}} {menu {}}} {
       if {"$item" ne ""} {
@@ -787,49 +788,27 @@ namespace eval RolePlayingDB3 {
 	  return
 	}
 	1 {
-	  set thecontainer "[lindex $selected 0]"
-	  set t [$templatetree item "$thecontainer" -text]
-	  set d [$templatetree item "$thecontainer" -values]
-	  if {[string is integer -strict $thecontainer] && "$t" eq "$d"} {
-	    tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added to text!"
-	    return
-	  }
-	  foreach {tag attrlist args} $d {break}
-	  if {"$tag" eq "Field"} {
-	    tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added a Field!"
-	    return
-	  }
-	  set children [$templatetree children "$thecontainer"]
-	  set oldtext {}
-	  set oldnode {}
-	  foreach child $children {
-	    if {[string is integer -strict $child]} {
-	      set oldtext [$templatetree item "$child" -values]
-	      set oldnode $child
-	      break
-	    }
-	  }
-	  $containerText configure -text [string trim "$oldtext"]
-	  set ans [$_editContainerTextDialog draw]
-	  switch -exact $ans {
-	    0 {
-	      set newtext [string trim [$containerText cget -text]]
-	      if {"$oldnode" ne ""} {
-		if {"$newtext" eq ""} {
-		  $templatetree delete "$oldnode"
-		} else {
-		  $templatetree item "$oldnode" -text "$newtext" \
-						       -data "$newtext"
-		}
-	      } elseif {"$newtext" ne ""} {
-		$templatetree insert 0 "$thecontainer" #auto -text "$newtext" \
-							   -data "$newtext"
-	      }
-	    }
-	    1 {
-	    }
-	  }
-	  $self _regenerateXMLFromTree
+            set thecontainer "[lindex $selected 0]"
+            set node $_xmlnodes($thecontainer)
+            set datanode $_datanodes($node)
+            set t [$templatetree item $datanode -text]
+            set d [$templatetree item "$thecontainer" -values]
+            lassign $d tag attrlist
+            if {"$tag" eq "Field"} {
+                tk_messageBox -parent $win -type ok -icon info -message "Please select a container.  Text cannot be added a Field!"
+                return
+            }
+            $containerText configure -text [string trim "$t"]
+            set ans [$_editContainerTextDialog draw]
+            switch -exact $ans {
+                0 {
+                    set newtext [string trim [$containerText get]]
+                    $templatetree item $datanode -text $newtext
+                    $self _regenerateXMLFromTree
+                }
+                1 {
+                }
+            }
 	}
         default {
 	  tk_messageBox -parent $win -type ok -icon info -message "Please select only one container to text edit!"
@@ -858,8 +837,8 @@ namespace eval RolePlayingDB3 {
 	  if {[string is integer -strict "$thefield"] && "$t" eq "$d"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a field.  Text cannot be directly edited!"
 	    return
-	  }
-	  foreach {tag attrlist args} $d {break}
+          }
+          lassign $d tag attrlist
 	  if {"$tag" ne "Field"} {
 	    tk_messageBox -parent $win -type ok -icon info -message "Please select a field.  Only fields can be edited!"
 	    return
@@ -895,7 +874,7 @@ namespace eval RolePlayingDB3 {
 		  append text " $n=\"$v\""
 		}
 	      }
-	      $templatetree item "$thefield" -text $text -data [list $tag $attrlist $args]
+	      $templatetree item "$thefield" -text $text -data [list $tag $attrlist]
 	      $self _regenerateXMLFromTree
 	    }
 	  }
@@ -905,7 +884,8 @@ namespace eval RolePlayingDB3 {
 	}
       }
     }
-    method _postItemMenu {item} {
+    method _postItemMenu {x y} {
+      set item [$templatetree identify item $x $y]
       set postX [winfo pointerx $templatetree]
       set postY [winfo pointery $templatetree]
       regsub -all {[[:space:].]} "$item" {} mpath
@@ -921,7 +901,7 @@ namespace eval RolePlayingDB3 {
       set d [$templatetree item "$item" -values]
 #      puts stderr "*** $self _postItemMenu: item = $item, t = $t, d = $d"
       if {[string is integer -strict "$item"] && "$t" eq "$d"} {return};# Text
-      foreach {tag attrlist args} $d {break}
+      lassign $d tag attrlist
       menu $mpath -tearoff no
       set iscontainer [expr {"$tag" ne "Field"}]
 #      puts stderr "*** $self _postItemMenu: iscontainer = $iscontainer, tag = $tag"
@@ -942,44 +922,41 @@ namespace eval RolePlayingDB3 {
     variable fromX 
     variable fromY
     variable oldCursor
-    method _startMove {mx my item} {
+    method _startMove {mx my} {
       set fromX $mx
       set fromY $my
       set oldCursor [$templatetree cget -cursor]
       $templatetree configure -cursor crosshair
     }
-    method _endMove {mx my item} {
+    method _endMove {mx my} {
+      set item [$templatetree identify item $fromX $fromY]
       if {"$item" eq ""} {
 	return
-      }	
-      if {[string is integer -strict "$item"]} {
-	tk_messageBox -type ok -icon info \
-		-message "Cannot move caintainer text"
-	return
       }
+      
       set toX $mx
       set toY $my
       $templatetree configure -cursor $oldCursor
       if {$toY != $fromY} {
-#	puts stderr "*** $self _endMove: toY = $toY, $fromY = $fromY"
+	#puts stderr "*** $self _endMove: toY = $toY, $fromY = $fromY"
 	set which [$templatetree identify item $toX $toY]
 	if {"$which" eq ""} {
 	  tk_messageBox -type ok -icon info \
 		-message "Cannot move to nowhere"
 	  return
 	}
-#	puts stderr "*** $self _endMove: which = $which, item = $item"
+	#puts stderr "*** $self _endMove: which = $which, item = $item"
 	if {$which eq $item} {return}
 	set myparent [$templatetree parent $item]
-	if {"$myparent" eq "root"} {
+	if {"$myparent" eq ""} {
 	  tk_messageBox -type ok -icon info \
 		     -message "Cannot move sheet class container"
 	  return
         }
 
 	set hisparent [$templatetree parent $which]
-#	puts stderr "*** $self _endMove: myparent = $myparent, hisparent = $hisparent"
-	if {"$hisparent" eq "root"} {
+	#puts stderr "*** $self _endMove: myparent = $myparent, hisparent = $hisparent"
+	if {"$hisparent" eq ""} {
 	  tk_messageBox -type ok -icon info \
 		     -message "Cannot move fields or containers above sheet class container"
 	  return
@@ -990,9 +967,25 @@ namespace eval RolePlayingDB3 {
 	  set newOrder [lreplace $currentOrder $itemIndex $itemIndex]
 	  set whichIndex [lsearch -exact $newOrder $which]
 	  set newOrder [linsert $newOrder $whichIndex $item]
-	  $templatetree reorder $hisparent $newOrder
+	  $templatetree children $hisparent $newOrder
+          set hisxmlparent $_xmlnodes($hisparent)
+          set hissibs [$hisxmlparent children]
+          set me $_xmlnodes($item)
+          set myindex [lsearch -exact $hissibs $me]
+          set newsibs [lreplace $hissibs $myindex $myindex]
+          set hisindex  [lsearch -exact $newsibs $_xmlnodes($which)]
+          set newsibs [linsert $newsibs $hisindex $me]
+          $hisxmlparent replaceChildren $newsibs
 	} else {
-	  $templatetree move $hisparent $item [$templatetree index $which]
+          $templatetree move $hisparent $item [$templatetree index $which]
+          set me $_xmlnodes($item)
+          $_xmlnodes($myparent) removeChild $me
+          set him $_xmlnodes($which)
+          set hisxmlparent $_xmlnodes($hisparent)
+          set hissibs [$hisxmlparent children]
+          set hisindex  [lsearch -exact $hissibs $him]
+          set newsibs [linsert $hissibs $hisindex $me]
+          $hisxmlparent replaceChildren $newsibs
 	}
 	$self _regenerateXMLFromTree
       }

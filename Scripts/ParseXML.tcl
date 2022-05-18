@@ -82,14 +82,28 @@ snit::type SimpleDOMElement {
     }
   }
   destructor {
+      ## The destructor -- free up all memory by destroying all children.
+      
       foreach c $_children {
           catch {$c destroy}
       }
   }
   method children {} {
-    ## Method to return the elements children.
+    ## Method to return the element's children.
     # @return The children.
     return $_children
+  }
+  method replaceChildren {newchildren} {
+    ## Method to replace the element's children.
+    # @param newchildren The new children list.
+    # @returns The old children
+    # @throws Invalid type error if elements of newchildren are not 
+    # SimpleDOMElement objects.
+    foreach c $newchildren {
+        $type validate $c
+    }
+    set oldchildren $_children
+    set _children $newchildren
   }
   method addchild {childnode} {
     ## Method to add a child node.
@@ -127,11 +141,11 @@ snit::type SimpleDOMElement {
   
   set addnamespace [from args -addnamespace no]
   set ns_i [lsearch -exact $options(-opts) -namespace]
-  set ns {}
+  set nsprefix {}
   if {$ns_i >= 0} {
       set nsuri [lindex $options(-opts) [expr {$ns_i + 1}]]
       if {[info exists namespacedecls($nsuri)]} {
-          set ns "$namespacedecls($nsuri):"
+          set nsprefix "$namespacedecls($nsuri):"
       }
   }
   set nsdecl {}
@@ -146,20 +160,21 @@ snit::type SimpleDOMElement {
   }          
   
 
-#    puts stderr "*** $self display $indent"
+    #puts stderr "*** $self display $indent"
+    #puts stderr "*** $self display: options(-tag) is $options(-tag), nsprefix is $nsprefix"
     if {[llength $_children] > 0} {
-      puts $fp "$indent<$ns$options(-tag)${nsdecl}[_formattrlist $options(-attributes)]>"
-#      puts stderr "*** $self display: \[lindex \$_children 0\] = [lindex $_children 0]"
+      puts $fp "$indent<$nsprefix$options(-tag)${nsdecl}[_formattrlist $options(-attributes)]>"
+      #puts stderr "*** $self display: \[lindex \$_children 0\] = [lindex $_children 0]"
       if {$_data ne ""} {puts $fp [_quoteXML $_data]}
       foreach child $_children {
-#        puts stderr "*** $self display: child = $child"
+        #puts stderr "*** $self display: child = $child"
 	$child display $fp "$indent  "
       }
-      puts $fp "$indent</$ns$options(-tag)>"
+      puts $fp "$indent</$nsprefix$options(-tag)>"
     } elseif {$_data ne ""} {
-      puts $fp "$indent<$ns$options(-tag)[_formattrlist $options(-attributes)]>[_quoteXML $_data]</$ns$options(-tag)>"
+      puts $fp "$indent<$nsprefix$options(-tag)${nsdecl}[_formattrlist $options(-attributes)]>[_quoteXML $_data]</$nsprefix$options(-tag)>"
     } else {
-      puts $fp "$indent<$ns$options(-tag)[_formattrlist $options(-attributes)]/>"
+      puts $fp "$indent<$nsprefix$options(-tag)${nsdecl}[_formattrlist $options(-attributes)]/>"
     }
   }
   method attribute {attrname} {
@@ -247,7 +262,7 @@ snit::type SimpleDOMElement {
       return {}
   }
   proc _formattrlist {attrs} {
-    ## @provatesection Format a attribute list for inclusion in displayed XML.
+    ## @privatesection Format a attribute list for inclusion in displayed XML.
     # @param attrs The attribute list as a alterning list of names and values.
     # @return A formatted and escaped attribute list string.
     set result {}
@@ -271,7 +286,7 @@ snit::type SimpleDOMElement {
     return "$quoted"
   }
   typemethod validate {object} {
-      ## @brief Validation typemethod.
+      ## @publicsection @brief Validation typemethod.
       # Raises an error if its argument is not a SimpleDOMElement object.
       #
       # @param object The object to typecheck.
@@ -290,6 +305,9 @@ snit::type ParseXML {
   ## @brief Class to hold an XML tree.
   # This class parses an XML string and stores the result as a DOM Element 
   # tree.
+  #
+  # Inheirets methods getElementsByTagName, getElementsById, and children
+  # from SimpleDOMElement.
   #
   # @param name Generally \%\%AUTO\%\% is passed.
   # @param xml  The XML string.
@@ -317,6 +335,8 @@ snit::type ParseXML {
     $p free
   } 
   destructor {
+      ## The destructor -- free up memory by destroying the root node.
+      
       if {$rootnode ne ""} {$rootnode destroy}
   }
   method _elementstart {tag attrlist args} {
@@ -377,10 +397,18 @@ snit::type ParseXML {
       }
   }
   typevariable _topcontainer {}
+  ## @privatesection Temp variable.
   proc _tc_elementstart {tag args} {
+      ## Helper function for peeking into XML (TopContainer)
       if {$_topcontainer eq ""} {set _topcontainer $tag}
   }
   typemethod TopContainer {XML} {
+      ## @publicsection Static function to peek into XML to find the top 
+      # container.
+      #
+      # @param XML XML string.
+      # @returns The top container tag.
+      
       set p [xml::parser  -elementstartcommand [myproc _tc_elementstart]]
       set _topcontainer {}
       if {[catch {$p parse $XML} errormessage]} {
