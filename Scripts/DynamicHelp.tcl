@@ -1,39 +1,57 @@
-##############################################################################
-#
-#  System        : 
-#  Module        : 
-#  Object Name   : $RCSfile$
-#  Revision      : $Revision$
-#  Date          : $Date$
-#  Author        : $Author$
-#  Created By    : Robert Heller
-#  Created       : Thu May 16 09:05:46 2013
-#  Last Modified : <130516.1058>
-#
-#  Description	
-#
-#  Notes
-#
-#  History
-#	
-##############################################################################
-#
-#  Copyright (c) 2013 Deepwoods Software.
-# 
-#  All Rights Reserved.
-# 
-#  This  document  may  not, in  whole  or in  part, be  copied,  photocopied,
-#  reproduced,  translated,  or  reduced to any  electronic  medium or machine
-#  readable form without prior written consent from Deepwoods Software.
-#
-##############################################################################
+#*
+#*
+#*  System        : 
+#*  Module        : 
+#*  Object Name   : $RCSfile$
+#*  Revision      : $Revision$
+#*  Date          : $Date$
+#*  Author        : $Author$
+#*  Created By    : Robert Heller
+#*  Created       : Thu May 16 09:05:46 2013
+#*  Last Modified : <220523.1219>
+#*
+#*  Description	
+#*
+#*  Notes
+#*
+#*  History
+#*	
+#*	
+#*
+#*
+#*     Generic Project
+#*     Copyright (C) 2013  Robert Heller D/B/A Deepwoods Software
+#* 			51 Locke Hill Road
+#* 			Wendell, MA 01379-9728
+#* 
+#*     This program is free software; you can redistribute it and/or modify
+#*     it under the terms of the GNU General Public License as published by
+#*     the Free Software Foundation; either version 2 of the License, or
+#*     (at your option) any later version.
+#* 
+#*     This program is distributed in the hope that it will be useful,
+#*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#*     GNU General Public License for more details.
+#* 
+#*     You should have received a copy of the GNU General Public License
+#*     along with this program; if not, write to the Free Software
+#*     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#* 
+#*  
+#* 
 
+## @addtogroup TclCommon
+# @{
 
 package require Tk
 package require tile
 package require snit
 
 snit::macro DynamicHelp_include {type} {
+    ## Macro to add Dynamic Help
+    # Add options and support for Dynamic Help to widgets.
+    
     option -helptext -default "" -configuremethod _configurehelp
     option -helpvar  -default "" -configuremethod _configurehelp
     option -helptype -default $type \
@@ -55,24 +73,37 @@ snit::macro DynamicHelp_include {type} {
 }
 
 snit::type DynamicHelp {
+    ## Implements BWidget style Dynamic Help: balloon help and status 
+    # variable help displays
+    
     pragma -hastypeinfo    no
     pragma -hastypedestroy no
     pragma -hasinstances   no
     
     typevariable _registered -array {}
+    ## @privatesection Array of registered items with Dynamic Help.
     typevariable _canvases -array {}
+    ## Array of Dynamic Help canvases.
     typevariable _top     ".help_shell"
+    ## Help shell widget.
     typevariable _id      ""
+    ## Help id.
     typevariable _delay   600
+    ## Delay period.
     typevariable _current_balloon ""
+    ## Current balloon.
     typevariable _current_variable ""
+    ## Current variable.
     typevariable _saved
+    ## 
     typevariable _options -array {
         -delay 600
         -state "normal"
     }
+    ## Options array
     
     typeconstructor {
+        ## Type constructor: one time initaization.
         bind BwHelpBalloon <Enter>   [myproc _motion_balloon enter  %W %X %Y]
         bind BwHelpBalloon <Motion>  [myproc _motion_balloon motion %W %X %Y]
         bind BwHelpBalloon <Leave>   [myproc _motion_balloon leave  %W %X %Y]
@@ -92,6 +123,11 @@ snit::type DynamicHelp {
     }
 
     typemethod configure {args} {
+        ## @publicsection Set configuration options.
+        # @params ... Option value list: option value ...
+        # @arg -state configure new state value.
+        # @arg -delay configure new delay value.
+        
         foreach {option value} $args {
             switch $option {
                 -state {
@@ -110,6 +146,11 @@ snit::type DynamicHelp {
         }
     }
     typemethod register { path _type args } {
+        ## Register a new widget with help.
+        # @param path Widget path.
+        # @param _type Type of help (variable or balloon)
+        # @param ... Additional args (depends on type).
+        
         set len [llength $args]
         if {$_type == "balloon"  && $len > 1} { set _type canvasBalloon  }
         if {$_type == "variable" && $len > 2} { set _type canvasVariable }
@@ -208,6 +249,16 @@ snit::type DynamicHelp {
         return 1
     }
     typemethod add { path args } {
+        ## Add a path to the list of paths with Dynamic Help.
+        # @param path The widget path.
+        # @param ... Options:
+        # @arg -type The type of Dynamic Help.
+        # @arg -text The help text.
+        # @arg -item The menu item.
+        # @arg -index The item index.
+        # @arg -command The command.
+        # @arg -variable The variable.
+        
         array set data {
             -type     balloon
             -text     ""
@@ -270,10 +321,17 @@ snit::type DynamicHelp {
     }
     
     typemethod delete { path } {
+        ## Delete a path from Dynamic Help.
+        # @param path The widget path.
+        
         _unset_help $path
     }
     
     proc _add_bind_tag { path tag } {
+        ## @privatesection Add a bind tag.
+        # @param path The widget path.
+        # @param tag The bind tag to add.
+        
         set evt [bindtags $path]
         set idx [lsearch $evt $tag]
         set evt [lreplace $evt $idx $idx]
@@ -281,11 +339,19 @@ snit::type DynamicHelp {
         bindtags $path $evt
     }
     proc _add_balloon { path text } {
+        ## Add a Dynamic Help balloon.
+        # @param path The widget path.
+        # @param text The help text.
+        
         set _registered($path,balloon) $text
         _add_bind_tag $path BwHelpBalloon
     }
     proc _add_canvas_balloon { path text tagOrItem } {
-
+        ## Add a Dynamic Help canvas balloon.
+        # @param path The widget path.
+        # @param text The help text.
+        # @param tagOrItem The tag or item.
+        
         set _registered($path,$tagOrItem,balloon) $text
 
         if {![info exists _canvases($path,balloon)]} {
@@ -309,12 +375,21 @@ snit::type DynamicHelp {
     }
 
     proc _add_variable { path text varName } {
- 
+        ## Add a variable Dynamic Help.
+        # @param path The widget path.
+        # @param text The help text.
+        # @param varName The variable to get the help text.
+        
         set _registered($path,variable) [list $varName $text]
         _add_bind_tag $path BwHelpVariable
     }
     proc _add_canvas_variable { path text varName tagOrItem } {
-
+        ## Add a canvas variable Dynamic Help.
+        # @param path The widget path.
+        # @param text The help text.
+        # @param varName The variable to get the help text.
+        # @param tagOrItem The tag or item.
+        
         set _registered($path,$tagOrItem,variable) [list $varName $text]
 
         if {![info exists _canvases($path,variable)]} {
@@ -335,6 +410,10 @@ snit::type DynamicHelp {
         $path addtag BwHelpVariable withtag $tagOrItem
     }
     proc _clonename { menu } {
+        ## Clone a menu?
+        # @param menu A menu
+        # @returns a widget path.
+        
         set path     ""
         set menupath ""
         set found    0
@@ -351,7 +430,10 @@ snit::type DynamicHelp {
         return $path
     }
     proc _add_menu { path varName } {
-
+        ## Add a menu with Dynamic Help
+        # @param path The widget path.
+        # @param varName The variable to get the help text.
+        
         set cpath [_clonename $path]
         if { [winfo exists $cpath] } { set path $cpath }
 
@@ -361,7 +443,11 @@ snit::type DynamicHelp {
 
 
     proc _add_menuentry { path text index } {
-
+        ## Add menu entry to Dynamic Help.
+        # @param path The widget path.
+        # @param text The help text.
+        # @param index The menu index.
+        
         set idx  [lsearch $_registered($path) [list $index *]]
         set list [list $index $text]
         if { $idx == -1 } {
@@ -377,7 +463,13 @@ snit::type DynamicHelp {
     #  Command DynamicHelp::_motion_balloon
     # ----------------------------------------------------------------------------
     proc _motion_balloon { type path x y {isCanvasItem 0} } {
-
+        ## Balloon motion binding
+        # @param type One of enter, motion, leave, or button.
+        # @param path The widget path.
+        # @param x The screen X coord.
+        # @param y The screen Y coord.
+        # @param isCanvasItem Canvas item flag.
+        
         set w $path
         if {$isCanvasItem} { set path [_get_canvas_path $path balloon] }
 
@@ -404,10 +496,17 @@ snit::type DynamicHelp {
     }
     
     proc _global_setvar  { varName value } {
+        ## Set a global variable.
+        # @param varName The variable name.
+        # @param value The value.
+        
         return [uplevel \#0 [list set $varName $value]]
     }
     
     proc _global_getvar  { varName } {
+        ## Get a global variable.
+        # @param varName The variable name.
+        
         return [uplevel \#0 [list set $varName]]
     }
     
@@ -417,7 +516,10 @@ snit::type DynamicHelp {
     #  Command DynamicHelp::_motion_info
     # ----------------------------------------------------------------------------
     proc _motion_info { path {isCanvasItem 0} } {
-
+        ## Motion info binding.
+        # @param path The widget path.
+        # @param isCanvasItem Canvas item flag.
+        
         if {$isCanvasItem} { set path [_get_canvas_path $path variable] }
 
         if { $_current_variable != $path
@@ -439,7 +541,10 @@ snit::type DynamicHelp {
     #  Command DynamicHelp::_leave_info
     # ----------------------------------------------------------------------------
     proc _leave_info { path {isCanvasItem 0} } {
-
+        ## Leave info binding.
+        # @param path The widget path.
+        # @param isCanvasItem Canvas item flag.
+        
         if {$isCanvasItem} { set path [_get_canvas_path $path variable] }
 
         if { [info exists _registered($path,variable)] } {
@@ -457,7 +562,10 @@ snit::type DynamicHelp {
     #    under windows for menu.
     # ----------------------------------------------------------------------------
     proc _menu_info { event path } {
-
+        ## Menu info binding.
+        # @param event The event.
+        # @param path The widget path.
+        
         if { [info exists _registered($path)] } {
             set index   [$path index active]
             set varName [lindex $_registered($path) 0]
@@ -479,7 +587,11 @@ snit::type DynamicHelp {
     #  Command DynamicHelp::_show_help
     # ----------------------------------------------------------------------------
     proc _show_help { path w x y } {
-
+        ## Show Dynamic Help.
+        # @param w The widget path.
+        # @param x The screen X coordinate.
+        # @param y The screen Y coordinate.
+        
         if { $_options(-state) eq "disabled" } { return }
 
         if { [info exists _registered($path,balloon)] } {
@@ -547,7 +659,9 @@ snit::type DynamicHelp {
     #  Command DynamicHelp::_unset_help
     # ----------------------------------------------------------------------------
     proc _unset_help { path } {
-
+        ## Unset help.
+        # @param path The Widget path.
+        
         if {[info exists _registered($path)]} { unset _registered($path) }
         if {[winfo exists $path]} {
             set cpath [_clonename $path]
@@ -562,7 +676,11 @@ snit::type DynamicHelp {
     #  Command DynamicHelp::_get_canvas_path
     # ----------------------------------------------------------------------------
     proc _get_canvas_path { path type {item ""} } {
-
+        ## Get the canvas path.
+        # @param path The Widget path.
+        # @param type The type.
+        # @param item The item.
+        
         if {$item == ""} { set item [$path find withtag current] }
 
         ## Check the tags related to this item for the one that
@@ -583,5 +701,7 @@ ttk::style configure HelpBallon -background black -relief flat -borderwidth 1
 ttk::style configure HelpBallonLabel -relief flat -bd 0 -highlightthickness 0 \
       -padx 1 -pady 1 -foreground black -background "#FFFFC0" \
       -font "helvetica 8" -justify left
+
+## @}
 
 package provide DynamicHelp 1.0

@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sat May 7 13:39:32 2022
-#  Last Modified : <220517.1656>
+#  Last Modified : <220522.1038>
 #
 #  Description	
 #
@@ -40,14 +40,15 @@
 #
 #*****************************************************************************
 
-
+## @addtogroup RPGSupport
+# @{
 
 package require vfs
 package require snit
 
 
-namespace eval ::vfs::rpg {
-    ## @brief ::vfs::rpg Roleplaying Database temp filesystem
+namespace eval vfs::rpg {
+    ## Roleplaying Database temp filesystem.
     # This is an implementation of a simple Virtual Filesystem for internal use
     # by the Roleplaying Database program.  It stores the working version of
     # the RPG DB bundle which is normally stored as a ZIP file.  It is a basic
@@ -67,7 +68,7 @@ namespace eval ::vfs::rpg {
     snit::type RPGDirent {
         ## @brief A Directory Entry
         # Holds information about a file or directory.  Only the bare minimum
-        # information is kept: name, mod time, list of file (directories only),
+        # information is kept: name, mod time, list of files (directories only),
         # mode (permissions), offset (files only), and size (files only).
         #
         # Options:
@@ -104,8 +105,9 @@ namespace eval ::vfs::rpg {
         method SetSize {size} {set _size $size}
         constructor {name args} {
             ## Constructor: create a new direct.  Not normally called directly
-            # (see AddNewDirent).
+            # (see @ref AddNewDirent).
             #
+            # @param objname Should be passed as %AUTO%
             # @param name New filename
             # @param ... Options:
             # @arg -ftype File type.  Must be either "file" or "directory". 
@@ -236,6 +238,7 @@ namespace eval ::vfs::rpg {
             # system.  The root directory is set up.  If the backing file
             # already exists, the root directory is read in from the backing 
             # file.
+            # @param mountpoint The name of the mount point.
             # @param backingfile The name of the backing file.  It is created
             # if it does not exist.
             
@@ -334,7 +337,7 @@ namespace eval ::vfs::rpg {
             puts -nonewline $_fd [binary format i $treesize]
         }
         method _handler {cmd root relative actualpath args} {
-            ## File system handler.  Call from the VFS system C code.
+            ## File system handler.  Called from the VFS system C code.
             # @param cmd The command to handle
             # @param root 
             # @param relative The filename
@@ -652,5 +655,7 @@ namespace eval ::vfs::rpg {
     }
         
 }
+
+## @}
 
 package provide vfs::rpg 1.0

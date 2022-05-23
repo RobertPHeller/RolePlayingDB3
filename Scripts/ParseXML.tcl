@@ -52,11 +52,6 @@ snit::type SimpleDOMElement {
 # getElementsByTagName and getElementsById methods, along with accessors
 # to get data, attributes, and children of XML elements.
 #
-# @param name Element name.  Generally \%\%AUTO\%\% is passed.
-# @param _ Options:
-# @arg -tag The element's tag.
-# @arg -attributes The element's attributes.
-# @arg -opts The element's options.
 #
 # @author Robert Heller \<heller\@deepsoft.com\>.
 #
@@ -73,6 +68,12 @@ snit::type SimpleDOMElement {
   
   constructor {args} {
     ## @publicsection The constructor. Just sets the options.
+    # @param objname Element name.  Generally \%AUTO\% is passed.
+    # @param ... Options:
+    # @arg -tag The element's tag.
+    # @arg -attributes The element's attributes.
+    # @arg -opts The element's options.
+    
     $self configurelist $args
     set nsdecs_i [lsearch -exact $options(-opts) -namespacedecls]
     if {$nsdecs_i >= 0} {
@@ -135,7 +136,7 @@ snit::type SimpleDOMElement {
   # document.
   # @param fp Channel to write the display to.
   # @param indent The indentation to use.
-  # @param _ Options
+  # @param ... Options
   # @arg -addnamespace Boolean (default no) Add namespace.
   #
   
@@ -309,9 +310,6 @@ snit::type ParseXML {
   # Inheirets methods getElementsByTagName, getElementsById, and children
   # from SimpleDOMElement.
   #
-  # @param name Generally \%\%AUTO\%\% is passed.
-  # @param xml  The XML string.
-  # @param _ Options. None at present.
   delegate method getElementsByTagName to rootnode
   delegate method getElementsById to rootnode
   delegate method children to rootnode
@@ -322,12 +320,13 @@ snit::type ParseXML {
   constructor {xml args} {
     ## @publicsection The constructor parses the XML string and stores it as a child of the
     # rootnode component.
+    # @param objname Generally \%AUTO\% is passed.
     # @param xml  The XML string.
-    # @param _ Options. None at present.
+    # @param ... Options. None at present.
     set p [xml::parser	-elementstartcommand [mymethod _elementstart] \
 			-elementendcommand   [mymethod _elementend] \
 			-characterdatacommand [mymethod _characterdata]]
-    install rootnode using SimpleDOMElement %%AUTO%%
+    install rootnode using SimpleDOMElement %AUTO%
     set nodeStack [list $rootnode]
     if {[catch {$p parse $xml} errormessage]} {
         error "Cannot parse $xml: $errormessage"
@@ -343,11 +342,11 @@ snit::type ParseXML {
     ## @privatesection Callback called at the start of of XML element.
     # @param tag The element's tag.
     # @param attrlist The element's attribute list.
-    # @param _ The element's options.
+    # @param ... The element's options.
     
     #puts stderr "*** [list $self _elementstart $tag $attrlist $args]"
     set parent [lindex $nodeStack end]
-    set node [SimpleDOMElement %%AUTO%% -tag $tag -attributes $attrlist \
+    set node [SimpleDOMElement %AUTO% -tag $tag -attributes $attrlist \
 					-opts $args]
     lappend nodeStack $node
     $parent addchild $node
@@ -355,7 +354,7 @@ snit::type ParseXML {
   method _elementend {tag args} {
     ## Callback called at the end of an XML element.
     # @param tag The element's tag.
-    # @param _ The element's options.
+    # @param ... The element's options.
     
     #puts stderr "*** $self _elementend $tag $args"
     set nodeStack [lrange $nodeStack 0 [expr {[llength $nodeStack] -2}]]
@@ -373,7 +372,7 @@ snit::type ParseXML {
   method displayTree {{fp stdout} args} {
       ## @publicsection Display the XML tree.
       # @param fp The channel to write the display to.
-      # @param _ Options
+      # @param ... Options
       # @arg -addnamespace Boolean (default no) Add namespace.
       
       set addnamespace [from args -addnamespace no]

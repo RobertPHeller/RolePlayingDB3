@@ -1,46 +1,68 @@
-##############################################################################
-#
-#  System        : 
-#  Module        : 
-#  Object Name   : $RCSfile$
-#  Revision      : $Revision$
-#  Date          : $Date$
-#  Author        : $Author$
-#  Created By    : Robert Heller
-#  Created       : Thu May 16 13:48:41 2013
-#  Last Modified : <220504.1234>
-#
-#  Description	
-#
-#  Notes
-#
-#  History
-#	
-##############################################################################
-#
-#  Copyright (c) 2013 Deepwoods Software.
-# 
-#  All Rights Reserved.
-# 
-#  This  document  may  not, in  whole  or in  part, be  copied,  photocopied,
-#  reproduced,  translated,  or  reduced to any  electronic  medium or machine
-#  readable form without prior written consent from Deepwoods Software.
-#
-##############################################################################
+#*
+#*
+#*  System        : 
+#*  Module        : 
+#*  Object Name   : $RCSfile$
+#*  Revision      : $Revision$
+#*  Date          : $Date$
+#*  Author        : $Author$
+#*  Created By    : Robert Heller
+#*  Created       : Thu May 16 13:48:41 2013
+#*  Last Modified : <220523.1628>
+#*
+#*  Description	
+#*
+#*  Notes
+#*
+#*  History
+#*	
+#*     Generic Project
+#*     Copyright (C) 2013  Robert Heller D/B/A Deepwoods Software
+#* 			51 Locke Hill Road
+#* 			Wendell, MA 01379-9728
+#* 
+#*     This program is free software; you can redistribute it and/or modify
+#*     it under the terms of the GNU General Public License as published by
+#*     the Free Software Foundation; either version 2 of the License, or
+#*     (at your option) any later version.
+#* 
+#*     This program is distributed in the hope that it will be useful,
+#*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#*     GNU General Public License for more details.
+#* 
+#*     You should have received a copy of the GNU General Public License
+#*     along with this program; if not, write to the Free Software
+#*     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#* 
+#*  
+#* 
+
+## @addtogroup TclCommon
+# @{
+
 
 package require Tk
 package require snit
 package require Img
 
 snit::type IconImage {
+    ## Icon image management
+    # Auto loads images and keeps track of available and loaded image objects
+    # for labels and related uses.
+    
     pragma -hastypeinfo no
     pragma -hastypedestroy no
     pragma -hasinstances   no
     
     typevariable icondir
+    ## @privatesection Directory where icons and images reside.
     typevariable unknownimg
+    ## Image to use for unknown images.
     typevariable imagemap -array {}
+    ## Map of available and loaded images.
     typeconstructor {
+        ## Type constructor: one time initialization of type variables.
         set icondir [file join [file dirname \
                                 [file dirname [file dirname \
                                                [info script]]]] Images]
@@ -48,6 +70,12 @@ snit::type IconImage {
         snit::enum ftypes -values {any png xpm xbm}
     }
     typemethod insert {_self args} {
+        ## Insert a new image.
+        # @param _self Image name, also base file name.
+        # @param ... Options:
+        # @arg -filetype File type.
+        # @arg -icondir Alternitive directory to look in.
+        
         #puts stderr "*** $type insert $_self $args"
         set _name [namespace tail $_self]
         #puts stderr "*** $type insert $_self: _name is $_name"
@@ -96,6 +124,12 @@ snit::type IconImage {
         
     }
     typemethod image {name args} {
+        ## @publicsection Fetch an image by name.
+        # @param name Image name.
+        # @param ... Options:
+        # @arg -filetype File type.
+        # @arg -icondir Alternitive directory to look in.
+        
         #puts stderr "*** $type image $name $args"
         #parray imagemap
         set _name [namespace tail $name]
@@ -103,7 +137,7 @@ snit::type IconImage {
         if {[::info exists imagemap($_name)]} {
             return $imagemap($_name)
         } else {
-            eval [list $type insert $name] $args
+            eval $type insert $name {*}$args
             #puts stderr "*** $type image: imagemap($_name) is $imagemap($_name)"
             return $imagemap($_name)
         }
@@ -111,15 +145,23 @@ snit::type IconImage {
 }
 
 snit::type IconBitmap {
+    ## Icon bitmap management
+    # Auto loads bitmaps and keeps track of available and loaded bitmap objects
+    # for labels and related uses.
+    
     pragma -hastypeinfo no
     pragma -hastypedestroy no
     pragma -hasinstances   no
     
     typevariable icondir
+    ## @privatesection Directory where icons and images reside.
     typevariable unknownbm
+    ## Bitmap to use for unknown bitmaps.
     typevariable bitmapmap -array {}
+    ## Map of available and loaded bitmaps.
     
     typeconstructor {
+        ## Type constructor: one time initialization of type variables.
         set icondir [file dirname [info script]]
         set unknownbm error
         foreach stockbm {error gray75 gray50 gray25 gray12 hourglass info questhead question warning} {
@@ -132,6 +174,11 @@ snit::type IconBitmap {
         }
     }
     typemethod insert {_self args} {
+        ## Insert a new bitmap.
+        # @param _self Bitmap name, also base file name.
+        # @param ... Options:
+        # @arg -icondir Alternitive directory to look in.
+        
         set name [namespace tail $_self]
         set _icondir [from args -icondir $icondir]
         set xbmfile [file join $_icondir $name.xbm]
@@ -142,6 +189,9 @@ snit::type IconBitmap {
         }
     }
     typemethod bitmap {name} {
+        ## @publicsection Fetch a bitmap by name.
+        # @param name Bitmap name.
+        
         if {[info exists bitmapmap($name)]} {
             return $bitmapmap($name)
         } else {
@@ -150,6 +200,8 @@ snit::type IconBitmap {
         }
     }
 }
+
+## @}
 
 package provide IconImage 1.0
 
