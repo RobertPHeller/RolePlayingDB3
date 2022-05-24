@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sun May 22 09:26:25 2022
-#  Last Modified : <220524.1543>
+#  Last Modified : <220524.1551>
 #
 #  Description	
 #
@@ -71,7 +71,7 @@ $(API)_Version.h: $(top_builddir)/config.status
 	echo "  * System version is $(VERSION)." >>$(API)_Version.h
 	echo "  */" >>$(API)_Version.h
 	
-$(API_HTML) $(API_PDF) man/man3 : $(API_Sources) $(API_FIGS) $(BIBLIO) \
+$(API_HTML) $(API_PDF) man/man3rpg : $(API_Sources) $(API_FIGS) $(BIBLIO) \
 	$(API)_Version.h ../User/Preface.h ../User/COPYING.h Doxyfile \
 	../User/footer.tex
 	-rm -rf $(APIHBase)/
