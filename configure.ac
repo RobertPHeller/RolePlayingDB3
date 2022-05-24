@@ -208,6 +208,8 @@ AC_OUTPUT(Makefile \
 		Doc/User/Makefile \
 		Doc/User/Doxyfile \
 		Doc/Support/Makefile \
+		Doc/API/Makefile \
+		Doc/API/Doxyfile \
 	  SampleData/Makefile \
 	  Doxyfile \
 	  RolePlayingDB3.spec
