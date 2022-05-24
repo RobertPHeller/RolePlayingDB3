@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sun May 22 09:26:25 2022
-#  Last Modified : <220524.1551>
+#  Last Modified : <220524.1552>
 #
 #  Description	
 #
@@ -62,7 +62,7 @@ man3dir = $(mandir)/man3
 CLEANFILES = $(API_PDF) $(API)_Version.h
 
 clean-local:
-	-rm -rf $(USERMANHBase) latex man
+	-rm -rf $(APIHBase) latex man
 	
 BUILT_SOURCES = $(API)_Version.h
 
