@@ -23,7 +23,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sun May 22 09:26:25 2022
-#  Last Modified : <220524.1551>
+#  Last Modified : <220524.1552>
 #
 #  Description	
 #
@@ -534,7 +534,7 @@ uninstall-am: uninstall-pkgdataDATA
 
 
 clean-local:
-	-rm -rf $(USERMANHBase) latex man
+	-rm -rf $(APIHBase) latex man
 
 $(API)_Version.h: $(top_builddir)/config.status
 	echo '/** @page Version Version' >$(API)_Version.h
