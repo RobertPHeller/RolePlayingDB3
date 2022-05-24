@@ -23,7 +23,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sun May 22 09:26:25 2022
-#  Last Modified : <220524.1552>
+#  Last Modified : <220524.1601>
 #
 #  Description	
 #
@@ -311,10 +311,8 @@ EXTRA_DIST = $(DOXYFILE)
 pkgdata_DATA = $(API_PDF)
 noinst_DATA = $(API_HTML)
 man3dir = $(mandir)/man3
-CLEANFILES = $(API_PDF) $(API)_Version.h
-BUILT_SOURCES = $(API)_Version.h
-all: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) all-am
+CLEANFILES = $(API_PDF)
+all: all-am
 
 .SUFFIXES:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -407,15 +405,13 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) check-am
+check: check-am
 all-am: Makefile $(DATA)
 installdirs:
 	for dir in "$(DESTDIR)$(pkgdatadir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) install-am
+install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -446,7 +442,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-local mostlyclean-am
@@ -515,8 +510,7 @@ ps-am:
 uninstall-am: uninstall-pkgdataDATA
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
-.MAKE: all check install install-am install-data-am install-strip \
-	uninstall-am
+.MAKE: install-am install-data-am install-strip uninstall-am
 
 .PHONY: all all-am check check-am clean clean-generic clean-local \
 	cscopelist-am ctags-am distclean distclean-generic distdir dvi \
@@ -536,13 +530,8 @@ uninstall-am: uninstall-pkgdataDATA
 clean-local:
 	-rm -rf $(APIHBase) latex man
 
-$(API)_Version.h: $(top_builddir)/config.status
-	echo '/** @page Version Version' >$(API)_Version.h
-	echo "  * System version is $(VERSION)." >>$(API)_Version.h
-	echo "  */" >>$(API)_Version.h
-
 $(API_HTML) $(API_PDF) man/man3rpg : $(API_Sources) $(API_FIGS) $(BIBLIO) \
-	$(API)_Version.h ../User/Preface.h ../User/COPYING.h Doxyfile \
+	../User/COPYING.h Doxyfile \
 	../User/footer.tex
 	-rm -rf $(APIHBase)/
 	-rm -rf latex

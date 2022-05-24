@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sun May 22 09:26:25 2022
-#  Last Modified : <220524.1552>
+#  Last Modified : <220524.1601>
 #
 #  Description	
 #
@@ -59,20 +59,13 @@ noinst_DATA  = $(API_HTML)
 
 man3dir = $(mandir)/man3
 
-CLEANFILES = $(API_PDF) $(API)_Version.h
+CLEANFILES = $(API_PDF)
 
 clean-local:
 	-rm -rf $(APIHBase) latex man
 	
-BUILT_SOURCES = $(API)_Version.h
-
-$(API)_Version.h: $(top_builddir)/config.status
-	echo '/** @page Version Version' >$(API)_Version.h
-	echo "  * System version is $(VERSION)." >>$(API)_Version.h
-	echo "  */" >>$(API)_Version.h
-	
 $(API_HTML) $(API_PDF) man/man3rpg : $(API_Sources) $(API_FIGS) $(BIBLIO) \
-	$(API)_Version.h ../User/Preface.h ../User/COPYING.h Doxyfile \
+	../User/COPYING.h Doxyfile \
 	../User/footer.tex
 	-rm -rf $(APIHBase)/
 	-rm -rf latex
