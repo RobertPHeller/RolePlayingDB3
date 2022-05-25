@@ -382,7 +382,7 @@ namespace eval RolePlayingDB3 {
                                 -editable no \
                                 -values {yes no}]
             pack $printLevelsLCB -fill x
-            $printLevelsLCB setvalue first
+            $printLevelsLCB set [lindex [$printLevelsLCB cget -values] 0]
         }
         typeconstructor {
             ## @privatesection Type constructor -- one time initialization.
@@ -1185,7 +1185,7 @@ namespace eval RolePlayingDB3 {
 				-editable no \
 				-values {yes no}]
             pack $printSpacesLCB -fill x
-            $printSpacesLCB setvalue first
+            $printSpacesLCB set [lindex [$printSpacesLCB cget -values] 0]
         }
         typeconstructor {
             ## Typeconstructor: one time initialization.
