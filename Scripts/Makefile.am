@@ -1,28 +1,6 @@
-Scripts = BWStdMenuBar.tcl fileentry.tcl HTMLHelp.tcl labelcombobox.tcl \
-	  labelselectcolor.tcl labelspinbox.tcl ReadConfiguration.tcl \
-	  RolePlayingDB3.tcl splash.tcl RPGTemplate.tcl ZipArchive.tcl \
-	  RPGSheetEdit.tcl RPGMapLevelSpace.tcl RPGUtilities.tcl
-Images  = DeepwoodsBanner.gif new.gif open.gif save.gif print.gif close.gif \
-	  AddNewExitBanner.png AddNewItemBanner.png CharacterBanner.png \
-	  CharacterButton.png CharacterRollBanner.png CreateMapBanner.png \
-	  CreateSpaceBanner.png DressingBanner.png DressingButton.png \
-	  ExitButton.png ExitInfoBanner.png MapBanner.png MapButton.png \
-	  MonsterBanner.png MonsterButton.png SpaceBanner.png \
-	  TemplateBanner.png ConfigMonster.png SmallTemplateMonster.png \
-	  SpellBanner.png SpellButton.png TreasureBanner.png \
-	  TreasureButton.png TrickTrapBanner.png TrickTrapButton.png \
-	  background.png RPG-Icon.png CharacterDialogIcon.png \
-	  DressingDialogIcon.png MonsterDialogIcon.png SpellDialogIcon.png \
-	  TreasureDialogIcon.png TrickTrapDialogIcon.png \
-	  SheetEditDialogIcon.png LevelBanner.png CreateLevelBanner.png \
-	  MapDialogIcon.png largePrinter.gif SelectLevelBanner.png \
-	  CreateNewMediaFolderBanner.png SelectMediaFolderBanner.png \
-	  SaveMediaFileBanner.png OpenMediaFileBanner.png \
-	  CreateNewSpaceBanner.png SelectSpaceBanner.png \
-	  CharacterOpenMediaFileBanner.png DressingOpenMediaFileBanner.png \
-	  MonsterOpenMediaFileBanner.png SpellOpenMediaFileBanner.png \
-	  TreasureOpenMediaFileBanner.png TrickTrapOpenMediaFileBanner.png \
-	  OpenTemplateFileDialogBanner.png OtherSpaceNameBanner.png
+Scripts = $(wildcard *.tcl)
+Images  = $(wildcard *.gif) $(wildcard *.png) $(wildcard *.xbm) \
+		$(wildcard *.xpm)
 	  
 BUILT_SOURCES = Version.tcl
 noinst_DATA = Version.tcl

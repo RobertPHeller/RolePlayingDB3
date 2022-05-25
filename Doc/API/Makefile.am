@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sun May 22 09:26:25 2022
-#  Last Modified : <220524.1601>
+#  Last Modified : <220525.0858>
 #
 #  Description	
 #
@@ -91,7 +91,7 @@ install-data-hook: $(API_HTML)
 	for i in $$list; do \
 	  file=$$i; \
 	  echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man3dir)/'"; \
-	  $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man3dir)/; \
+	  $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man3dir)/"; \
 	done	  
 	    
 
