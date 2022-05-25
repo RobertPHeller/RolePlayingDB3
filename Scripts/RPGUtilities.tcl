@@ -888,7 +888,9 @@ namespace eval RolePlayingDB3 {
                 "$widget" eq "::RolePlayingDB3::Graphic"} {
                 set fileWidgets($wname) true
             }
-            if {"$widget" eq "LabelComboBox"} {$wname setvalue first}
+            if {"$widget" eq "LabelComboBox"} {
+                $wname set [lindex [$wname cget -values] 0]
+            }
             eval [list pack $wname] $packopts
             if {![catch {set attrlist_array(id)} id]} {
                 set idmap($id) $wname
