@@ -50,7 +50,7 @@ foreach {name value} [lrange $argv 2 end] {
 
 puts $versionFP "\}"
 
-puts $versionFP "package provide Version $version"
+puts $versionFP "package provide Version [regsub -all {[a-zA-Z]} $version {}]"
 
 close $versionFP
 
