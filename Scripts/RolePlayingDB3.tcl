@@ -538,25 +538,35 @@ package require RPGTemplate
 package require RPGSheetEdit
 
 package require RPGMapLevelSpace
+
+
 RolePlayingDB3::Configuration load
 
-RolePlayingDB3::CreateMainWindow
-	
+if {[lsearch -exact $argv -headless] < 0} {RolePlayingDB3::CreateMainWindow}
+    
+set dashscript [lsearch -exact $argv -script]
+if {$dashscript >= 0} {
+    source [lindex $argv [expr {$dashscript + 1}]]
+    if {[lsearch -exact $argv -headless] >= 0} {exit}
+}
+
 
 for {set ia 0} {$ia < $argc} {incr ia} {
-  switch -glob -- "[lindex $argv $ia]" {
-    -map {
-	set ia1 [expr {$ia + 1}]
-	RolePlayingDB3::MapEditor openfile "[lindex $argv $ia1]"
-	incr ia
+    switch -glob -- "[lindex $argv $ia]" {
+        -script {incr ia}
+        -map {
+            set ia1 [expr {$ia + 1}]
+            RolePlayingDB3::MapEditor openfile "[lindex $argv $ia1]"
+            incr ia
+        }
+        -template {
+            set ia1 [expr {$ia + 1}]
+            RolePlayingDB3::Template openfile "[lindex $argv $ia1]"
+            incr ia
+        }
+        default {
+            RolePlayingDB3::SheetEdit openfile "[lindex $argv $ia]"
+        }
     }
-    -template {
-	set ia1 [expr {$ia + 1}]
-	RolePlayingDB3::Template openfile "[lindex $argv $ia1]"
-	incr ia
-    }
-    default {
-	RolePlayingDB3::SheetEdit openfile "[lindex $argv $ia]"
-    }
-  }
 }
+
