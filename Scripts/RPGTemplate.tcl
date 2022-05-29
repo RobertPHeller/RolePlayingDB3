@@ -1051,7 +1051,7 @@ namespace eval RolePlayingDB3 {
                                     append text " $n=\"$v\""
                                 }
                             }
-                            $templatetree item "$thefield" -text $text -data [list $tag $attrlist]
+                            $templatetree item "$thefield" -text $text -values [list $tag $attrlist]
                             $self _regenerateXMLFromTree
                         }
                     }
