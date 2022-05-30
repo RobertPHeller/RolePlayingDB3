@@ -8,7 +8,7 @@
 #  Author        : $Author$
 #  Created By    : Robert Heller
 #  Created       : Sat May 7 13:39:32 2022
-#  Last Modified : <220522.1038>
+#  Last Modified : <220530.1046>
 #
 #  Description	
 #
@@ -206,6 +206,7 @@ namespace eval vfs::rpg {
             # @returns A list of dirents.
             # @throws ENOENT If the containing dirent is not a directory.
             
+            #puts stderr "*** $self LookupMatch $pattern $types"
             set result [list]
             if {$options(-ftype) ne "directory"} {::vfs::rpg::fail ENOENT}
             foreach f $_files {
@@ -344,6 +345,9 @@ namespace eval vfs::rpg {
             # @param actualpath
             # @param ... Additional args (depends on the command).
             
+            if {$relative eq "."} {set relative {}}
+            set relative [regsub {^\./} $relative {}]
+            set relative [regsub {/\.$} $relative {}]
             #puts stderr "*** ${self}::_handler '$cmd' '$root' '$relative' '$actualpath' $args"
             switch -- $cmd {
                 access {
@@ -558,6 +562,7 @@ namespace eval vfs::rpg {
             # @param ... Options: (none)
             # @returns list of full pathnames that match.
             
+            #puts stderr "*** $self _matchindirectory $path $pattern $types $args"
             if {$pattern eq {}} {
                 if {![::vfs::matchDirectories $types]} {
                     return {}
@@ -573,11 +578,18 @@ namespace eval vfs::rpg {
                 lappend returntypes file
             }
             set pathkeys [file split $path]
+            #puts stderr "*** $self _matchindirectory: pathkeys is $pathkeys"
             set dirent [_findDirent $rootdirectory $pathkeys]
+            #puts stderr "*** $self _matchindirectory: dirent is $dirent"
+            if {$dirent eq {}} {
+                ::vfs::rpg::fail ENOENT
+            }
             set result [list]
             foreach f [$dirent LookupMatch $pattern $returntypes] {
+                #puts stderr "*** $self _matchindirectory (result loop): f is '[$f Name]'"
                 lappend result [file join [namespace tail $self] $path [$f Name]]
             }
+            #puts stderr [list *** $self _matchindirectory: result is $result]
             return $result
         }
         method _open {path mode permissions} {
