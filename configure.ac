@@ -1,4 +1,4 @@
-AC_INIT(RolePlayingDB,3.1.2,[support@deepsoft.com], RolePlayingDB)
+AC_INIT(RolePlayingDB,3.1.3,[support@deepsoft.com], RolePlayingDB)
 
 AC_CONFIG_MACRO_DIR([m4])
 
