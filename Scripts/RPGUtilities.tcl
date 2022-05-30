@@ -148,7 +148,7 @@ namespace eval RolePlayingDB3 {
             }
             foreach directory $sorteddirs {
                 regsub -all {[[:space:]]} "[file rootname [file tail $directory]]" {_} nodename
-                #	puts stderr "*** [namespace which dirtree]: directory = $directory, nodename = $nodename"
+                #puts stderr "*** [namespace which dirtree]: directory = $directory, nodename = $nodename"
                 set thisnode [$tree insert "$parent" end  \
                               -values "$directory" \
                               -text "[file tail $directory]" \
@@ -166,7 +166,7 @@ namespace eval RolePlayingDB3 {
             foreach file $sortedfiles {
                 if {"[file tail $file]" eq "flag"} {continue}
                 regsub -all {[[:space:]]} "[file rootname [file tail $file]]" {_} nodename
-                #	puts stderr "*** [namespace which dirtree]: file = $file, nodename = $nodename"
+                #puts stderr "*** [namespace which dirtree]: file = $file, nodename = $nodename"
                 if {$showextension} {
                     set text [file tail $file]
                 } else {
@@ -724,6 +724,7 @@ namespace eval RolePlayingDB3 {
                                 set bindscript [list bind <KeyPress> [mymethod setdirty]]
                                 lappend widgetopts -values $attrlist_array(values)
                                 lappend widgetopts -modifycmd [mymethod setdirty]
+                                lappend widgetopts -text [lindex $attrlist_array(values) 0]
                             }
                         }	     
                         {Long Text} {
@@ -878,7 +879,7 @@ namespace eval RolePlayingDB3 {
                 incr i
                 set wname $bwname$i
             }
-            #      puts stderr "*** $self makewidget: wname = $wname, tag = $tag, widget = $widget, packopts = $packopts, widgetopts = $widgetopts"
+            #puts stderr "*** $self makewidget: wname = $wname, tag = $tag, widget = $widget, packopts = $packopts, widgetopts = $widgetopts"
             eval [list $widget $wname] $widgetopts
             #      if {"$widget" eq "::RolePlayingDB3::ScrolledList"} {
             #	puts stderr "*** $self makewidget: wname = $wname, $wname cget -selectmode = [$wname cget -selectmode]"
@@ -888,16 +889,15 @@ namespace eval RolePlayingDB3 {
                 "$widget" eq "::RolePlayingDB3::Graphic"} {
                 set fileWidgets($wname) true
             }
-            if {"$widget" eq "LabelComboBox"} {
-                $wname set [lindex [$wname cget -values] 0]
-            }
             eval [list pack $wname] $packopts
             if {![catch {set attrlist_array(id)} id]} {
                 set idmap($id) $wname
             }
             if {"$bindscript" ne ""} {eval $wname $bindscript}
             #puts stderr "*** $self makewidget: [winfo class $wname] <= '$widgetdata'"
-            catch {$wname configure -text $widgetdata}
+            if {$widgetdata ne {}} {
+                catch {$wname configure -text $widgetdata}
+            }
             set _widgets($node) $wname
             set _xmlnodes($wname) $node
             foreach c [$node children] {
@@ -1522,13 +1522,16 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
         }
         method UpDirCmd {} {
             if {"$selectPath" ne ""} {
-                #	puts stderr "[list *** $self UpDirCmd: selectPath = $selectPath]"
-                #	puts stderr "[list *** $self UpDirCmd: file dirname $selectPath = [file dirname $selectPath]]"
+                #puts stderr "[list *** $self UpDirCmd: selectPath = $selectPath]"
+                #puts stderr "[list *** $self UpDirCmd: file dirname $selectPath = [file dirname $selectPath]]"
                 set selectPath [file dirname $selectPath]
+                if {$selectPath eq "."} {set selectPath ""}
             }
         }
         method OkCmd {} {
+            #puts stderr "*** $self OkCmd"
             set selection [$iconList selection get]
+            #puts stderr "*** $self OkCmd: \[llength \$selection] is [llength $selection]"
             if { [llength $selection] != 0 } {
                 set iconText [$iconList get [lindex $selection 0]]
                 set iconText [file join $selectPath $iconText]
@@ -1573,32 +1576,43 @@ QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==}]
             $entry configure -cursor watch
             $win       configure -cursor watch
             update idletasks
-            # puts stderr "*** $self Update: selectPath = $selectPath"
+            #puts stderr "*** $self Update: selectPath = $selectPath"
+            set lookupdir [file join $options(-root) $selectPath]
+            #puts stderr "*** $self Update: lookupdir is $lookupdir"
+            if {![file exists $lookupdir]} {
+                $self Done "$lookupdir"
+                return
+            }
             $iconList deleteall
-            set dirs [lsort -dictionary -unique \
-                      [glob -tails \
-                       -directory [file join $options(-root) \
-                                   $selectPath] -type d \
-                       -nocomplain *]]
+            #puts stderr "*** $self Update: iconList cleared"
+            set unsorteddirs [glob -tails -directory $lookupdir -type d -nocomplain *]
+            #puts stderr "*** $self Update: unsorteddirs is $unsorteddirs"
+            set dirs [lsort -dictionary -unique $unsorteddirs]
             #puts stderr "[list *** $self Update: dirs = $dirs]"
             set dirList {}
             foreach d $dirs {
                 lappend dirList $d
             }
             $iconList add $folderImage $dirList
-            set list "."
+            set list ""
             set dir ""
-            #puts stderr "*** $self Update: file split selectPath = [file split $selectPath]"
+            #puts stderr "*** $self Update (just before subdir loop): file split selectPath = [file split $selectPath]"
             foreach subdir [file split $selectPath] {
+                puts stderr "*** $self Update (in subdir loop): subdir is $subdir"
                 set dir [file join $dir $subdir]
+                puts stderr "*** $self Update (in subdir loop): dir is $dir"
                 lappend list $dir
+                puts stderr "[list *** $self Update (in subdir loop): list = $list]"
             }
             #puts stderr "[list *** $self Update: list = $list]"
             $dirmenu delete 0 end
+            #puts stderr "*** $self Update: dirmenu emptied"
             set var [myvar selectPath]
+            #puts stderr "*** $self Update: var is \"$var\""
             foreach path $list {
                 $dirmenu add command -label $path -command [list set $var $path]
             }
+            #puts stderr "*** $self Update: dirmenu updated"
             $entry configure -cursor $entCursor
             $win       configure -cursor $dlgCursor
         }
@@ -1802,7 +1816,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
                 [file isdirectory [file join $options(-root) $initialdir]]} {
                 set selectFile $initialfile
                 set selectPath [file dirname $initialfile]
-                if {$selectPath eq "."} {set selectPath {}}
+                if {$selectPath eq ""} {set selectPath {}}
             }
             $entry delete 0 end
             $entry insert 0 $selectFile
@@ -1823,12 +1837,12 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
             }
         }
         method UpdateWhenIdle {} {
-            #      puts stderr "*** $self UpdateWhenIdle"
+            #puts stderr "*** $self UpdateWhenIdle"
             if {![info exists updateId]} {
                 set updateId [after idle [mymethod Update]]
-                #	puts stderr "*** $self UpdateWhenIdle: new updateId = $updateId"
+                #puts stderr "*** $self UpdateWhenIdle: new updateId = $updateId"
             } else {
-                #	puts stderr "*** $self UpdateWhenIdle: old updateId = $updateId"
+                #puts stderr "*** $self UpdateWhenIdle: old updateId = $updateId"
             }
         }
         method ListInvoke {filenames} {
@@ -1883,7 +1897,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
                 #puts stderr "[list *** $self UpDirCmd: selectPath = $selectPath]"
                 #puts stderr "[list *** $self UpDirCmd: file dirname $selectPath = [file dirname $selectPath]]"
                 set selectPath [file dirname $selectPath]
-                if {$selectPath eq "."} {set selectPath {}}
+                if {$selectPath eq ""} {set selectPath {}}
             }
         }
         method OkCmd {} {
@@ -2125,6 +2139,7 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
             
             #puts stderr "*** $self Update: selectPath = $selectPath"
             
+            
             $iconList deleteall
             set dirs [lsort -dictionary -unique \
                       [glob -tails \
@@ -2139,18 +2154,22 @@ rSASvJTGhnhcV3EJlo3kh53ltF5nAhQAOw==}]
             }
             $iconList add $folderImage $dirList
             
-            set cmd [list glob -tails -directory [file join $options(-root) \
-                                                  $selectPath] \
+            set directory [file join $options(-root) $selectPath]
+            set directory [regsub {/.$} $directory {}]
+            #puts stderr "*** $self Update: directory is $directory"
+            set cmd [list glob -tails -directory $directory \
                                                   -type {f b c l p s} -nocomplain]
             #puts stderr "*** $self Update: filter = $filter"
             if {[string equal $filter *]} {
                 lappend cmd .* *
             } else {
-                eval [list lappend cmd] *$filter
+                lappend cmd {*}$filter
             }
             #puts stderr "*** $self Update: cmd = $cmd"
-            set fileList [lsort -dictionary -unique [eval $cmd]]
-            #puts stderr "*** $self Update: fileList = $fileList"
+            set rawFiles [eval $cmd]
+            #puts stderr [list *** $self Update: rawFiles = $rawFiles]
+            set fileList [lsort -dictionary -unique $rawFiles]
+            #puts stderr [list *** $self Update: fileList = $fileList]
             $iconList add $fileImage $fileList
             
             set list ""
