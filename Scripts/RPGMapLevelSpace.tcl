@@ -2353,11 +2353,12 @@ namespace eval RolePlayingDB3 {
         method colorchanged {} {
             ## Update on color change.
             
-            $spacecanvas itemconfigure background -fill [$self getcolor]
-            $options(-leveleditor) updatelevelmapcolor \
-                  [$self getcolor] \
-                  [file rootname [file tail $options(-spacefile)]]
-            set isdirty yes
+            if {![catch {$spacecanvas itemconfigure background -fill [$self getcolor]}]} {
+                $options(-leveleditor) updatelevelmapcolor \
+                      [$self getcolor] \
+                      [file rootname [file tail $options(-spacefile)]]
+                set isdirty yes
+            }
         } 
         method getcolor {} {
             ## Get the current color.

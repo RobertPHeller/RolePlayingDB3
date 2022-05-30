@@ -686,8 +686,10 @@ namespace eval RolePlayingDB3 {
                                 if {[regexp {^([[:digit:]]*)[dD]([[:digit:]]*)$} \
                                      "$attrlist_array(generator)" -> num sides] > 0} {
                                     lappend widgetopts -range [list $num [expr {$sides * $num}] 1]
+                                    set default $num
                                 } elseif {[regexp {^[dD]%$} "$attrlist_array(generator)"] > 0} {
                                     lappend widgetopts -range {0 99 1}
+                                    set default 0
                                 } else {
                                     set range $attrlist_array(range)
                                     if {[llength $range] > 1 && [llength $range] < 4} {
@@ -695,7 +697,15 @@ namespace eval RolePlayingDB3 {
                                     } else {
                                         lappend widgetopts -range {-9999999 9999999 1} -text 0
                                     }
+                                    set default 0
+                                    if {[lindex $range 0] > $default} {
+                                        set default [lindex $range 0]
+                                    }
+                                    if {[lindex $range 1] < $default} {
+                                        set default [lindex $range 1]
+                                    }
                                 }
+                                lappend widgetopts -text $default
                             }
                         }
                         {Word / Short Phrase} {
